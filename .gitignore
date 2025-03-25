@@ -1,0 +1,4 @@
+# Ignore data files and cache
+*.xlsx
+__pycache__/
+env/
