@@ -53,53 +53,48 @@ def download_file():
 def upload_excel():
     if "file" not in request.files:
         return jsonify({"error": "No file uploaded"}), 400
-
     file = request.files["file"]
     if file.filename == "":
         return jsonify({"error": "No file selected"}), 400
-
     if not file.filename.endswith((".xls", ".xlsx")):
         return jsonify({"error": "Invalid file format"}), 400
 
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], file.filename)
-
+    
     try:
-        file.save(file_path)  
+        file.save(file_path)
         print(f"✅ File saved at: {file_path}")
 
-        # Read the entire file without skipping rows
-        df = pd.read_excel(file_path, header=None)  
+        # Read Excel without headers
+        df = pd.read_excel(file_path, header=None)
 
-        # Extract station count from the first row
-        station_count = int(df.iloc[0, 1])  
+        # Debug: Print first few rows
+        print("🔍 First few rows of Excel file:")
+        print(df.head())
 
-        # Extract station names dynamically from the second row
-        station_names = df.iloc[1, 1:].dropna().tolist()
+        # Detect column headers dynamically
+        df.columns = df.iloc[1]  # Set second row as column names
+        df = df[2:].reset_index(drop=True)  # Remove first two rows
 
-        # Extract slot values
-        stationary_slots = df.iloc[2, 1:].dropna().astype(int).tolist()
-        onboard_slots = df.iloc[3, 1:].dropna().astype(int).tolist()
+        # Rename columns (ensuring they match expected names)
+        df.columns = ["Station Name", "Stationary Slots", "Onboard Slots"]
 
-        # Combine extracted data
-        station_data = []
-        for i in range(len(station_names)):
-            station_data.append({
-                "Station": station_names[i],
-                "Stationary Slots": stationary_slots[i] if i < len(stationary_slots) else 0,
-                "Onboard Slots": onboard_slots[i] if i < len(onboard_slots) else 0
-            })
+        # ❗ Remove the first row that still contains the headers as data
+        df = df[1:].reset_index(drop=True)
+
+        # Convert to dictionary
+        station_data = df.to_dict(orient="records")
+
+        # Dynamically count stations
+        station_count = len(station_data)
 
         print(f"📊 Parsed Data: {station_data}")
 
         return jsonify({"station_count": station_count, "data": station_data})
-    
+
     except Exception as e:
         print(f"❌ Error processing file: {str(e)}")
         return jsonify({"error": f"File processing error: {str(e)}"}), 500
-
-
-
-
 
 if __name__ == "__main__":
     app.run(debug=True)

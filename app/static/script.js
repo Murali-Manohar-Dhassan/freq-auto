@@ -127,11 +127,19 @@ function populateFieldsFromExcel(stationData) {
             <div class="card shadow p-3">
                 <h5 class="text-center text-secondary">Station ${index + 1}</h5>
                 <label class="form-label">Station Name:</label>
-                <input type="text" class="form-control mb-2" value="${station.Station}" id="stationName${index + 1}" required>
+                <input type="text" class="form-control mb-2" 
+                       value="${station["Station Name"]}" 
+                       id="stationName${index + 1}" required>
+
                 <label class="form-label">Stationary Slots:</label>
-                <input type="number" class="form-control mb-2" value="${station['Stationary Slots']}" id="stationarySlots${index + 1}" required>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Stationary Slots"]}" 
+                       id="stationarySlots${index + 1}" required>
+
                 <label class="form-label">Onboard Slots:</label>
-                <input type="number" class="form-control" value="${station['Onboard Slots']}" id="onboardSlots${index + 1}" required>
+                <input type="number" class="form-control" 
+                       value="${station["Onboard Slots"]}" 
+                       id="onboardSlots${index + 1}" required>
             </div>
         `;
         container.appendChild(card);
@@ -139,7 +147,6 @@ function populateFieldsFromExcel(stationData) {
 
     alert("Excel data loaded successfully!");
 }
-
 
 // Function to check if the file is ready before downloading
 function checkFileReady(fileUrl) {
