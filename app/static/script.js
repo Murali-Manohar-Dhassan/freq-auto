@@ -38,6 +38,8 @@ function submitData() {
     document.getElementById("loadingSpinner").style.display = "block"; // Show loading animation
 
     console.log("📊 Collecting station data...");
+    console.log("📌 Number of Stations:", numStations);
+
     // Collect station data from user input
     for (let i = 1; i <= numStations; i++) {
         const name = document.getElementById(`stationName${i}`).value.trim();
@@ -53,6 +55,8 @@ function submitData() {
         stationData.push({ name, stationSlots, onboardSlots });
     }
 
+    console.log("🚀 Sending station data to server:", stationData);
+
     // Send collected data to the server
     fetch("/allocate_slots_endpoint", {
         method: "POST",
@@ -61,6 +65,8 @@ function submitData() {
     })
     .then(response => response.json())
     .then(data => {
+        console.log("📩 Server Response:", data);
+
         if (data.fileUrl) {
             console.log("✅ Processing complete. Checking for file...");
             checkFileReady(data.fileUrl); // Start polling to check if file is ready
@@ -106,6 +112,9 @@ function uploadExcel() {
             return;
         }
 
+        // ✅ Update station count
+        document.getElementById("numStations").value = result.station_count;
+        
         console.log("✅ Data successfully received:", result.data);
         populateFieldsFromExcel(result.data);
     })

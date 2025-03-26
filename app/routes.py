@@ -72,6 +72,11 @@ def upload_excel():
         print("🔍 First few rows of Excel file:")
         print(df.head())
 
+        # Extract number of stations from the first row (e.g., "No of Station {number}")
+        first_row_value = str(df.iloc[0, 0])
+        station_count = int(first_row_value.split()[-1]) if first_row_value.startswith("No of Station") else len(df) - 2
+        print(f"🔢 Extracted Station Count: {station_count}")
+
         # Detect column headers dynamically
         df.columns = df.iloc[1]  # Set second row as column names
         df = df[2:].reset_index(drop=True)  # Remove first two rows
