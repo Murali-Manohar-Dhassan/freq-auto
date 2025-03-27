@@ -144,10 +144,10 @@ def apply_color_scheme():
     # Define color mapping for different frequency values
     color_map = {
         1: "FFFF00",  # Yellow
-        2: "0000FF",  # Blue
+        2: "30819c",  # Grey Blue
         3: "FFA500",  # Orange
-        4: "FF0000",  # Red
-        5: "800080",  # Purple
+        4: "cc0000",  # Red
+        5: "b300b3",  # Purple
         6: "FFC0CB",  # Pink
         7: "008000"   # Green
     }
