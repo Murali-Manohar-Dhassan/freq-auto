@@ -74,15 +74,21 @@ def upload_excel():
 
         # Extract number of stations from the first row (e.g., "No of Station {number}")
         first_row_value = str(df.iloc[0, 0])
-        station_count = int(first_row_value.split()[-1]) if first_row_value.startswith("No of Station") else len(df) - 2
+        station_count = int(first_row_value.split()[-1]) if first_row_value.startswith("No of Station") else len(df.columns) - 1
         print(f"🔢 Extracted Station Count: {station_count}")
 
-        # Detect column headers dynamically
-        df.columns = df.iloc[1]  # Set second row as column names
-        df = df[2:].reset_index(drop=True)  # Remove first two rows
+        # Skip the first two rows and extract data from columns
+        df = df.iloc[2:].T  # Transpose the DataFrame and remove first two rows
 
-        # Rename columns (ensuring they match expected names)
-        df.columns = ["Station Name", "Stationary Slots", "Onboard Slots"]
+        # Set new headers using the first row of transposed data
+        df.columns = df.iloc[0]  
+        df = df[1:].reset_index(drop=True)  # Remove old headers row
+
+        # Rename columns to match expected format
+        df.rename(columns={df.columns[0]: "Station Name", 
+                           df.columns[1]: "Stationary Slots", 
+                           df.columns[2]: "Onboard Slots"}, inplace=True)
+
 
         # ❗ Remove the first row that still contains the headers as data
         df = df[1:].reset_index(drop=True)
