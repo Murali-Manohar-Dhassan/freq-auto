@@ -3,6 +3,7 @@ import pandas as pd
 import xlsxwriter
 import openpyxl
 from openpyxl.styles import PatternFill
+from openpyxl.styles import Alignment
 
 # Define file paths
 BASE_DIR = os.getcwd()

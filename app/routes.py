@@ -73,8 +73,13 @@ def upload_excel():
         print(df.head())
 
         # Extract number of stations from the first row (e.g., "No of Station {number}")
-        first_row_value = str(df.iloc[0, 0])
-        station_count = int(first_row_value.split()[-1]) if first_row_value.startswith("No of Station") else len(df.columns) - 1
+        first_row_value = str(df.iloc[0, 0]).strip()
+        try:
+            station_count = int(first_row_value.split()[-1]) 
+        except ValueError:
+            print(f"⚠️ Couldn't extract number from '{first_row_value}', falling back on column count.")
+            station_count = df.shape[1] - 1  # fallback: all columns except column 0
+
         print(f"🔢 Extracted Station Count: {station_count}")
 
         # Skip the first two rows and extract data from columns
@@ -82,7 +87,7 @@ def upload_excel():
 
         # Set new headers using the first row of transposed data
         df.columns = df.iloc[0]  
-        df = df[1:].reset_index(drop=True)  # Remove old headers row
+        df = df[1:]  # Remove old headers row
 
         # Rename columns to match expected format
         df.rename(columns={df.columns[0]: "Station Name", 
@@ -91,7 +96,7 @@ def upload_excel():
 
 
         # ❗ Remove the first row that still contains the headers as data
-        df = df[1:].reset_index(drop=True)
+        df.reset_index(drop=True, inplace=True)
 
         # Convert to dictionary
         station_data = df.to_dict(orient="records")

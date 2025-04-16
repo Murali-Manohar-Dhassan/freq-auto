@@ -27,28 +27,37 @@
 <body class="container mt-4">
     <h2 class="text-center text-primary mb-4">Station Data Input</h2>
 
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <label class="form-label">Enter the number of stations:</label>
-            <input type="number" id="numStations" class="form-control mb-3" min="1" placeholder="Number of Stations">
-            <button class="btn btn-primary w-100" onclick="generateStationFields()">Generate</button>
+    <!-- Selection Buttons -->
+    <div class="row justify-content-center mb-4">
+        <div class="col-md-6 d-flex justify-content-between">
+            <button class="btn btn-outline-primary w-50 me-2" onclick="showManual()">Manual Input</button>
+            <button class="btn btn-outline-secondary w-50" onclick="showUpload()">Excel Upload</button>
         </div>
     </div>
 
-    <div class="row mt-4" id="stationContainer"></div>
-
-    
-
-    <hr>
+    <!-- Manual Input Section -->
+    <div id="manualSection" style="display: none;">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <label class="form-label">Enter the number of stations:</label>
+                <input type="number" id="numStations" class="form-control mb-3" min="1" placeholder="Number of Stations">
+                <button class="btn btn-primary w-100" id="generateBtn" onclick="generateStationFields()">Generate</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Excel Upload Section -->
-    <div class="row mt-4">
-        <div class="col-md-6 mx-auto">
-            <label class="form-label">Upload Excel File:</label>
-            <input type="file" id="excelFile" class="form-control mb-3">
-            <button class="btn btn-info w-100" onclick="uploadExcel()">Upload and Preview</button>
+    <div id="uploadSection" style="display: none;">
+        <div class="row mt-4">
+            <div class="col-md-6 mx-auto">
+                <label class="form-label">Upload Excel File:</label>
+                <input type="file" id="excelFile" class="form-control mb-3">
+                <button class="btn btn-info w-100" id="uploadBtn" onclick="uploadExcel()">Upload and Preview</button>
+            </div>
         </div>
     </div>
+    <!-- Shared Station Container -->
+    <div id="stationContainer" class="row mt-4"></div>
 
     <!-- Loading Spinner -->
     <div class="loader" id="loadingSpinner" style="display: none;">
@@ -58,16 +67,18 @@
         <p id="loadingMessage" class="text-primary mt-2">Processing... Please wait.</p>
     </div>
 
-    <div class="row mt-4">
+    <!-- Submit Button (Initially Hidden) -->
+    <div class="row mt-4" id="submitContainer" style="display: none;">
         <div class="col text-center">
             <button class="btn btn-success" onclick="submitData()">Submit</button>
         </div>
     </div>
-
-    <!-- Include SheetJS for Excel processing -->
+    <!-- Excel data preview-->
+     
+    <!-- SheetJS + External Script -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
-    <!-- Include external JavaScript -->
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
+
 
 </html>

@@ -1,6 +1,22 @@
 
 console.log("script.js loaded");
 
+
+function showManual() {
+    $('#manualSection').show();
+    $('#uploadSection').hide();
+    $('#submitContainer').hide();
+    $('#stationContainer').empty();
+    $('#generateBtn').show();
+}
+
+function showUpload() {
+    $('#uploadSection').show();
+    $('#manualSection').hide();
+    $('#submitContainer').hide();
+    $('#uploadBtn').show();
+}
+
 // Function to dynamically generate station input fields
 function generateStationFields() {
     const numStations = document.getElementById("numStations").value;
@@ -14,7 +30,7 @@ function generateStationFields() {
 
     for (let i = 1; i <= numStations; i++) {
         const card = document.createElement("div");
-        card.className = "col-md-4 mb-3";
+        card.className = "col-12 col-sm-6 col-md-4 mb-3";
         card.innerHTML = `
             <div class="card shadow p-3">
                 <h5 class="text-center text-secondary">Station ${i}</h5>
@@ -28,6 +44,11 @@ function generateStationFields() {
         `;
         container.appendChild(card);
     }
+
+    // Hide generate & upload buttons
+    $('#generateBtn').hide();
+    // Show submit button
+    $('#submitContainer').show();
 }
 
 // Function to collect user input and submit data to the server
@@ -84,14 +105,19 @@ function submitData() {
 
 // Function to handle Excel file upload and preview the data in the UI
 function uploadExcel() {
+    // Show spinner
+    $('#loadingSpinner').show();
+
     const fileInput = document.getElementById("excelFile");
-    if (!fileInput.files.length) {
+    const file = fileInput.files[0]; 
+    if (!file) {
         alert("Please select an Excel file.");
+        $('#loadingSpinner').hide();
         return;
     }
 
     const formData = new FormData();
-    formData.append("file", fileInput.files[0]);
+    formData.append("file", file);
 
     fetch("/upload_excel", {
         method: "POST",
@@ -117,21 +143,28 @@ function uploadExcel() {
         
         console.log("✅ Data successfully received:", result.data);
         populateFieldsFromExcel(result.data);
+        document.getElementById("manualSection").style.display = "block";
+        $('#uploadBtn').hide();
+        document.getElementById("stationContainer").style.display = "";
+        $('#submitContainer').show();
+        $('#loadingSpinner').hide();
     })
     .catch(err => {
         console.error("❌ Upload Error:", err); // Log error details
         alert("Failed to upload file. Check console for details.");
+        $('#loadingSpinner').hide();
     });
 }
 
 
 function populateFieldsFromExcel(stationData) {
     const container = document.getElementById("stationContainer");
+    container.className = "row mt-4";
     container.innerHTML = ""; // Clear previous entries
-
+    
     stationData.forEach((station, index) => {
         const card = document.createElement("div");
-        card.className = "col-md-4 mb-3";
+        card.className = "col-12 col-sm-6 col-md-4 mb-3";
         card.innerHTML = `
             <div class="card shadow p-3">
                 <h5 class="text-center text-secondary">Station ${index + 1}</h5>
@@ -152,8 +185,11 @@ function populateFieldsFromExcel(stationData) {
             </div>
         `;
         container.appendChild(card);
+        
     });
-
+    
+    // Show the container and submit section
+    document.getElementById("submitContainer").style.display = "block";
     alert("Excel data loaded successfully!");
 }
 
