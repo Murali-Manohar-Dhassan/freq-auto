@@ -157,6 +157,7 @@ function uploadExcel() {
 }
 
 
+
 function populateFieldsFromExcel(stationData) {
     const container = document.getElementById("stationContainer");
     container.className = "row mt-4";
@@ -228,3 +229,17 @@ function checkFileReady(fileUrl) {
 
     poll();
 }
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    const excelFileInput = document.getElementById("excelFile");
+    const generateBtn = document.getElementById("generateBtn");
+
+    excelFileInput.addEventListener("change", function () {
+        if (excelFileInput.files.length > 0) {
+            generateBtn.style.display = "none"; // Hide if file selected
+        } else {
+            generateBtn.style.display = "inline-block"; // Show if file cleared
+        }
+    });
+});
