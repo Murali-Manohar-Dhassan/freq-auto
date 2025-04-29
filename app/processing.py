@@ -195,8 +195,38 @@ def apply_color_scheme():
     wb = openpyxl.load_workbook(OUTPUT_FILE)
     ws = wb.active
 
+    # Insert two new rows below header to show Stationary and Onboard slot counts
+    ws.insert_rows(2)
+    ws.insert_rows(3)
+
+    # Add labels
+    ws.cell(row=2, column=1).value = "Stationary Slots"
+    ws.cell(row=3, column=1).value = "Onboard Slots"
+
+    # Fill in slot counts per station
+    for station in all_stations:
+        col_idx = output_df.columns.get_loc(f"{station}") + 1  # Excel is 1-based index
+
+        # Retrieve slot strings
+        stationary = df[df["Station"] == station]["Stationary Kavach Slots"].values[0]
+        onboard = df[df["Station"] == station]["Onboard Kavach Slots"].values[0]
+
+        # Count
+        stationary_count = len(str(stationary).split(", ")) if pd.notna(stationary) and stationary else 0
+        onboard_count = len(str(onboard).split(", ")) if pd.notna(onboard) and onboard else 0
+
+        # Write counts
+        ws.cell(row=2, column=col_idx).value = stationary_count
+        ws.cell(row=3, column=col_idx).value = onboard_count
+
+
+    # 🔁 Add vertical alignment for station names
+    for col_idx, col_name in enumerate(output_df.columns[1:], start=2):  # Skip 'Slot' column
+        cell = ws.cell(row=1, column=col_idx)
+        cell.alignment = Alignment(text_rotation=90, vertical='bottom', horizontal='center')
+        
     # Apply the color formatting for stationary slots based on frequency
-    for row in range(2, len(all_slots) + 2):  # Skip the header row
+    for row in range(4, len(all_slots) + 4):  # Skip the header row
         for station in all_stations:
             # Check if the slot is a stationary slot for the current station
             cell_value = ws.cell(row=row, column=1).value
