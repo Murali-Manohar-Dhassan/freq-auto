@@ -3,7 +3,7 @@ import pandas as pd
 import xlsxwriter
 import openpyxl
 from openpyxl.styles import PatternFill
-from openpyxl.styles import Alignment
+from openpyxl.styles import Border, Side, Alignment
 
 # Define file paths
 BASE_DIR = os.getcwd()
@@ -145,12 +145,12 @@ def apply_color_scheme():
     # Define color mapping for different frequency values
     color_map = {
         1: "FFFF00",  # Yellow
-        2: "30819c",  # Grey Blue
-        3: "FFA500",  # Orange
-        4: "cc0000",  # Red
-        5: "b300b3",  # Purple
-        6: "FFC0CB",  # Pink
-        7: "008000"   # Green
+        2: "8FCA1D",  # Green
+        3: "F39D1B",  # Orange
+        4: "3197EA",  # Blue
+        5: "90918F",  # Cement Grey
+        6: "DC3B3D",  # Red
+        7: "CC6CE7"   # Purple
     }
 
     df = pd.read_excel(INPUT_FILE)
@@ -219,11 +219,26 @@ def apply_color_scheme():
         ws.cell(row=2, column=col_idx).value = stationary_count
         ws.cell(row=3, column=col_idx).value = onboard_count
 
+    # Define thin border on all sides
+    thin_border = Border(
+        left=Side(style='thin'),
+        right=Side(style='thin'),
+        top=Side(style='thin'),
+        bottom=Side(style='thin')
+    )
+
+
+    # Change allignment for all the cells
+    for row in ws.iter_rows(min_row=1, max_col=ws.max_column, max_row=ws.max_row):
+        for cell in row:
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+            cell.border = thin_border
 
     # 🔁 Add vertical alignment for station names
     for col_idx, col_name in enumerate(output_df.columns[1:], start=2):  # Skip 'Slot' column
         cell = ws.cell(row=1, column=col_idx)
-        cell.alignment = Alignment(text_rotation=90, vertical='bottom', horizontal='center')
+        cell.alignment = Alignment(text_rotation=90, vertical='center', horizontal='center')
+
         
     # Apply the color formatting for stationary slots based on frequency
     for row in range(4, len(all_slots) + 4):  # Skip the header row
