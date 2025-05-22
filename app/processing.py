@@ -14,7 +14,7 @@ OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_colored.xlsx")
 
 def allocate_slots(
     stations: list[dict],  # Each dict has 'name', 'stationSlots', 'onboardSlots'
-    max_slots: int = 45,
+    max_slots: int = 44,
     max_frequencies: int = 7
 ) -> list[dict]:
     allocations: list[dict] = []
@@ -71,7 +71,7 @@ def allocate_slots(
             if num_stat_slots_placed_for_current_station < requested_station_slots:
                 if station_alloc[i] == 0: 
                     station_alloc[i] = station_name 
-                    current_station_allocated_stationary_slots_list.append(f"P{i+1}")
+                    current_station_allocated_stationary_slots_list.append(f"P{i+2}")
                     num_stat_slots_placed_for_current_station += 1
             else:
                 break 
@@ -91,7 +91,7 @@ def allocate_slots(
             if onboard_alloc[current_physical_slot_idx] == 0 and \
                station_alloc[current_physical_slot_idx] != station_name: 
                 onboard_alloc[current_physical_slot_idx] = station_name 
-                current_station_allocated_onboard_slots_list.append(f"P{current_physical_slot_idx+1}")
+                current_station_allocated_onboard_slots_list.append(f"P{current_physical_slot_idx+2}")
                 onboard_placed_in_phase1 += 1
                 current_physical_slot_idx += 2
             else:
@@ -104,7 +104,7 @@ def allocate_slots(
             if onboard_alloc[current_physical_slot_idx] == 0 and \
                station_alloc[current_physical_slot_idx] != station_name:
                 onboard_alloc[current_physical_slot_idx] = station_name
-                current_station_allocated_onboard_slots_list.append(f"P{current_physical_slot_idx+1}")
+                current_station_allocated_onboard_slots_list.append(f"P{current_physical_slot_idx+2}")
                 onboard_slots_still_needed_for_fill -= 1
                 onboard_placed_in_phase2 += 1
             current_physical_slot_idx += 1
@@ -185,7 +185,7 @@ def apply_color_scheme():
 
     df = pd.read_excel(INPUT_FILE) # Reads the file saved by generate_excel
     
-    all_slots = [f"P{i}" for i in range(1, 46)] 
+    all_slots = [f"P{i}" for i in range(2, 46)] 
     all_stations = df["Station"].unique()
 
     output_df = pd.DataFrame(index=all_slots)
@@ -293,6 +293,8 @@ def apply_color_scheme():
                 
                 cell_to_color = ws.cell(row=data_row_excel, column=excel_col_for_station)
                 cell_to_color.fill = PatternFill(start_color=color_code, end_color=color_code, fill_type="solid")
+                cell_to_color.value = ""  # Clear the text in the colored cell
+
 
     wb.save(OUTPUT_FILE)
     print(f"Formatted and colored Excel file saved to: {OUTPUT_FILE}")
