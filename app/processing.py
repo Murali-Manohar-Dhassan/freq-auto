@@ -1,4 +1,5 @@
 import os
+import math
 import pandas as pd
 import xlsxwriter # Not directly used in fixed function but kept for context
 import openpyxl
@@ -15,7 +16,7 @@ OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_colored.xlsx")
 def allocate_slots(
     stations: list[dict],  # Each dict has 'name', 'stationSlots', 'onboardSlots'
     max_slots: int = 44,
-    max_frequencies: int = 7
+    max_frequencies: int = 4
 ) -> list[dict]:
     allocations: list[dict] = []
     current_frequency: int = 1
@@ -37,13 +38,18 @@ def allocate_slots(
 
     for station_data in stations:
         station_name = station_data["name"]
-        requested_station_slots = station_data["stationSlots"]
+        optimum_static = station_data["OptimumStatic"]
         requested_onboard_slots = station_data["onboardSlots"]
         
+        # Calculate the number of stationary slots needed for this station
+        val_for_roundup = ((optimum_static * 120) + (requested_onboard_slots - optimum_static) * 40 + 100) / 66
+        calculated_station_slots = math.ceil(val_for_roundup)
+
+
         current_station_allocated_stationary_slots_list: list[str] = []
         current_station_allocated_onboard_slots_list: list[str] = []
 
-        # print(f"\nProcessing Station: {station_name} (Req Stat: {requested_station_slots}, Req Onb: {requested_onboard_slots}) on Freq: {current_frequency}")
+        # print(f"\nProcessing Station: {station_name} (Req Stat: {calculated_station_slots}, Req Onb: {requested_onboard_slots}) on Freq: {current_frequency}")
 
         # --- Revised Frequency Switching Logic ---
         # Check current availability on the frequency BEFORE attempting allocation for this station
@@ -52,8 +58,8 @@ def allocate_slots(
         current_freq_onboard_globally_free = onboard_alloc.count(0)
 
         needs_to_switch_frequency = False
-        if requested_station_slots > current_freq_stat_available:
-            # print(f"  Switching for {station_name}: Stationary demand ({requested_station_slots}) > available ({current_freq_stat_available})")
+        if calculated_station_slots > current_freq_stat_available:
+            # print(f"  Switching for {station_name}: Stationary demand ({calculated_station_slots}) > available ({current_freq_stat_available})")
             needs_to_switch_frequency = True
         elif requested_onboard_slots > current_freq_onboard_globally_free:
             # Also switch if the raw number of P-slots free from *any* onboard device is less than requested.
@@ -68,7 +74,7 @@ def allocate_slots(
         # 2. Allocate Stationary Slots for the current station
         num_stat_slots_placed_for_current_station = 0
         for i in range(max_slots):
-            if num_stat_slots_placed_for_current_station < requested_station_slots:
+            if num_stat_slots_placed_for_current_station < calculated_station_slots:
                 if station_alloc[i] == 0: 
                     station_alloc[i] = station_name 
                     current_station_allocated_stationary_slots_list.append(f"P{i+2}")
@@ -80,7 +86,7 @@ def allocate_slots(
         N_avail_alt_for_onboard_pattern = 0
         for j in range(max_slots):
             if onboard_alloc[j] == 0 and station_alloc[j] != station_name:
-                N_avail_alt_for_onboard_pattern += 1
+                N_avail_alt_for_onboard_pattern += 2
         
         max_slots_for_alternating_phase = max(0, (N_avail_alt_for_onboard_pattern // 2) - 1)
         num_onboard_to_place_alternatingly = min(requested_onboard_slots, max_slots_for_alternating_phase)
@@ -112,7 +118,7 @@ def allocate_slots(
         allocations.append({
             "Station": station_name,
             "Frequency": current_frequency,
-            "Stationary Kavach Slots Requested": requested_station_slots,
+            "Stationary Kavach Slots Requested": calculated_station_slots,
             "Stationary Kavach Slots Allocated": ", ".join(sorted(current_station_allocated_stationary_slots_list, key=lambda x: int(x[1:]))),
             "Num Stationary Allocated": len(current_station_allocated_stationary_slots_list),
             "Onboard Kavach Slots Requested": requested_onboard_slots,
@@ -301,39 +307,24 @@ def apply_color_scheme():
 
 
 if __name__ == '__main__':
-    sample_stations_data = [{'name': 'Secunderabad', 'stationSlots': 10, 'onboardSlots': 20}, 
-                          {'name': 'Hyderabad', 'stationSlots': 8, 'onboardSlots': 22}, 
-                          {'name': 'Bangalore', 'stationSlots': 12, 'onboardSlots': 20}, 
-                          {'name': 'Chennai', 'stationSlots': 11, 'onboardSlots': 21}, 
-                          {'name': 'Mumbai', 'stationSlots': 9, 'onboardSlots': 22}, 
-                          {'name': 'Delhi', 'stationSlots': 10, 'onboardSlots': 20}, 
-                          {'name': 'Kolkata', 'stationSlots': 9, 'onboardSlots': 21}, 
-                          {'name': 'Pune', 'stationSlots': 11, 'onboardSlots': 19}, 
-                          {'name': 'Ahmedabad', 'stationSlots': 10, 'onboardSlots': 20}, 
-                          {'name': 'Jaipur', 'stationSlots': 7, 'onboardSlots': 23}, 
-                          {'name': 'Lucknow', 'stationSlots': 12, 'onboardSlots': 18}, 
-                          {'name': 'Kanpur', 'stationSlots': 13, 'onboardSlots': 17}, 
-                          {'name': 'Nagpur', 'stationSlots': 8, 'onboardSlots': 22}, 
-                          {'name': 'Ghaziabad', 'stationSlots': 11, 'onboardSlots': 19}, 
-                          {'name': 'Indore', 'stationSlots': 12, 'onboardSlots': 18}, 
-                          {'name': 'Coimbatore', 'stationSlots': 7, 'onboardSlots': 23}, 
-                          {'name': 'Kochi', 'stationSlots': 13, 'onboardSlots': 17}, 
-                          {'name': 'Patna', 'stationSlots': 6, 'onboardSlots': 24}, 
-                          {'name': 'Bhopal', 'stationSlots': 12, 'onboardSlots': 18}, 
-                          {'name': 'Thane', 'stationSlots': 5, 'onboardSlots': 25}, 
-                          {'name': 'Visakhapatnam', 'stationSlots': 13, 'onboardSlots': 17}, 
-                          {'name': 'Vadodara', 'stationSlots': 4, 'onboardSlots': 26}, 
-                          {'name': 'Ludhiana', 'stationSlots': 12, 'onboardSlots': 18}, 
-                          {'name': 'Agra', 'stationSlots': 3, 'onboardSlots': 27}, 
-                          {'name': 'Nashik', 'stationSlots': 2, 'onboardSlots': 28}]
+    sample_stations_data = [
+        {'name': 'LC.563', 'OptimumStatic': 4, 'onboardSlots': 10},
+        {'name': 'Rundhi', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'LC.560', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'Sholanka', 'OptimumStatic': 4, 'onboardSlots': 16},
+        {'name': 'LC.555', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'Hodal', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'LC.551', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'Kosikalan', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'LC.545', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'Chhata', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'LC.539', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'Ajhai', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'LC.535', 'OptimumStatic': 4, 'onboardSlots': 9},
+        {'name': 'vrindavan', 'OptimumStatic': 4, 'onboardSlots': 14},
+        {'name': 'Mathura Jn', 'OptimumStatic': 6, 'onboardSlots': 21},
+    ]
     
-    # Test with a case that previously failed for the third station
-    # sample_stations_test = [
-    #     {"name": "S1", "stationSlots": 10, "onboardSlots": 20}, 
-    #     {"name": "S2", "stationSlots": 8, "onboardSlots": 15},
-    #     {"name": "S3", "stationSlots": 12, "onboardSlots": 10} 
-    # ]
-    # result_path = generate_excel(sample_stations_test)
 
     result_path = generate_excel(sample_stations_data)
 
