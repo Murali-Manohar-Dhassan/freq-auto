@@ -38,7 +38,7 @@ def allocate_slots(
 
     for station_data in stations:
         station_name = station_data["name"]
-        optimum_static = station_data["OptimumStatic"]
+        optimum_static = station_data["Static"]
         requested_onboard_slots = station_data["onboardSlots"]
         
         # Calculate the number of stationary slots needed for this station
@@ -51,7 +51,6 @@ def allocate_slots(
 
         # print(f"\nProcessing Station: {station_name} (Req Stat: {calculated_station_slots}, Req Onb: {requested_onboard_slots}) on Freq: {current_frequency}")
 
-        # --- Revised Frequency Switching Logic ---
         # Check current availability on the frequency BEFORE attempting allocation for this station
         current_freq_stat_available = station_alloc.count(0)
         # onboard_alloc.count(0) gives P-slots not taken by ANY station's onboard devices on this frequency
@@ -69,7 +68,6 @@ def allocate_slots(
 
         if needs_to_switch_frequency:
             _next_frequency_action()
-        # --- End of Revised Frequency Switching Logic ---
         
         # 2. Allocate Stationary Slots for the current station
         num_stat_slots_placed_for_current_station = 0
@@ -308,21 +306,21 @@ def apply_color_scheme():
 
 if __name__ == '__main__':
     sample_stations_data = [
-        {'name': 'LC.563', 'OptimumStatic': 4, 'onboardSlots': 10},
-        {'name': 'Rundhi', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'LC.560', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'Sholanka', 'OptimumStatic': 4, 'onboardSlots': 16},
-        {'name': 'LC.555', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'Hodal', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'LC.551', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'Kosikalan', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'LC.545', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'Chhata', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'LC.539', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'Ajhai', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'LC.535', 'OptimumStatic': 4, 'onboardSlots': 9},
-        {'name': 'vrindavan', 'OptimumStatic': 4, 'onboardSlots': 14},
-        {'name': 'Mathura Jn', 'OptimumStatic': 6, 'onboardSlots': 21},
+        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10},
+        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14},
+        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16},
+        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 1},
+        {'name': 'LC.551', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'Kosikalan', 'Static': 4, 'onboardSlots': 14},
+        {'name': 'LC.545', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'Chhata', 'Static': 4, 'onboardSlots': 14},
+        {'name': 'LC.539', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'Ajhai', 'Static': 4, 'onboardSlots': 14},
+        {'name': 'LC.535', 'Static': 4, 'onboardSlots': 9},
+        {'name': 'vrindavan', 'Static': 4, 'onboardSlots': 14},
+        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21},
     ]
     
 

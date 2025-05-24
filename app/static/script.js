@@ -36,10 +36,22 @@ function generateStationFields() {
                 <h5 class="text-center text-secondary">Station ${i}</h5>
                 <label class="form-label">Station Name:</label>
                 <input type="text" class="form-control mb-2" id="stationName${i}" required>
-                <label class="form-label">Stationary Slots:</label>
-                <input type="number" class="form-control mb-2" id="stationarySlots${i}" min="0" required>
+                <label class="form-label">Optimum no. of Static Profile:</label>
+                <input type="number" class="form-control mb-2" id="OptimumStatic${i}" min="0" required>
                 <label class="form-label">Onboard Slots:</label>
                 <input type="number" class="form-control" id="onboardSlots${i}" min="0" required>
+                
+                <label class="form-label">Stationary Kavach ID (Optional):</label>
+                <input type="number" class="form-control mb-2" id="KavachID${i}" min="0">
+
+                <label class="form-label">Station Code (Optional):</label>
+                <input type="number" class="form-control mb-2" id="StationCode${i}" min="0">
+
+                <label class="form-label">Stationary Unit Tower Lattitude (Optional):</label>
+                <input type="number" class="form-control mb-2" id="Lattitude${i}" min="0">
+
+                <label class="form-label">Stationary Unit Tower Longitude (Optional):</label>
+                <input type="number" class="form-control mb-2" id="Longtitude${i}" min="0">
             </div>
         `;
         container.appendChild(card);
@@ -64,8 +76,14 @@ function submitData() {
     // Collect station data from user input
     for (let i = 1; i <= numStations; i++) {
         const name = document.getElementById(`stationName${i}`).value.trim();
-        const stationSlots = parseInt(document.getElementById(`stationarySlots${i}`).value) || 0;
+        const Static = parseInt(document.getElementById(`OptimumStatic${i}`).value) || 0;
         const onboardSlots = parseInt(document.getElementById(`onboardSlots${i}`).value) || 0;
+
+        // Collect new fields
+        const KavachID = parseInt(document.getElementById(`KavachID${i}`).value) || 0; 
+        const StationCode = parseInt(document.getElementById(`StationCode${i}`).value) || 0; 
+        const Lattitude = parseInt(document.getElementById(`Lattitude${i}`).value) || 0; 
+        const Longitude = parseInt(document.getElementById(`Longtitude${i}`).value) || 0; 
 
         if (!name) {
             alert(`Station ${i} name cannot be empty.`);
@@ -73,7 +91,15 @@ function submitData() {
             return;
         }
 
-        stationData.push({ name, stationSlots, onboardSlots });
+        stationData.push({
+            name,
+            Static,
+            onboardSlots,
+            KavachID, 
+            StationCode, 
+            Lattitude, 
+            Longitude  
+         });
     }
 
     console.log("🚀 Sending station data to server:", stationData);
@@ -174,15 +200,35 @@ function populateFieldsFromExcel(stationData) {
                        value="${station["Station Name"]}" 
                        id="stationName${index + 1}" required>
 
-                <label class="form-label">Stationary Slots:</label>
+                <label class="form-label">Optimum no. of Static Profile:</label>
                 <input type="number" class="form-control mb-2" 
-                       value="${station["Stationary Slots"]}" 
-                       id="stationarySlots${index + 1}" required>
+                       value="${station["Static"]}" 
+                       id="OptimumStatic${index + 1}" required>
 
                 <label class="form-label">Onboard Slots:</label>
                 <input type="number" class="form-control" 
                        value="${station["Onboard Slots"]}" 
                        id="onboardSlots${index + 1}" required>
+
+                <label class="form-label">Stactionary Kavach ID (Optional):</label>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Stationary Kavach ID"] || 0}" 
+                       id="KavachID${index + 1}">
+
+                <label class="form-label">Station Code (Optional):</label>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Station Code"] || 0}" 
+                       id="StationCode${index + 1}" min="0">
+
+                <label class="form-label">Stationary Unit Tower Lattitude (Optional):</label>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Lattitude"] || 0}" 
+                       id="Lattitude${index + 1}">
+
+                <label class="form-label">Stationary Unit Tower Longtitude (Optional):</label>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Longtitude"] || 0}" 
+                       id="Longtitude${index + 1}" min="0">
             </div>
         `;
         container.appendChild(card);

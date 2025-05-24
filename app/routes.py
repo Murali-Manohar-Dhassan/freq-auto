@@ -91,7 +91,7 @@ def upload_excel():
 
         # Rename columns to match expected format
         df.rename(columns={df.columns[0]: "Station Name", 
-                           df.columns[1]: "Stationary Slots", 
+                           df.columns[1]: "Static", 
                            df.columns[2]: "Onboard Slots"}, inplace=True)
 
 
@@ -104,7 +104,7 @@ def upload_excel():
         # Dynamically count stations
         station_count = len(station_data)
 
-        print(f"📊 Parsed Data: {station_data}")
+        print(f"📊 Parsed Data: {station_data} \n {35*'---'}")
 
         return jsonify({"station_count": station_count, "data": station_data})
 
