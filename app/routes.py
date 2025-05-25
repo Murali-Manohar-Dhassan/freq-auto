@@ -40,7 +40,7 @@ def allocate_slots_endpoint():
 
 @app.route("/download")
 def download_file():
-    file_path = os.path.join(app.config["UPLOAD_FOLDER"], "output_kavach_slots_colored.xlsx")
+    file_path = os.path.join(app.config["UPLOAD_FOLDER"], "output_kavach_slots_styled.xlsx")
     print(f"Checking if file exists: {file_path} -> {os.path.exists(file_path)}")
 
     if os.path.exists(file_path):
