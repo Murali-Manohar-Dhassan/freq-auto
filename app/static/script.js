@@ -34,23 +34,26 @@ function generateStationFields() {
         card.innerHTML = `
             <div class="card shadow p-3">
                 <h5 class="text-center text-secondary">Station ${i}</h5>
+
+                <label class="form-label">Station Code:</label>
+                <input type="number" class="form-control mb-2" id="StationCode${i}" min="0">
+
                 <label class="form-label">Station Name:</label>
                 <input type="text" class="form-control mb-2" id="stationName${i}" required>
-                <label class="form-label">Optimum no. of Static Profile:</label>
+
+                <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
                 <input type="number" class="form-control mb-2" id="OptimumStatic${i}" min="0" required>
+
                 <label class="form-label">Onboard Slots:</label>
                 <input type="number" class="form-control" id="onboardSlots${i}" min="0" required>
                 
-                <label class="form-label">Stationary Kavach ID (Optional):</label>
+                <label class="form-label">Stationary Kavach ID:</label>
                 <input type="number" class="form-control mb-2" id="KavachID${i}" min="0">
 
-                <label class="form-label">Station Code (Optional):</label>
-                <input type="number" class="form-control mb-2" id="StationCode${i}" min="0">
-
-                <label class="form-label">Stationary Unit Tower Lattitude (Optional):</label>
+                <label class="form-label">Stationary Unit Tower Lattitude:</label>
                 <input type="number" class="form-control mb-2" id="Lattitude${i}" min="0">
 
-                <label class="form-label">Stationary Unit Tower Longitude (Optional):</label>
+                <label class="form-label">Stationary Unit Tower Longitude:</label>
                 <input type="number" class="form-control mb-2" id="Longtitude${i}" min="0">
             </div>
         `;
@@ -195,12 +198,18 @@ function populateFieldsFromExcel(stationData) {
         card.innerHTML = `
             <div class="card shadow p-3">
                 <h5 class="text-center text-secondary">Station ${index + 1}</h5>
+
+                <label class="form-label">Station Code:</label>
+                <input type="number" class="form-control mb-2" 
+                       value="${station["Station Code"] || 0}" 
+                       id="StationCode${index + 1}" min="0">
+
                 <label class="form-label">Station Name:</label>
                 <input type="text" class="form-control mb-2" 
                        value="${station["Station Name"]}" 
                        id="stationName${index + 1}" required>
 
-                <label class="form-label">Optimum no. of Static Profile:</label>
+                <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
                 <input type="number" class="form-control mb-2" 
                        value="${station["Static"]}" 
                        id="OptimumStatic${index + 1}" required>
@@ -210,22 +219,17 @@ function populateFieldsFromExcel(stationData) {
                        value="${station["Onboard Slots"]}" 
                        id="onboardSlots${index + 1}" required>
 
-                <label class="form-label">Stactionary Kavach ID (Optional):</label>
+                <label class="form-label">Stactionary Kavach ID:</label>
                 <input type="number" class="form-control mb-2" 
                        value="${station["Stationary Kavach ID"] || 0}" 
                        id="KavachID${index + 1}">
 
-                <label class="form-label">Station Code (Optional):</label>
-                <input type="number" class="form-control mb-2" 
-                       value="${station["Station Code"] || 0}" 
-                       id="StationCode${index + 1}" min="0">
-
-                <label class="form-label">Stationary Unit Tower Lattitude (Optional):</label>
+                <label class="form-label">Stationary Unit Tower Lattitude:</label>
                 <input type="number" class="form-control mb-2" 
                        value="${station["Lattitude"] || 0}" 
                        id="Lattitude${index + 1}">
 
-                <label class="form-label">Stationary Unit Tower Longtitude (Optional):</label>
+                <label class="form-label">Stationary Unit Tower Longtitude:</label>
                 <input type="number" class="form-control mb-2" 
                        value="${station["Longtitude"] || 0}" 
                        id="Longtitude${index + 1}" min="0">

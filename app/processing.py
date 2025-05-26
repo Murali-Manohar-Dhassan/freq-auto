@@ -507,11 +507,11 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
                 next_slot_p_num = f"P{current_slot_0index + 1 + 2}" if current_slot_0index < max_slot_idx_for_adj_check else None
                 if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
                    (next_slot_p_num and next_slot_p_num in set_onboard_p2):
-                    actual_p1_font_color = font_color_p1_conditional 
+                    actual_p1_font_color = font_color_p2 
                 cell_to_format.font = Font(color=actual_p1_font_color)
             elif is_onboard_p2:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2) 
+                cell_to_format.font = Font(color=font_color_p1_conditional) 
             elif is_stationary: 
                 cell_to_format.value = "" 
 
