@@ -4,7 +4,8 @@ from datetime import datetime
 now = datetime.now()
 import pandas as pd
 import openpyxl
-from openpyxl.styles import PatternFill, Border, Side, Alignment, Font # Added Font
+from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
+from openpyxl.utils import get_column_letter
 
 # Define file paths
 BASE_DIR = os.getcwd()
@@ -225,6 +226,7 @@ def allocate_slots(
 
             allocations.append({
                 "Station": s_name, "Frequency": s_freq,
+                "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": final_plan_to_commit["calculated_station_slots"],
                 "Stationary Kavach Slots Allocated": ", ".join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:]))),
                 "Num Stationary Allocated": len(stat_p_nums_allocated),
@@ -257,7 +259,7 @@ def generate_excel(input_stations_data):
     try:
         df = pd.DataFrame(alloc_results)
         expected_cols = [
-            "Station", "Frequency",
+            "Station", "Static", "Frequency",
             "Stationary Kavach Slots Requested", "Stationary Kavach Slots Allocated", "Num Stationary Allocated",
             "Onboard Kavach Slots Requested", "Onboard Kavach Slots Allocated", "Num Onboard Allocated",
             "Onboard Slots P1 Allocated", "Onboard Slots P2 Allocated", "Onboard Slots P3 Allocated",
@@ -297,46 +299,107 @@ def apply_color_scheme(results_df: pd.DataFrame):
     font_color_p2 = "E4080A"  # Dark Red
     font_style_p3 = Font(bold=True, color="FF000000") # Bold Black
     font_color_p1_conditional = "FF0000FF"
+
+    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
+                         top=Side(style='thin'), bottom=Side(style='thin'))
     
-    all_slots = [f"P{i}" for i in range(2, 46)] 
-    all_stations = results_df["Station"].unique()
-    max_slot_index = len(all_slots) - 1 
+    left_align_v_center_wrap = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    center_align_v_center_wrap = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    center_align_v_center = Alignment(horizontal='center', vertical='center')
+
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Slot Allocation Matrix"
 
-    # --- Add 7 Blank Rows at the Top ---
-    ws.insert_rows(idx=1, amount=12)
+    # --- Define Row Numbers for Content ---
+    # These are absolute Excel row numbers
+    title_row1 = 2
+    title_row2 = 3
+    title_row3 = 4
+    title_row4 = 5
+    # Rows 6 implicitly blank or for other content based on this structure
     
-    # --- Define Start Rows after adding top rows ---
-    header_excel_row = 8
-    stationary_count_row = 14
-    onboard_count_row = 16
-    data_start_row = 17 # Px data starts from this Excel row
+    
+    label_stationary_kavach_id_row = 7
+    label_station_code_row = 9
+    label_lat_row = 10
+    label_long_row = 11
+    data_optimum_static_row = 12
+    label_freq_pair_row = 13
+    # Row 14 is implicitly blank
+    
+    label_tx_window_row = 15
+    # Row 16 is implicitly blank
+    
+    header_excel_row = 8          # "Slot", Station Names
+    stationary_count_row = 14    # "Number of Stationary Kavach Tx slots"
+    onboard_count_row = 16        # "Peak nos. of Onboard Kavach Units..."
+    data_start_row = 17      # Px data starts
+
+
+    all_slots = [f"P{i}" for i in range(2, 46)] 
+    all_stations = results_df["Station"].unique()
+    max_excel_row = len(all_slots) + data_start_row # = len(all_slots) + 10 (blanktop + header + counts)
+    max_excel_col = len(all_stations) + 1 # +1 for the first column (Slot labels/Static text)
+    max_col_letter = get_column_letter(max_excel_col)
+    max_slot_index = len(all_slots) - 1 
+
+    # --- Write Titles (Rows 2-5) ---
+    titles_config = [
+        (title_row1, "Kavach (TCAS) : Application-cum-Approval: mComm Frequency Channels & Timeslots"),
+        (title_row2, "Stationary Kavach Unit-wise Frequency Channels - Timeslot Details"),
+        (title_row3, f"Application Number: Kavach/mComm/Appl/NCR-to-CoE/003/{now.hour:02d}"), # Ensure hour is 2 digits
+        (title_row4, f"Station - Station (Excl): When in Category-C (Radio Packet Structure as well as Tag Data Foramt as per V4.0 with SRS 4.0d3 Annex-C Amdt-7 wef {now.strftime('%d-%m-%Y')})")
+    ]
+    for r_num, text in titles_config:
+        cell = ws.cell(row=r_num, column=1)
+        cell.value = text
+        ws.merge_cells(start_row=r_num, start_column=1, end_row=r_num, end_column=max_excel_col)
+        cell.alignment = center_align_v_center_wrap
+        # Set row height for titles if needed, e.g., ws.row_dimensions[r_num].height = 30
+    
+    # --- Write Static Labels (Column 1 for rows 9-15) ---
+    static_labels_col1 = {
+        label_station_code_row: "Station code",
+        label_lat_row: "Stationary Unit Tower Lattitude",
+        label_long_row: "Stationary Unit Tower Longitude",
+        data_optimum_static_row: "Optimum no. of Simultaneous Exclusive Static Profile Transfer",
+        label_freq_pair_row: "Proposed Frequency Pair",
+        label_tx_window_row: "Stationary Kavach (TCAS) Tx Window Commence - End",
+        stationary_count_row: "Number of Stationary Kavach Tx slots", # Moved here for consistency
+        onboard_count_row: "Peak nos. of Onboard Kavach Units in Stn Unit Jurisdiction" # Moved here
+    }
+    for r_num, text in static_labels_col1.items():
+        cell = ws.cell(row=r_num, column=1)
+        cell.value = text
+        cell.alignment = left_align_v_center_wrap
+
+    # --- Populate Data for Row 12 (Optimum Static Values) ---
+    if "Static" in results_df.columns:
+        for c_idx_df, station_name in enumerate(all_stations):
+            excel_data_col = c_idx_df + 2 # Data starts from column B
+            station_specific_data = results_df[results_df["Station"] == station_name]
+            if not station_specific_data.empty:
+                static_val = station_specific_data["Static"].iloc[0]
+                cell = ws.cell(row=data_optimum_static_row, column=excel_data_col)
+                cell.value = static_val
+                cell.alignment = center_align_v_center 
+    else:
+        print("Warning: 'Static' column not found in results_df. Row 12 will not be populated with this data.")
 
     # --- Write Headers and Count Labels ---
-    ws.cell(row=7, column=1).value = "Stationary Kavach ID"
+    ws.cell(row=label_stationary_kavach_id_row, column=1).value = "Stationary Kavach ID"
+    ws.cell(row=label_stationary_kavach_id_row, column=1).alignment = center_align_v_center
     ws.cell(row=header_excel_row, column=1).value = "Station Name"
+    ws.cell(row=header_excel_row, column=1).alignment = center_align_v_center
     for c_idx, station_name_header in enumerate(all_stations):
         header_cell = ws.cell(row=header_excel_row, column=c_idx + 2)
         header_cell.value = station_name_header
         header_cell.alignment = Alignment(text_rotation=90, vertical='center', horizontal='center')
 
-    ws.cell(row=2, column=1).value = "Kavach (TCAS) : Application-cum-Approval: mComm Frequency Channels & Timeslots"
-    ws.cell(row=3, column=1).value = "Stationary Kavach Unit-wise Frequency Channels - Timeslot Details"
-    ws.cell(row=4, column=1).value = f"Application Number: Kavach/mComm/Appl/NCR-to-CoE/003/{now.hour}"
-    ws.cell(row=5, column=1).value = f"Station - Station (Excl): When in Category-C (Radio Packet Structure as well as Tag Data Foramt as per V4.0 with SRS 4.0d3 Annex-C Amdt-7 wef {now.strftime('%d-%m-%Y')})"
-    ws.cell(row=9, column=1).value = "Station code" 
-    ws.cell(row=10, column=1).value = "Stationary Unit Tower Lattitude"
-    ws.cell(row=11, column=1).value = "Stationary Unit Tower Longitude"
-    ws.cell(row=12, column=1).value = "Optimum no. of Simultaneous Exclusive Static Profile Transfer"
-    ws.cell(row=13, column=1).value = "Proposed Frequency Pair"
-    ws.cell(row=15, column=1).value = "Stationary Kavach (TCAS) Tx Window Commence - End"
-    ws.cell(row=stationary_count_row, column=1).value = "Number of Stationary Kavach Tx slots"
-    ws.cell(row=onboard_count_row, column=1).value = "Peak nos. of Onboard Kavach Units in Stn Unit Jurisdiction"
     
-    # Populate counts
+    # --- Populate Count Values (for rows count_stationary_row, count_onboard_row) ---
     for col_idx_df, station_name in enumerate(all_stations):
         excel_col = col_idx_df + 2
         station_data_rows = results_df[results_df["Station"] == station_name]
@@ -362,6 +425,7 @@ def apply_color_scheme(results_df: pd.DataFrame):
             cell_to_format = ws.cell(row=current_excel_row, column=excel_col_for_station)
             cell_to_format.value = ""
             cell_to_format.font = Font()
+            cell_to_format.alignment = center_align_v_center
 
             station_data_rows = results_df[results_df["Station"] == station_name_for_coloring]
             if station_data_rows.empty: continue
@@ -421,13 +485,10 @@ def apply_color_scheme(results_df: pd.DataFrame):
             # If none of the above, cell remains blank with default formatting
 
     # --- Apply General Formatting (Borders, Alignment) ---
-    thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), top=Side(style='thin'), bottom=Side(style='thin'))
-    max_excel_col = len(all_stations) + 1
-    max_excel_row = len(all_slots) + 7 + 2   + 2 # = len(all_slots) + 10 (blanktop + header + counts)
-
-    for r in range(1, max_excel_row + 1): # Iterate from row 1 to cover all content
+    for r in range(7, max_excel_row): # Iterate from row 1 to cover all content
         for c in range(1, max_excel_col + 1): # max_excel_col is len(all_stations) + 1
             cell = ws.cell(row=r, column=c)
+            cell.border = thin_border
             # Apply border to all relevant cells
             if r >= header_excel_row or (r >= stationary_count_row and r <= onboard_count_row and c <=1) : # Apply to headers, counts label, and data area
                  cell.border = thin_border
@@ -453,7 +514,7 @@ def apply_color_scheme(results_df: pd.DataFrame):
     print(f"Formatted and styled Excel file saved to: {OUTPUT_FILE}")
 
 if __name__ == '__main__':
-    sample_stations_data = [
+    stations = [
         {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10}, 
         {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14}, 
         {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9},  
@@ -469,7 +530,7 @@ if __name__ == '__main__':
         {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21},
     ]
     
-    result_path = generate_excel(sample_stations_data)
+    result_path = generate_excel(stations)
 
     if result_path:
         print(f"Process completed. Output file: {result_path}")
