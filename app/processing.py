@@ -11,7 +11,7 @@ from openpyxl.utils import get_column_letter
 BASE_DIR = os.getcwd()
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_styled.xlsx") # Updated output file name
+OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_final_layout_v2.xlsx") # Updated output file name
 
 def allocate_slots(
     stations: list[dict],
@@ -306,50 +306,41 @@ def apply_color_scheme(results_df: pd.DataFrame):
     left_align_v_center_wrap = Alignment(horizontal='left', vertical='center', wrap_text=True)
     center_align_v_center_wrap = Alignment(horizontal='center', vertical='center', wrap_text=True)
     center_align_v_center = Alignment(horizontal='center', vertical='center')
+    left_align_v_center = Alignment(horizontal='left', vertical='center')
 
+
+    all_slots = [f"P{i}" for i in range(2, 46)] 
+    all_stations = results_df["Station"].unique()
+    max_excel_col = len(all_stations) + 1 
+    max_slot_idx_for_adj_check = len(all_slots) - 1 
 
     wb = openpyxl.Workbook()
     ws = wb.active
     ws.title = "Slot Allocation Matrix"
 
-    # --- Define Row Numbers for Content ---
-    # These are absolute Excel row numbers
+    # --- Define Row Numbers for Content (User's specification) ---
     title_row1 = 2
     title_row2 = 3
     title_row3 = 4
     title_row4 = 5
-    # Rows 6 implicitly blank or for other content based on this structure
-    
-    
+    # Row 6 is blank
     label_stationary_kavach_id_row = 7
+    header_excel_row = 8  # "Station Name" label in Col A, Rotated station names in Col B+
     label_station_code_row = 9
     label_lat_row = 10
     label_long_row = 11
     data_optimum_static_row = 12
     label_freq_pair_row = 13
-    # Row 14 is implicitly blank
-    
-    label_tx_window_row = 15
-    # Row 16 is implicitly blank
-    
-    header_excel_row = 8          # "Slot", Station Names
-    stationary_count_row = 14    # "Number of Stationary Kavach Tx slots"
-    onboard_count_row = 16        # "Peak nos. of Onboard Kavach Units..."
-    data_start_row = 17      # Px data starts
-
-
-    all_slots = [f"P{i}" for i in range(2, 46)] 
-    all_stations = results_df["Station"].unique()
-    max_excel_row = len(all_slots) + data_start_row # = len(all_slots) + 10 (blanktop + header + counts)
-    max_excel_col = len(all_stations) + 1 # +1 for the first column (Slot labels/Static text)
-    max_col_letter = get_column_letter(max_excel_col)
-    max_slot_index = len(all_slots) - 1 
+    stationary_count_row = 14 # Label in Col A, Data in Col B+
+    label_tx_window_row = 15    # Label in Col A, Data (slot range) in Col B+
+    onboard_count_row = 16    # Label in Col A, Data in Col B+
+    data_start_row = 17       # Px data (P2, P3...) starts in Col A
 
     # --- Write Titles (Rows 2-5) ---
     titles_config = [
         (title_row1, "Kavach (TCAS) : Application-cum-Approval: mComm Frequency Channels & Timeslots"),
         (title_row2, "Stationary Kavach Unit-wise Frequency Channels - Timeslot Details"),
-        (title_row3, f"Application Number: Kavach/mComm/Appl/NCR-to-CoE/003/{now.hour:02d}"), # Ensure hour is 2 digits
+        (title_row3, f"Application Number: Kavach/mComm/Appl/NCR-to-CoE/003/{now.hour:02d}"),
         (title_row4, f"Station - Station (Excl): When in Category-C (Radio Packet Structure as well as Tag Data Foramt as per V4.0 with SRS 4.0d3 Annex-C Amdt-7 wef {now.strftime('%d-%m-%Y')})")
     ]
     for r_num, text in titles_config:
@@ -357,161 +348,229 @@ def apply_color_scheme(results_df: pd.DataFrame):
         cell.value = text
         ws.merge_cells(start_row=r_num, start_column=1, end_row=r_num, end_column=max_excel_col)
         cell.alignment = center_align_v_center_wrap
-        # Set row height for titles if needed, e.g., ws.row_dimensions[r_num].height = 30
-    
-    # --- Write Static Labels (Column 1 for rows 9-15) ---
+        # ws.row_dimensions[r_num].height = 30 # Optional: Adjust row height
+
+    # --- Write Static Labels in Column A ---
     static_labels_col1 = {
+        label_stationary_kavach_id_row: "Stationary Kavach ID",
+        header_excel_row: "Station Name", # Label for rotated station names
         label_station_code_row: "Station code",
         label_lat_row: "Stationary Unit Tower Lattitude",
         label_long_row: "Stationary Unit Tower Longitude",
         data_optimum_static_row: "Optimum no. of Simultaneous Exclusive Static Profile Transfer",
         label_freq_pair_row: "Proposed Frequency Pair",
+        stationary_count_row: "Number of Stationary Kavach Tx slots",
         label_tx_window_row: "Stationary Kavach (TCAS) Tx Window Commence - End",
-        stationary_count_row: "Number of Stationary Kavach Tx slots", # Moved here for consistency
-        onboard_count_row: "Peak nos. of Onboard Kavach Units in Stn Unit Jurisdiction" # Moved here
+        onboard_count_row: "Peak nos. of Onboard Kavach Units in Stn Unit Jurisdiction"
     }
     for r_num, text in static_labels_col1.items():
         cell = ws.cell(row=r_num, column=1)
         cell.value = text
-        cell.alignment = left_align_v_center_wrap
+        cell.alignment = left_align_v_center_wrap if r_num != header_excel_row else center_align_v_center
 
-    # --- Populate Data for Row 12 (Optimum Static Values) ---
-    if "Static" in results_df.columns:
-        for c_idx_df, station_name in enumerate(all_stations):
-            excel_data_col = c_idx_df + 2 # Data starts from column B
-            station_specific_data = results_df[results_df["Station"] == station_name]
-            if not station_specific_data.empty:
-                static_val = station_specific_data["Static"].iloc[0]
-                cell = ws.cell(row=data_optimum_static_row, column=excel_data_col)
-                cell.value = static_val
-                cell.alignment = center_align_v_center 
-    else:
-        print("Warning: 'Static' column not found in results_df. Row 12 will not be populated with this data.")
+    # --- Populate Data for Specific Rows (Columns B onwards) ---
+    for c_idx_df, station_name in enumerate(all_stations):
+        excel_data_col = c_idx_df + 2 # Data starts from column B
+        station_specific_data = results_df[results_df["Station"] == station_name]
+        if station_specific_data.empty: continue
+        station_data_row = station_specific_data.iloc[0]
 
-    # --- Write Headers and Count Labels ---
-    ws.cell(row=label_stationary_kavach_id_row, column=1).value = "Stationary Kavach ID"
-    ws.cell(row=label_stationary_kavach_id_row, column=1).alignment = center_align_v_center
-    ws.cell(row=header_excel_row, column=1).value = "Station Name"
-    ws.cell(row=header_excel_row, column=1).alignment = center_align_v_center
-    for c_idx, station_name_header in enumerate(all_stations):
-        header_cell = ws.cell(row=header_excel_row, column=c_idx + 2)
-        header_cell.value = station_name_header
-        header_cell.alignment = Alignment(text_rotation=90, vertical='center', horizontal='center')
+        # Row 7 (Stationary Kavach ID Data - Placeholder, as data source not specified)
+        # ws.cell(row=label_stationary_kavach_id_row, column=excel_data_col).value = "ID_HERE" # Example
+        ws.cell(row=label_stationary_kavach_id_row, column=excel_data_col).alignment = left_align_v_center
 
-    
-    # --- Populate Count Values (for rows count_stationary_row, count_onboard_row) ---
-    for col_idx_df, station_name in enumerate(all_stations):
-        excel_col = col_idx_df + 2
-        station_data_rows = results_df[results_df["Station"] == station_name]
-        if not station_data_rows.empty:
-            station_data = station_data_rows.iloc[0]
-            ws.cell(row=stationary_count_row, column=excel_col).value = station_data.get("Num Stationary Allocated", 0)
-            ws.cell(row=onboard_count_row, column=excel_col).value = station_data.get("Num Onboard Allocated", 0)
+        # Row 8 (Rotated Station Names)
+        header_cell = ws.cell(row=header_excel_row, column=excel_data_col)
+        header_cell.value = station_name
+        header_cell.alignment = Alignment(text_rotation=90, horizontal='center', vertical='center')
+        
+        # Rows 9, 10, 11 (Station Code, Lat, Long Data - Placeholder)
+        # ws.cell(row=label_station_code_row, column=excel_data_col).value = "CODE" # Example
+        ws.cell(row=label_station_code_row, column=excel_data_col).alignment = left_align_v_center
+        # ws.cell(row=label_lat_row, column=excel_data_col).value = "LAT_VAL" # Example
+        ws.cell(row=label_lat_row, column=excel_data_col).alignment = left_align_v_center
+        # ws.cell(row=label_long_row, column=excel_data_col).value = "LONG_VAL" # Example
+        ws.cell(row=label_long_row, column=excel_data_col).alignment = left_align_v_center
+
+
+        # Row 12 (Optimum Static Values)
+        # IMPORTANT: Ensure "Optimum Static Param" is the correct column name from your allocate_slots
+        if "Optimum Static Param" in station_data_row:
+            static_val = station_data_row["Optimum Static Param"]
+            cell = ws.cell(row=data_optimum_static_row, column=excel_data_col)
+            cell.value = static_val
+            cell.alignment = center_align_v_center
+        elif "Static" in station_data_row: # Fallback to "Static" if user named it that
+            static_val = station_data_row["Static"]
+            cell = ws.cell(row=data_optimum_static_row, column=excel_data_col)
+            cell.value = static_val
+            cell.alignment = center_align_v_center
         else:
-            ws.cell(row=stationary_count_row, column=excel_col).value = 0
-            ws.cell(row=onboard_count_row, column=excel_col).value = 0
+             ws.cell(row=data_optimum_static_row, column=excel_data_col).alignment = center_align_v_center
 
-    # Write Slot names (P2, P3, ...) in the first column
-    for r_idx, slot_name in enumerate(all_slots):
-        ws.cell(row=data_start_row + r_idx, column=1).value = slot_name
 
-    # --- Apply Styles, Colors, and Text to Data Cells ---
-    for r_idx_data_area, slot_in_current_row in enumerate(all_slots): # r_idx_data_area is 0-based from start of all_slots
-        current_excel_row = data_start_row + r_idx_data_area
-        current_slot_0index = int(slot_in_current_row[1:]) - 2 # e.g. P2->0, P45->43
-    
+        # Row 13 (Proposed Frequency Pair - Number and Color)
+        frequency_val = station_data_row.get("Frequency")
+        cell_freq = ws.cell(row=label_freq_pair_row, column=excel_data_col)
+        if pd.notna(frequency_val) and frequency_val != "N/A":
+            try:
+                frequency = int(frequency_val)
+                cell_freq.value = frequency
+                bg_color_code = color_map.get(frequency, "FFFFFF")
+                cell_freq.fill = PatternFill(start_color=bg_color_code, end_color=bg_color_code, fill_type="solid")
+            except ValueError: 
+                cell_freq.value = str(frequency_val) # Show as string if not int
+        else:
+            cell_freq.value = "N/A"
+        cell_freq.alignment = center_align_v_center
+
+        # Row 14 (Stationary Count Data)
+        cell_stat_count = ws.cell(row=stationary_count_row, column=excel_data_col)
+        cell_stat_count.value = station_data_row.get("Num Stationary Allocated", 0)
+        cell_stat_count.alignment = center_align_v_center
+        
+        # Row 15 (Stationary Kavach Tx Window - Slot Range)
+        s_slots_str_r15 = str(station_data_row.get("Stationary Kavach Slots Allocated", ""))
+        stat_slots_p_nums_r15 = [s.strip() for s in s_slots_str_r15.split(',') if s.strip() and s.strip().lower() != 'nan' and s.startswith('P')]
+        tx_window_text_r15 = ""
+        if stat_slots_p_nums_r15:
+            slot_numbers_r15 = sorted([int(p[1:]) for p in stat_slots_p_nums_r15])
+            if slot_numbers_r15: # Ensure list is not empty after parsing
+                if len(slot_numbers_r15) == 1:
+                    tx_window_text_r15 = f"P{slot_numbers_r15[0]}"
+                else:
+                    tx_window_text_r15 = f"P{slot_numbers_r15[0]}-P{slot_numbers_r15[-1]}"
+        cell_tx_window_r15 = ws.cell(row=label_tx_window_row, column=excel_data_col)
+        cell_tx_window_r15.value = tx_window_text_r15
+        cell_tx_window_r15.alignment = center_align_v_centerr
+
+        # Row 16 (Onboard Count Data)
+        cell_onboard_count = ws.cell(row=onboard_count_row, column=excel_data_col)
+        cell_onboard_count.value = station_data_row.get("Num Onboard Allocated", 0)
+        cell_onboard_count.alignment = center_align_v_center
+
+    # --- Write Slot Names (P2, P3, ...) in Column 1 for the Matrix Data Area ---
+    for r_idx_slot_name, slot_name in enumerate(all_slots):
+        cell = ws.cell(row=data_start_row + r_idx_slot_name, column=1)
+        cell.value = slot_name
+        cell.alignment = center_align_v_center
+
+    # --- Apply Styles, Colors, and Text to Matrix Data Cells (P-slot area) ---
+    for r_idx_data_matrix, slot_in_current_row in enumerate(all_slots):
+        current_excel_data_row = data_start_row + r_idx_data_matrix
+        current_slot_0index = int(slot_in_current_row[1:]) - 2 # User's variable name
+
         for c_idx_df, station_name_for_coloring in enumerate(all_stations):
             excel_col_for_station = c_idx_df + 2
-            cell_to_format = ws.cell(row=current_excel_row, column=excel_col_for_station)
-            cell_to_format.value = ""
-            cell_to_format.font = Font()
+            cell_to_format = ws.cell(row=current_excel_data_row, column=excel_col_for_station)
+            cell_to_format.value = "" 
+            cell_to_format.font = Font() 
             cell_to_format.alignment = center_align_v_center
 
-            station_data_rows = results_df[results_df["Station"] == station_name_for_coloring]
-            if station_data_rows.empty: continue
-            station_data = station_data_rows.iloc[0]
+            station_data_rows_matrix = results_df[results_df["Station"] == station_name_for_coloring]
+            if station_data_rows_matrix.empty: continue
+            station_data_matrix_row = station_data_rows_matrix.iloc[0]
 
-            # Fetch allocated slots for the current station
-            s_slots_str = str(station_data.get("Stationary Kavach Slots Allocated", ""))
-            o_p1_slots_str = str(station_data.get("Onboard Slots P1 Allocated", ""))
-            o_p2_slots_str = str(station_data.get("Onboard Slots P2 Allocated", ""))
-            o_p3_slots_str = str(station_data.get("Onboard Slots P3 Allocated", ""))
+            s_slots_str_m = str(station_data_matrix_row.get("Stationary Kavach Slots Allocated", ""))
+            o_p1_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P1 Allocated", ""))
+            o_p2_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P2 Allocated", ""))
+            o_p3_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P3 Allocated", ""))
 
-            # Create sets for quick lookup
-            set_stationary = {s.strip() for s in s_slots_str.split(',') if s.strip() and s.strip().lower() != 'nan'}
-            set_onbard_p1 = {s.strip() for s in o_p1_slots_str.split(',') if s.strip() and s.strip().lower() != 'nan'}
-            set_onboard_p2 = {s.strip() for s in o_p2_slots_str.split(',') if s.strip() and s.strip().lower() != 'nan'}
-            set_onboard_p3 = {s.strip() for s in o_p3_slots_str.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_stationary = {s.strip() for s in s_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_onbard_p1 = {s.strip() for s in o_p1_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'} # User's variable name
+            set_onboard_p2 = {s.strip() for s in o_p2_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_onboard_p3 = {s.strip() for s in o_p3_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
 
             is_stationary = slot_in_current_row in set_stationary
-            is_onboard_p1 = slot_in_current_row in set_onbard_p1
+            is_onboard_p1 = slot_in_current_row in set_onbard_p1 # User's variable name
             is_onboard_p2 = slot_in_current_row in set_onboard_p2
             is_onboard_p3 = slot_in_current_row in set_onboard_p3
             
-            # 1. Apply stationary background color first
             if is_stationary:
-                frequency_val = station_data.get("Frequency")
-                if pd.notna(frequency_val) and frequency_val != "N/A":
+                frequency_val_m = station_data_matrix_row.get("Frequency")
+                if pd.notna(frequency_val_m) and frequency_val_m != "N/A":
                     try:
-                        frequency = int(frequency_val)
-                        color_code = color_map.get(frequency, "FFFFFF")
-                        cell_to_format.fill = PatternFill(start_color=color_code, end_color=color_code, fill_type="solid")
-                    except ValueError: pass # Frequency not a number
+                        frequency_m = int(frequency_val_m)
+                        bg_color_code_m = color_map.get(frequency_m, "FFFFFF")
+                        cell_to_format.fill = PatternFill(start_color=bg_color_code_m, end_color=bg_color_code_m, fill_type="solid")
+                    except ValueError: pass 
             
-            # 2. Apply text and font styling (P3 > P45 special > P1 conditional > P2 > Stationary only)
-            if is_onboard_p3: 
+            if is_onboard_p3:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = font_style_p3
+                cell_to_format.font = font_style_p3 # User's variable name
             elif slot_in_current_row == "P45" and (is_onboard_p1 or is_onboard_p2):
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2)
+                cell_to_format.font = Font(color=font_color_p2) # User's variable name
             elif is_onboard_p1:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p1)
-                actual_p1_font_color = font_color_p1
-                # Check adjacency for P2 slots of the same station
+                actual_p1_font_color = font_color_p1 # User's variable name (default)
                 prev_slot_p_num = f"P{current_slot_0index - 1 + 2}" if current_slot_0index > 0 else None
-                next_slot_p_num = f"P{current_slot_0index + 1 + 2}" if current_slot_0index < max_slot_index else None
-                
+                next_slot_p_num = f"P{current_slot_0index + 1 + 2}" if current_slot_0index < max_slot_idx_for_adj_check else None
                 if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
                    (next_slot_p_num and next_slot_p_num in set_onboard_p2):
-                    actual_p1_font_color = font_color_p1_conditional
+                    actual_p1_font_color = font_color_p1_conditional # User's variable name
                 cell_to_format.font = Font(color=actual_p1_font_color)
             elif is_onboard_p2:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2)
-            elif is_stationary: # Purely stationary, no P3 onboard text, keep value blank
-                pass # cell_to_format.value remains "" as set by default or previous logic
-            # If none of the above, cell remains blank with default formatting
+                cell_to_format.font = Font(color=font_color_p2) # User's variable name
+            elif is_stationary: 
+                cell_to_format.value = "" 
 
-    # --- Apply General Formatting (Borders, Alignment) ---
-    for r in range(7, max_excel_row): # Iterate from row 1 to cover all content
-        for c in range(1, max_excel_col + 1): # max_excel_col is len(all_stations) + 1
+    # --- Apply Borders to the Relevant Table Area ---
+    final_max_content_row = data_start_row + len(all_slots) - 1 
+    # User's border loop started from row 7. Titles are rows 2-5.
+    # Row 6 is blank.
+    # Rows 7 to final_max_content_row should get borders.
+    for r in range(label_stationary_kavach_id_row, final_max_content_row + 1): 
+        # Skip explicitly blank rows if any were defined (e.g., row 6, or if 14/16 were meant to be blank between sections)
+        # For now, applying to all rows from 7 down to end of matrix.
+        # If row 14 (stationary_count_row) or 16 (onboard_count_row) are used for labels, they should get borders.
+        # User's original border loop `range(7, max_excel_row)` where `max_excel_row` was `len(all_slots) + data_start_row` (i.e., 44 + 17 = 61).
+        # So, it was `range(7, 61)`. This means rows 7 to 60.
+        # `final_max_content_row` is `17 + 44 - 1 = 60`. So `range(7, 61)` matches.
+        for c in range(1, max_excel_col + 1):
             cell = ws.cell(row=r, column=c)
             cell.border = thin_border
-            # Apply border to all relevant cells
-            if r >= header_excel_row or (r >= stationary_count_row and r <= onboard_count_row and c <=1) : # Apply to headers, counts label, and data area
-                 cell.border = thin_border
-            # Apply center alignment to headers, counts, and data area
-            if r >= header_excel_row:
-                 cell.alignment = Alignment(horizontal='center', vertical='center')
-            elif r >= stationary_count_row and r <= onboard_count_row and c > 1: # Count values
-                 cell.alignment = Alignment(horizontal='center', vertical='center')
-
+            # Specific alignments for data in cols B+ for certain label rows were set during data population.
+            # If a cell in these rows (7,9,10,11,13,15) and cols B+ is still blank, apply left alignment.
+            if r in [label_stationary_kavach_id_row, label_station_code_row, label_lat_row, label_long_row] and c > 1:
+                if not cell.value: # Apply to blank cells in these rows
+                     cell.alignment = left_align_v_center
+            # Alignment for row 13 (freq), 15 (tx window), 12 (opt static), 14 (stat count), 16 (onb count)
+            # in cols B+ was set during their data population.
+            # Alignment for Col A labels was set.
+            # Alignment for Matrix P-slot area (data_start_row onwards) was set.
+            # Alignment for Matrix header (header_excel_row) was set.
 
     # --- Add Allocation Details Sheet ---
     ws_details = wb.create_sheet(title="Allocation Details")
-    detail_headers = list(results_df.columns)
-    ws_details.append(detail_headers)
-    for _, row in results_df.iterrows():
-        ws_details.append(list(row.astype(str))) # Convert all to str for appending
-    
-    for column_cells in ws_details.columns:
-        length = max(len(str(cell.value) if cell.value is not None else "") for cell in column_cells)
-        ws_details.column_dimensions[openpyxl.utils.get_column_letter(column_cells[0].column)].width = length + 2
+    if not results_df.empty:
+        detail_headers = list(results_df.columns)
+        ws_details.append(detail_headers)
+        for _, row_data_obj in results_df.iterrows():
+            try:
+                ws_details.append(list(row_data_obj.astype(str))) 
+            except Exception as e_row:
+                print(f"Warning: Could not append row to details sheet: {row_data_obj.get('Station', 'Unknown_Station')}, Error: {e_row}")
+        
+        for column_cells_detail in ws_details.columns:
+            try:
+                length = max(len(str(cell.value) if cell.value is not None else "") for cell in column_cells_detail)
+                ws_details.column_dimensions[get_column_letter(column_cells_detail[0].column)].width = length + 2
+            except Exception as e_col_size:
+                print(f"Warning: Could not resize column {get_column_letter(column_cells_detail[0].column)}, Error: {e_col_size}")
+    else:
+        ws_details.append(["No allocation details to display."])
 
-    wb.save(OUTPUT_FILE)
-    print(f"Formatted and styled Excel file saved to: {OUTPUT_FILE}")
+    try:
+        wb.save(OUTPUT_FILE)
+        print(f"Formatted and styled Excel file with new layout saved to: {OUTPUT_FILE}")
+    except PermissionError:
+        print(f"Critical Error: Permission denied. Failed to save the Excel workbook to {OUTPUT_FILE}.")
+        print("Please ensure the file is not open elsewhere and you have write permissions to the directory.")
+    except Exception as e_save:
+        print(f"Critical Error: Failed to save the Excel workbook to {OUTPUT_FILE}. Error: {e_save}")
+
 
 if __name__ == '__main__':
     stations = [
