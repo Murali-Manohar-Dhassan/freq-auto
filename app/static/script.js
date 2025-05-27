@@ -1,73 +1,7 @@
+// Counter for manually added stations to ensure unique IDs
+let manualStationCount = 0;
 
-console.log("script.js loaded");
-
-
-function showManual() {
-    $('#manualSection').show();
-    $('#uploadSection').hide();
-    $('#submitContainer').hide();
-    $('#stationContainer').empty();
-    $('#generateBtn').show();
-}
-
-function showUpload() {
-    $('#uploadSection').show();
-    $('#manualSection').hide();
-    $('#submitContainer').hide();
-    $('#uploadBtn').show();
-}
-
-// Function to dynamically generate station input fields
-function generateStationFields() {
-    const numStations = document.getElementById("numStations").value;
-    const container = document.getElementById("stationContainer");
-    container.innerHTML = ""; // Clear previous entries
-
-    if (!numStations || numStations < 1) {
-        alert("Please enter a valid number of stations.");
-        return;
-    }
-
-    for (let i = 1; i <= numStations; i++) {
-        const card = document.createElement("div");
-        card.className = "col-12 col-sm-6 col-md-4 mb-3";
-        card.innerHTML = `
-            <div class="card shadow p-3">
-                <h5 class="text-center text-secondary">Station ${i}</h5>
-
-                <label class="form-label">Station Code:</label>
-                <input type="text" class="form-control mb-2" id="StationCode${i}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5">
-
-                <label class="form-label">Station Name:</label>
-                <input type="text" class="form-control mb-2" id="stationName${i}" required>
-
-                <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                <input type="number" class="form-control mb-2" id="OptimumStatic${i}" min="0" required>
-
-                <label class="form-label">Onboard Slots:</label>
-                <input type="number" class="form-control" id="onboardSlots${i}" min="0" required>
-                
-                <label class="form-label">Stationary Kavach ID:</label>
-                <input type="number" class="form-control mb-2" id="KavachID${i}" min="0">
-
-                <label class="form-label">Stationary Unit Tower Lattitude:</label>
-                <input type="number" class="form-control mb-2" id="Lattitude${i}" min="0">
-
-                <label class="form-label">Stationary Unit Tower Longitude:</label>
-                <input type="number" class="form-control mb-2" id="Longtitude${i}" min="0">
-            </div>
-        `;
-        container.appendChild(card);
-    }
-
-    setupStationCodeListeners(numStations);
-
-    // Hide generate & upload buttons
-    $('#generateBtn').hide();
-    // Show submit button
-    $('#submitContainer').show();
-}
-
+// Station lookup data (ensure this is defined in your actual script)
 const stationLookup = {
   "CSTM": { name: "CHHATRAPATI Shivaji Terminus", division: "Mumbai", state: "Maharastra", latitude: 18.9398, longitude: 72.8355 },
   "KYN": { name: "Kalyan", division: "Mumbai", state: "Maharastra", latitude: 19.2437, longitude: 73.1277 },
@@ -786,102 +720,261 @@ const stationLookup = {
   "CAPE": { name: "Kanyakumari", division: "Tamilnadu", state: "Tamilnadu", latitude: 8.0883, longitude: 77.5385 }
 };
 
-function setupStationCodeListeners(numStations) {
-    for (let i = 1; i <= numStations; i++) {
-        const stationCodeInput = document.getElementById(`StationCode${i}`);
+// --- UI Control Functions ---
+function showManual() {
+    $('#manualSection').show();
+    $('#uploadSection').hide();
+    $('#stationContainer').empty().show();
+    $('#addStationBtn').show();
+    $('#finishManualInputBtn').text('Finish & Preview Stations').show(); // Reset text and show
+    $('#submitContainer').hide();
+    manualStationCount = 0;
+    updateStationNumbers(); // In case any lingering state
+}
+
+function showUpload() {
+    $('#uploadSection').show();
+    $('#manualSection').hide();
+    $('#stationContainer').empty().show();
+    $('#submitContainer').hide();
+    $('#uploadBtn').show();
+    updateStationNumbers(); // In case any lingering state
+}
+
+// --- Manual Station Input Functions ---
+function addStationField() {
+    // Collapse the previously added card's body if it exists and is expanded
+    if (manualStationCount > 0) {
+        const prevStationIdSuffix = `manual_${manualStationCount}`;
+        const prevCollapseElement = document.getElementById(`collapse_${prevStationIdSuffix}`);
+        if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
+            new bootstrap.Collapse(prevCollapseElement, { toggle: false }).hide();
+        }
+    }
+
+    manualStationCount++;
+    const container = document.getElementById("stationContainer");
+    const stationIdSuffix = `manual_${manualStationCount}`;
+    const cardWrapperId = `stationCard_${stationIdSuffix}`;
+
+    const cardWrapper = document.createElement("div");
+    cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
+    cardWrapper.id = cardWrapperId;
+
+    // Card HTML with Bootstrap Collapse
+    cardWrapper.innerHTML = `
+        <div class="card shadow p-0 h-100">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+                 id="headerFor_${stationIdSuffix}"
+                 data-bs-toggle="collapse"
+                 data-bs-target="#collapse_${stationIdSuffix}"
+                 aria-expanded="true"
+                 aria-controls="collapse_${stationIdSuffix}"
+                 style="cursor: pointer;">
+                <span class="station-title-text">Station ${manualStationCount}</span>
+                <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}')"></button>
+            </div>
+            <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
+                <div class="card-body">
+                    <label class="form-label">Station Code:</label>
+                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5">
+
+                    <label class="form-label">Station Name:</label>
+                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" required>
+
+                    <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
+                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" required>
+
+                    <label class="form-label">Onboard Slots:</label>
+                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" required>
+                    
+                    <label class="form-label">Stationary Kavach ID:</label>
+                    <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0">
+
+                    <label class="form-label">Stationary Unit Tower Latitude:</label>
+                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}">
+
+                    <label class="form-label">Stationary Unit Tower Longitude:</label>
+                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}">
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(cardWrapper);
+    setupStationCodeListener(cardWrapper, stationIdSuffix);
+    updateStationNumbers(); // Update all station numbers
+
+    // Ensure the "Finish & Preview" button is visible if there are cards
+    if ($('#stationContainer .station-card').length > 0) {
+        $('#finishManualInputBtn').show();
+    }
+    // Submit button is only shown after "Finish & Preview"
+    $('#submitContainer').hide();
+}
+
+function removeStationCard(cardId) {
+    const card = document.getElementById(cardId);
+    if (card) {
+        // If a bootstrap collapse instance exists, dispose of it
+        const collapseId = card.querySelector('.collapse')?.id;
+        if (collapseId) {
+            const collapseInstance = bootstrap.Collapse.getInstance(document.getElementById(collapseId));
+            if (collapseInstance) {
+                collapseInstance.dispose();
+            }
+        }
+        card.remove();
+        updateStationNumbers(); // Re-number stations
+        if ($('#stationContainer .station-card').length === 0) {
+            $('#finishManualInputBtn').hide();
+            $('#submitContainer').hide(); // Hide submit if no cards left
+            manualStationCount = 0; // Reset if all cards removed
+        }
+    }
+}
+
+// Updates the visual numbering of stations
+function updateStationNumbers() {
+    $('#stationContainer .station-card').each(function(index) {
+        $(this).find('.station-title-text').text(`Station ${index + 1}`);
+    });
+}
+
+function finishManualInput() {
+    if ($('#stationContainer .station-card').length > 0) {
+        // Expand all cards
+        $('#stationContainer .station-card .collapse').each(function() {
+            const collapseElement = this;
+            if (!collapseElement.classList.contains('show')) {
+                new bootstrap.Collapse(collapseElement, { toggle: false }).show();
+            }
+            // Ensure aria-expanded is true on the controller
+            const headerId = $(collapseElement).attr('aria-labelledby');
+            if(headerId) {
+                $(`#${headerId}`).attr('aria-expanded', 'true');
+            }
+        });
+
+        $('#addStationBtn').show(); // Keep "Add Station" button visible for dynamic additions
+        // Optionally change the text or hide "Finish" button
+        // For now, let's keep it, maybe it can act as "Expand All"
+        $('#finishManualInputBtn').text('Expand All Cards').show(); 
+        $('#submitContainer').show();
+    } else {
+        alert("Please add at least one station.");
+        $('#finishManualInputBtn').text('Finish & Preview Stations'); // Reset text
+    }
+}
+
+function setupStationCodeListener(cardElement, stationIdSuffix) {
+    const stationCodeInput = cardElement.querySelector(`#StationCode${stationIdSuffix}`); // Corrected selector
+    if (stationCodeInput) {
         stationCodeInput.addEventListener('input', () => {
-            const code = stationCodeInput.value.toUpperCase();  // Ensure uppercase
+            const code = stationCodeInput.value.toUpperCase();
             const lookup = stationLookup[code];
 
+            const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
+            const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`);
+            const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
+
             if (lookup) {
-                document.getElementById(`stationName${i}`).value = lookup.name || '';
-                document.getElementById(`Lattitude${i}`).value = lookup.latitude || '';
-                document.getElementById(`Longtitude${i}`).value = lookup.longitude || '';
-                // You can also set Division/State if you have fields for them
+                if (nameEl) nameEl.value = lookup.name || '';
+                if (latEl) latEl.value = lookup.latitude || '';
+                if (lonEl) lonEl.value = lookup.longitude || '';
+            } else {
+                // Clear fields if code is not found or becomes invalid
+                // if (nameEl) nameEl.value = ''; // Decide if you want to clear or leave as is
+                // if (latEl) latEl.value = '';
+                // if (lonEl) lonEl.value = '';
             }
         });
     }
 }
 
-// Function to collect user input and submit data to the server
+// --- Data Submission and Excel Handling (largely unchanged from previous, but ensure consistency) ---
 function submitData() {
-    const numStations = document.getElementById("numStations").value;
     const stationData = [];
-    
-    document.getElementById("loadingSpinner").style.display = "block"; // Show loading animation
+    document.getElementById("loadingSpinner").style.display = "block";
+    $('#loadingMessage').text('Processing... Please wait.');
 
-    console.log("📊 Collecting station data...");
-    console.log("📌 Number of Stations:", numStations);
+    $('#stationContainer .station-card').each(function(index) { // Use index for error reporting if needed
+        const card = $(this);
+        const stationVisualNumber = index + 1; // For error messages
 
-    // Collect station data from user input
-    for (let i = 1; i <= numStations; i++) {
-        const name = document.getElementById(`stationName${i}`).value.trim();
-        const Static = parseInt(document.getElementById(`OptimumStatic${i}`).value) || 0;
-        const onboardSlots = parseInt(document.getElementById(`onboardSlots${i}`).value) || 0;
-
-        // Collect new fields
-        const KavachID = parseInt(document.getElementById(`KavachID${i}`).value) || 0; 
-        const StationCode = parseInt(document.getElementById(`StationCode${i}`).value) || 0; 
-        const Lattitude = parseInt(document.getElementById(`Lattitude${i}`).value) || 0; 
-        const Longitude = parseInt(document.getElementById(`Longtitude${i}`).value) || 0; 
+        const name = card.find('.station-name-input').val().trim();
+        const stationCodeValue = card.find('.station-code-input').val().trim().toUpperCase();
+        const staticVal = parseInt(card.find('.optimum-static-input').val()) || 0;
+        const onboardSlotsVal = parseInt(card.find('.onboard-slots-input').val()) || 0;
+        const kavachIDVal = parseInt(card.find('.kavach-id-input').val()) || 0;
+        const latitudeVal = parseFloat(card.find('.latitude-input').val()) || null;
+        const longitudeVal = parseFloat(card.find('.longitude-input').val()) || null;
 
         if (!name) {
-            alert(`Station ${i} name cannot be empty.`);
+            alert(`Station Name cannot be empty for Station ${stationVisualNumber}.`);
             document.getElementById("loadingSpinner").style.display = "none";
-            return;
+            stationData.length = 0; // Clear array to prevent submission
+            return false; // Exit .each loop
+        }
+        if (!stationCodeValue) {
+            alert(`Station Code cannot be empty for Station ${stationVisualNumber}.`);
+            document.getElementById("loadingSpinner").style.display = "none";
+            stationData.length = 0;
+            return false;
         }
 
         stationData.push({
-            name,
-            Static,
-            onboardSlots,
-            KavachID, 
-            StationCode, 
-            Lattitude, 
-            Longitude  
-         });
+            name: name,
+            StationCode: stationCodeValue,
+            Static: staticVal,
+            onboardSlots: onboardSlotsVal,
+            KavachID: kavachIDVal,
+            Lattitude: latitudeVal,
+            Longitude: longitudeVal
+        });
+    });
+
+    if (stationData.length === 0 && $('#stationContainer .station-card').length > 0) {
+        // This happens if validation inside .each failed
+        document.getElementById("loadingSpinner").style.display = "none";
+        return; 
+    }
+    
+    if (stationData.length === 0) {
+        alert("No station data to submit. Please add some stations.");
+        document.getElementById("loadingSpinner").style.display = "none";
+        return;
     }
 
-    console.log("🚀 Sending station data to server:", stationData);
-
-    // Send collected data to the server
-    fetch("/allocate_slots_endpoint", {
+    fetch("/allocate_slots_endpoint", { // Your Flask endpoint
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(stationData)
     })
     .then(response => response.json())
     .then(data => {
-        console.log("📩 Server Response:", data);
-
         if (data.fileUrl) {
-            console.log("✅ Processing complete. Checking for file...");
-            checkFileReady(data.fileUrl); // Start polling to check if file is ready
+            checkFileReady(data.fileUrl);
         } else {
-            alert("Error generating file.");
+            alert(data.message || data.error || "Error generating file from server.");
             document.getElementById("loadingSpinner").style.display = "none";
         }
     })
     .catch(err => {
-        console.error("❌ Submission Error:", err);
-        alert("Error: " + err);
+        alert("Submission Error: " + err.message);
         document.getElementById("loadingSpinner").style.display = "none";
     });
 }
 
-// Function to handle Excel file upload and preview the data in the UI
 function uploadExcel() {
-    // Show spinner
     $('#loadingSpinner').show();
-
+    $('#loadingMessage').text('Uploading and processing Excel file...');
     const fileInput = document.getElementById("excelFile");
-    const file = fileInput.files[0]; 
+    const file = fileInput.files[0];
     if (!file) {
         alert("Please select an Excel file.");
         $('#loadingSpinner').hide();
         return;
     }
-
     const formData = new FormData();
     formData.append("file", file);
 
@@ -891,144 +984,128 @@ function uploadExcel() {
     })
     .then(response => response.json())
     .then(result => {
-        console.log("📩 Server Response:", result); // Log full response in console
-
-        if (result.error) {
-            alert("Error: " + result.error);
-            return;
-        }
-
-        if (!result.data || !Array.isArray(result.data)) {
-            alert("Invalid data format received.");
-            console.error("❌ Unexpected response format:", result);
-            return;
-        }
-
-        // ✅ Update station count
-        document.getElementById("numStations").value = result.station_count;
-        
-        console.log("✅ Data successfully received:", result.data);
-        populateFieldsFromExcel(result.data);
-        document.getElementById("manualSection").style.display = "block";
-        $('#uploadBtn').hide();
-        document.getElementById("stationContainer").style.display = "";
-        $('#submitContainer').show();
         $('#loadingSpinner').hide();
+        if (result.error) {
+            alert("Error: " + result.error); return;
+        }
+        if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
+            alert("No valid data found in Excel or invalid format."); return;
+        }
+        populateFieldsFromExcel(result.data);
+        $('#manualSection').hide();
+        $('#uploadSection').hide(); // Hide upload options after successful processing
+        $('#submitContainer').show();
+        updateStationNumbers(); // Ensure numbering is correct for Excel cards
     })
     .catch(err => {
-        console.error("❌ Upload Error:", err); // Log error details
-        alert("Failed to upload file. Check console for details.");
+        alert("Failed to upload or process Excel file. " + err.message);
         $('#loadingSpinner').hide();
     });
 }
 
-
-
-function populateFieldsFromExcel(stationData) {
+function populateFieldsFromExcel(stationDataArray) {
     const container = document.getElementById("stationContainer");
-    container.className = "row mt-4";
     container.innerHTML = ""; // Clear previous entries
-    
-    stationData.forEach((station, index) => {
-        const card = document.createElement("div");
-        card.className = "col-12 col-sm-6 col-md-4 mb-3";
-        card.innerHTML = `
-            <div class="card shadow p-3">
-                <h5 class="text-center text-secondary">Station ${index + 1}</h5>
 
-                <label class="form-label">Station Code:</label>
-                <input type="text" class="form-control mb-2" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()"
-                       value="${station["Station Code"] || ''}" 
-                       id="StationCode${index + 1}">
+    stationDataArray.forEach((station, index) => {
+        const stationIdSuffix = `excel_${index + 1}`;
+        const cardWrapperId = `stationCard_${stationIdSuffix}`;
+        const cardWrapper = document.createElement("div");
+        cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
+        cardWrapper.id = cardWrapperId;
 
-                <label class="form-label">Station Name:</label>
-                <input type="text" class="form-control mb-2" 
-                       value="${station["Station Name"] ||''}" 
-                       id="stationName${index + 1}" required>
+        cardWrapper.innerHTML = `
+            <div class="card shadow p-0 h-100">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"
+                     id="headerFor_${stationIdSuffix}"
+                     data-bs-toggle="collapse"
+                     data-bs-target="#collapse_${stationIdSuffix}"
+                     aria-expanded="true" 
+                     aria-controls="collapse_${stationIdSuffix}"
+                     style="cursor: pointer;">
+                    <span class="station-title-text">Station ${index + 1} (Excel)</span>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}')"></button>
+                </div>
+                <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
+                    <div class="card-body">
+                        <label class="form-label">Station Code:</label>
+                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" value="${station["Station Code"] || ''}">
 
-                <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                <input type="number" class="form-control mb-2" 
-                       value="${station["Static"] || 0}" 
-                       id="OptimumStatic${index + 1}" required>
+                        <label class="form-label">Station Name:</label>
+                        <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${station["Station Name"] || station["name"] || ''}" required>
 
-                <label class="form-label">Onboard Slots:</label>
-                <input type="number" class="form-control" 
-                       value="${station["Onboard Slots"] || 0}" 
-                       id="onboardSlots${index + 1}" required>
+                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${station["Static"] || station["Optimum no. of Simultaneous Exclusive Static Profile Transfer"] || 0}" required>
 
-                <label class="form-label">Stactionary Kavach ID:</label>
-                <input type="number" class="form-control mb-2" 
-                       value="${station["Stationary Kavach ID"] || 0}" 
-                       id="KavachID${index + 1}">
+                        <label class="form-label">Onboard Slots:</label>
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${station["Onboard Slots"] || station["onboardSlots"] || 0}" required>
+                        
+                        <label class="form-label">Stationary Kavach ID:</label>
+                        <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0" value="${station["Stationary Kavach ID"] || station["KavachID"] || 0}">
 
-                <label class="form-label">Stationary Unit Tower Lattitude:</label>
-                <input type="number" class="form-control mb-2" 
-                       value="${station["Lattitude"] || 0}" 
-                       id="Lattitude${index + 1}">
+                        <label class="form-label">Stationary Unit Tower Latitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" value="${station["Stationary Unit Tower Lattitude"] || station["Lattitude"] || ''}">
 
-                <label class="form-label">Stationary Unit Tower Longtitude:</label>
-                <input type="number" class="form-control mb-2" 
-                       value="${station["Longtitude"] || 0}" 
-                       id="Longtitude${index + 1}" min="0">
+                        <label class="form-label">Stationary Unit Tower Longitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${station["Stationary Unit Tower Longitude"] || station["Longitude"] || ''}">
+                    </div>
+                </div>
             </div>
         `;
-        container.appendChild(card);
-        
+        container.appendChild(cardWrapper);
+        setupStationCodeListener(cardWrapper, stationIdSuffix);
     });
 
-    setupStationCodeListeners(stationData.length);
-    
-    // Show the container and submit section
-    document.getElementById("submitContainer").style.display = "block";
-    alert("Excel data loaded successfully!");
+    if (stationDataArray.length > 0) {
+        $('#submitContainer').show();
+    } else {
+        $('#submitContainer').hide();
+        alert("No valid station data to populate from Excel.");
+    }
+    updateStationNumbers(); // Critical to call after populating from Excel
 }
 
-// Function to check if the file is ready before downloading
+
 function checkFileReady(fileUrl) {
     let attempts = 0;
-    let maxAttempts = 10; // Maximum number of checks before timing out
-    let checkInterval = 3000; // Check every 3 seconds
+    const maxAttempts = 20; 
+    const checkInterval = 3000; 
+
+    $('#loadingSpinner').show(); 
+    $('#loadingMessage').text(`Preparing file for download. Please wait...`);
 
     function poll() {
         fetch(fileUrl, { method: "HEAD" })
         .then(response => {
-            if (response.status === 200) {
-                window.location.href = fileUrl;
-                document.getElementById("loadingSpinner").style.display = "none"; 
-            } else if (response.status === 202) {
-                document.getElementById("loadingMessage").innerText = `Processing... Attempt ${attempts + 1} of ${maxAttempts}`;
-                
-                if (attempts < maxAttempts) {
-                    attempts++;
-                    setTimeout(poll, checkInterval);
-                } else {
-                    alert("File processing took too long. Try again later.");
-                    document.getElementById("loadingSpinner").style.display = "none"; 
-                }
-            } else {
-                alert("Error fetching file.");
-                document.getElementById("loadingSpinner").style.display = "none"; 
+            if (response.ok && response.status === 200) { 
+                $('#loadingMessage').text('File ready! Starting download...');
+                setTimeout(() => { 
+                    window.location.href = fileUrl;
+                    document.getElementById("loadingSpinner").style.display = "none";
+                    $('#stationContainer').empty();
+                    $('#submitContainer').hide();
+                    showManual(); // Or some other default state
+                    updateStationNumbers(); // Reset numbering display
+                }, 1000);
+            } else if (response.status === 404 || attempts >= maxAttempts) { 
+                let message = response.status === 404 ? "File not found or not yet available." : "File processing timed out.";
+                alert(message + " Please check the server or try again later.");
+                document.getElementById("loadingSpinner").style.display = "none";
+            } else { 
+                attempts++;
+                $('#loadingMessage').text(`Processing... Attempt ${attempts} of ${maxAttempts}. Status: ${response.status}`);
+                setTimeout(poll, checkInterval);
             }
         })
         .catch(err => {
-            alert("Error: " + err);
-            document.getElementById("loadingSpinner").style.display = "none"; 
+            alert("Error checking file readiness: " + err.message);
+            document.getElementById("loadingSpinner").style.display = "none";
         });
     }
-
     poll();
 }
 
-
 document.addEventListener('DOMContentLoaded', function () {
-    const excelFileInput = document.getElementById("excelFile");
-    const generateBtn = document.getElementById("generateBtn");
-
-    excelFileInput.addEventListener("change", function () {
-        if (excelFileInput.files.length > 0) {
-            generateBtn.style.display = "none"; // Hide if file selected
-        } else {
-            generateBtn.style.display = "inline-block"; // Show if file cleared
-        }
-    });
+    showManual(); // Start with manual input view by default, or choose another default
+    // console.log("DOM fully loaded. Initial UI set for manual input.");
 });
