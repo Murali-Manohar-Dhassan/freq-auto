@@ -980,72 +980,118 @@ function finishManualInput() {
 function setupStationCodeListener(cardElement, stationIdSuffix) {
     const stationCodeInput = cardElement.querySelector(`#StationCode${stationIdSuffix}`);
     const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
-    const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`);
-    const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
-    const feedbackEl = $(stationCodeInput).siblings('.station-code-feedback');
+    const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`); // Note: HTML uses Lattitude
+    const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`); // Note: HTML uses Longtitude
+    const feedbackEl = $(stationCodeInput).siblings('.station-code-feedback'); // Assumes feedback div exists
 
+    if (!stationCodeInput) {
+        console.error(`StationCode input not found for suffix: ${stationIdSuffix}`);
+        return;
+    }
 
-    stationCodeInput.addEventListener('input', () => {
+    const handleStationCodeValidation = (isBlurEvent = false) => {
         const code = stationCodeInput.value.toUpperCase().trim();
         const lookup = stationLookup[code];
-        feedbackEl.hide(); // Hide feedback on new input
+
+        // Clear previous feedback initially, but only if not a blur event that might immediately show a new one
+        if (!isBlurEvent && feedbackEl && feedbackEl.length) {
+            feedbackEl.text('').hide();
+        }
 
         if (lookup) {
+            // Code found in lookup
             if (nameEl) nameEl.value = lookup.name || '';
             if (latEl) latEl.value = lookup.latitude || '';
             if (lonEl) lonEl.value = lookup.longitude || '';
+            if (feedbackEl && feedbackEl.length) {
+                feedbackEl.text('Code found.').removeClass('text-danger').addClass('text-success').show();
+                setTimeout(() => feedbackEl.fadeOut(), 2000); // Optional: fade out success message
+            }
         } else {
-            // Optional: Clear if not found, or leave as is for manual entry
-            // if (nameEl) nameEl.value = ''; 
+            // Code NOT found in lookup
+            // Clear derived fields immediately if they were previously filled
+            if (nameEl && nameEl.value) nameEl.value = '';
+            if (latEl && latEl.value) latEl.value = '';
+            if (lonEl && lonEl.value) lonEl.value = '';
+
+            if (isBlurEvent && code) { // Only clear the input itself on blur if code is not found and field is not empty
+                stationCodeInput.value = ''; // Clear the station code input itself
+                if (feedbackEl && feedbackEl.length) {
+                    feedbackEl.text('Station code not found & cleared.').addClass('text-danger').removeClass('text-success').show();
+                }
+            } else if (!isBlurEvent && code && feedbackEl && feedbackEl.length) {
+                // On input, if code is not found but field is not empty, just indicate it's not found yet
+                // feedbackEl.text('Station code not in lookup.').addClass('text-warning').removeClass('text-success text-danger').show();
+                // Decided against showing a warning on every keystroke for non-match, can be noisy.
+                // The blur event will handle the final "not found & cleared".
+            }
         }
+    };
+
+    stationCodeInput.addEventListener('input', () => {
+        handleStationCodeValidation(false); // Call validation logic, false indicates it's not a blur event
 
         // --- S-Kav Auto-fill Logic ---
+        // This logic attempts to fill an S-Kav station's code if its neighbors get codes.
+        // This should run on input to be responsive.
+        const code = stationCodeInput.value.toUpperCase().trim(); // get current code for S-Kav
         const currentNumericId = parseInt(stationIdSuffix.split('_')[1]);
-        if (!currentNumericId) return; // Should not happen with 'manual_X'
+        if (!currentNumericId) return;
 
-        // Function to update an S-Kav station
         const attemptAutoFillSkav = (skavNumericId, code1, code2) => {
             const skavCard = document.getElementById(`stationCard_manual_${skavNumericId}`);
-            if (skavCard && skavCard.dataset.isSkav === 'true') {
+            // Ensure it's a manually added card and marked as S-Kav and not yet filled
+            if (skavCard && skavCard.dataset.isSkav === 'true' && skavCard.dataset.isSkavFilled !== 'true' && stationIdSuffix.startsWith('manual_')) {
                 const skavCodeInput = document.getElementById(`StationCodemanual_${skavNumericId}`);
                 if (skavCodeInput && code1 && code2) {
                     skavCodeInput.value = `${code1}-${code2}`;
-                    // $(skavCodeInput).prop('disabled', false).removeClass('skav-input-pending'); // Re-enable
-                    $(skavCard).find('.card-header').removeClass('bg-warning text-dark').addClass('bg-primary'); // Reset header
-                    delete skavCard.dataset.isSkav; // Mark as filled
-                    skavCodeInput.dispatchEvent(new Event('input')); // Trigger its own lookup
+                    $(skavCard).find('.card-header').removeClass('bg-warning text-dark').addClass('bg-primary');
+                    $(skavCodeInput).removeClass('skav-input-pending');
+                    skavCard.dataset.isSkavFilled = 'true';
+                    skavCodeInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             }
         };
 
-        // 1. Check if THIS card's input can complete a PREVIOUS S-Kav station (S-Kav is currentNumericId - 1)
-        if (currentNumericId > 1) {
-            const skavCandidateNumericId = currentNumericId - 1; // Potential S-Kav
-            if (currentNumericId > 2) { // S-Kav needs a station before it
+        // 1. Check if THIS card's input can complete a PREVIOUS S-Kav station
+        if (currentNumericId > 1 && stationIdSuffix.startsWith('manual_')) {
+            const skavCandidateNumericId = currentNumericId - 1;
+            if (currentNumericId > 2) {
                 const beforeSkavNumericId = currentNumericId - 2;
                 const beforeSkavCodeInput = document.getElementById(`StationCodemanual_${beforeSkavNumericId}`);
                 const codeBeforeSkav = beforeSkavCodeInput ? beforeSkavCodeInput.value.trim().toUpperCase() : null;
-                attemptAutoFillSkav(skavCandidateNumericId, codeBeforeSkav, code); // code is current card's code
-            } else { // S-Kav is station 1, this is station 2. Only possible if S-Kav was manually set and we allow prefix-less.
-                // For A-B, station 1 cannot be S-Kav if it needs a preceding station.
-                // If logic allows {CODE_OF_CARD_2}, then handle here. Current logic needs two codes.
+                if (code) { // Ensure current card has a code to use
+                    attemptAutoFillSkav(skavCandidateNumericId, codeBeforeSkav, code);
+                }
             }
         }
 
-        // 2. Check if THIS card's input can complete a NEXT S-Kav station (S-Kav is currentNumericId + 1)
-        const nextNumericId = currentNumericId + 1;
-        const afterSkavNumericId = currentNumericId + 2;
-        const skavCandidateNextNumericId = nextNumericId;
+        // 2. Check if THIS card's input can complete a NEXT S-Kav station
+        if (stationIdSuffix.startsWith('manual_')) {
+            const nextNumericId = currentNumericId + 1;
+            const afterSkavNumericId = currentNumericId + 2;
+            const skavCandidateNextNumericId = nextNumericId;
 
-        // Check if card 'afterSkavNumericId' exists
-        const afterSkavCard = document.getElementById(`stationCard_manual_${afterSkavNumericId}`);
-        if (afterSkavCard) {
-            const afterSkavCodeInput = document.getElementById(`StationCodemanual_${afterSkavNumericId}`);
-            const codeAfterSkav = afterSkavCodeInput ? afterSkavCodeInput.value.trim().toUpperCase() : null;
-            attemptAutoFillSkav(skavCandidateNextNumericId, code, codeAfterSkav); // code is current card's code
+            const afterSkavCard = document.getElementById(`stationCard_manual_${afterSkavNumericId}`);
+            if (afterSkavCard) {
+                const afterSkavCodeInput = document.getElementById(`StationCodemanual_${afterSkavNumericId}`);
+                const codeAfterSkav = afterSkavCodeInput ? afterSkavCodeInput.value.trim().toUpperCase() : null;
+                if (code && codeAfterSkav) { // Ensure current card and the one after S-Kav have codes
+                   attemptAutoFillSkav(skavCandidateNextNumericId, code, codeAfterSkav);
+                }
+            }
+        }
+         // If current input length reaches max length, also trigger the blur-like validation
+        if (stationCodeInput.value.length === stationCodeInput.maxLength) {
+            handleStationCodeValidation(true); // Treat as a blur event for final validation
         }
     });
+
+    stationCodeInput.addEventListener('blur', () => {
+        handleStationCodeValidation(true); // Call validation logic, true indicates it's a blur event
+    });
 }
+
 
 
 // --- Data Submission and Excel Handling ---
