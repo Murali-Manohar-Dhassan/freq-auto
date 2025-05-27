@@ -10,65 +10,114 @@
     <style>
         body {
             background-color: #f8f9fa;
+            font-family: 'Inter', sans-serif; /* Added a common sans-serif font */
         }
         .card {
-            transition: transform 0.2s ease-in-out;
+            transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Added shadow transition */
+            border-radius: 0.5rem; /* Consistent rounded corners */
         }
         .card:hover {
             transform: scale(1.02);
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15); /* Enhanced hover shadow */
         }
         .loader {
-            display: none;
+            display: none; /* Hidden by default */
             text-align: center;
             margin-top: 20px;
+            padding: 20px; /* Added padding */
+        }
+        /* Custom styling for better visual feedback on S-Kav pending inputs */
+        .skav-input-pending {
+            background-color: #fff3cd; /* Light yellow to indicate pending */
+            border-color: #ffeeba;
+        }
+        .btn {
+            border-radius: 0.375rem; /* Bootstrap's default rounded corners for buttons */
+        }
+        /* Ensure station container takes up full width for card layout */
+        #stationContainer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem; /* Spacing between cards */
+        }
+        .station-card {
+             min-width: 300px; /* Minimum width for cards */
         }
     </style>
 </head>
-<body class="container mt-4">
-    <h2 class="text-center text-primary mb-4">CoE Kavach - Frequency & Time Slot Allocation Tool</h2>
+<body class="container mt-4 pb-5"> <!-- Added pb-5 for bottom padding -->
+
+    <header class="text-center mb-5"> <!-- Semantic header -->
+
+        <h1 class="text-primary">CoE Kavach</h1>
+        <h2 class="h4 text-secondary">Frequency & Time Slot Allocation Tool</h2>
+    </header>
 
     <div class="row justify-content-center mb-4">
-        <div class="col-md-6 d-flex justify-content-between">
-            <button class="btn btn-outline-primary w-50 me-2" onclick="showManual()">Manual Input</button>
-            <button class="btn btn-outline-secondary w-50" onclick="showUpload()">Excel Upload</button>
+        <div class="col-md-8 col-lg-6 d-flex justify-content-center gap-2"> <!-- Centered and used gap -->
+
+            <button class="btn btn-outline-primary flex-grow-1" onclick="showManual()">Manual Input</button>
+            <button class="btn btn-outline-secondary flex-grow-1" onclick="showUpload()">Excel Upload</button>
         </div>
     </div>
 
     <div id="manualSection" style="display: none;">
         <div class="row justify-content-center">
-            <div class="col-md-6 text-center">
-                <button class="btn btn-primary w-100 mb-2" id="addStationBtn" onclick="addStationField()">Add Station</button>
-                <button class="btn btn-info w-100" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
+            <div class="col-md-8 col-lg-6 text-center">
+                <button class="btn btn-primary w-100 mb-2 shadow-sm" id="addStationBtn" onclick="addStationField()">Add Station</button>
+                <button class="btn btn-info w-100 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
             </div>
         </div>
     </div>
 
     <div id="uploadSection" style="display: none;">
-        <div class="row mt-4">
-            <div class="col-md-6 mx-auto">
-                <label class="form-label">Upload Excel File:</label>
-                <input type="file" id="excelFile" class="form-control mb-3">
-                <button class="btn btn-info w-100" id="uploadBtn" onclick="uploadExcel()">Upload and Preview</button>
+        <div class="row mt-4 justify-content-center"> <!-- Centered upload section -->
+            <div class="col-md-8 col-lg-6">
+                <div class="card shadow-sm"> <!-- Added card styling to upload section -->
+                    <div class="card-body">
+                        <label for="excelFile" class="form-label">Upload Excel File:</label> <!--  Added for attribute -->
+                        <input type="file" id="excelFile" class="form-control mb-3" accept=".xlsx, .xls"> <!--  Added accept attribute  -->
+                        <button class="btn btn-info w-100 shadow-sm" id="uploadBtn" onclick="uploadExcel()">Upload and Preview</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <div id="stationContainer" class="row mt-4"></div>
+    <div id="stationContainer" class="row mt-4 justify-content-center"></div>
 
-    <div class="loader" id="loadingSpinner" style="display: none;">
-        <div class="spinner-border text-primary" role="status">
+
+    <div class="loader" id="loadingSpinner"> <!--  Removed style="display: none;" as JS handles it  -->
+        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;"> <!--  Larger spinner -->
             <span class="visually-hidden">Loading...</span>
         </div>
-        <p id="loadingMessage" class="text-primary mt-2">Processing... Please wait.</p>
+        <p id="loadingMessage" class="text-primary mt-2 fs-5">Processing... Please wait.</p> <!--  Larger text  -->
     </div>
 
     <div class="row mt-4" id="submitContainer" style="display: none;">
-        <div class="col text-center">
-            <button class="btn btn-success" onclick="submitData()">Submit All Stations</button>
+        <div class="col-md-8 col-lg-6 mx-auto text-center"> <!-- Centered submit button -->
+            <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit All Stations</button> <!--  Larger button -->
         </div>
     </div>
+
+    <div class="modal fade" id="skavModal" tabindex="-1" aria-labelledby="skavModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+      <div class="modal-dialog modal-dialog-centered"> <!-- {/* Centered modal */} -->
+        <div class="modal-content shadow">
+          <div class="modal-header bg-primary text-white">
+            <h5 class="modal-title" id="skavModalLabel">Station Code Confirmation</h5>
+            </div>
+          <div class="modal-body">
+            <p id="skavModalText" class="fs-6">The station code for the previous station is empty. Is this an S-Kav station (its code will be auto-generated from adjacent stations)? Or do you want to fill its code now?</p>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-primary" id="skavModalIsSkavBtn">Yes, it's S-Kav</button>
+            <button type="button" class="btn btn-secondary" id="skavModalFillNowBtn">No, I'll fill code now</button>
+            <button type="button" class="btn btn-warning text-dark" id="skavModalCancelAddBtn">Cancel Adding New Station</button>
+          </div>
+        </div>
+      </div>
+    </div>
     
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
     <script src="{{ url_for('static', filename='script.js') }}"></script>
 </body>
 </html>

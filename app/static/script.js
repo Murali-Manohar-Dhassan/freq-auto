@@ -720,39 +720,137 @@ const stationLookup = {
   "CAPE": { name: "Kanyakumari", division: "Tamilnadu", state: "Tamilnadu", latitude: 8.0883, longitude: 77.5385 }
 };
 
+// --- Modal and Global State for S-Kav ---
+let skavModalInstance;
+let currentPotentialSkavCard = null; // Card that might become S-Kav
+let currentPotentialSkavCodeInput = null; // Its code input
+
 // --- UI Control Functions ---
 function showManual() {
     $('#manualSection').show();
     $('#uploadSection').hide();
     $('#stationContainer').empty().show();
     $('#addStationBtn').show();
-    $('#finishManualInputBtn').text('Finish & Preview Stations').show(); // Reset text and show
+    $('#finishManualInputBtn').text('Finish & Preview Stations').show();
     $('#submitContainer').hide();
     manualStationCount = 0;
-    updateStationNumbers(); // In case any lingering state
+    updateStationNumbers();
+    currentPotentialSkavCard = null; // Reset context
+    currentPotentialSkavCodeInput = null;
 }
 
 function showUpload() {
     $('#uploadSection').show();
     $('#manualSection').hide();
-    $('#stationContainer').empty().show();
+    $('#stationContainer').empty().show(); // Keep station container for Excel preview
     $('#submitContainer').hide();
     $('#uploadBtn').show();
-    updateStationNumbers(); // In case any lingering state
+    updateStationNumbers();
+    currentPotentialSkavCard = null; // Reset context
+    currentPotentialSkavCodeInput = null;
 }
 
 // --- Manual Station Input Functions ---
+
+/**
+ * Initiates adding a new station field.
+ * Checks if the previous station's code is empty and prompts for S-Kav if necessary.
+ */
 function addStationField() {
-    // Collapse the previously added card's body if it exists and is expanded
     if (manualStationCount > 0) {
-        const prevStationIdSuffix = `manual_${manualStationCount}`;
-        const prevCollapseElement = document.getElementById(`collapse_${prevStationIdSuffix}`);
+        const lastStationIdSuffix = `manual_${manualStationCount}`;
+        const lastStationCard = document.getElementById(`stationCard_${lastStationIdSuffix}`);
+        const lastStationCodeInput = document.getElementById(`StationCode${lastStationIdSuffix}`);
+
+        // If last station's code is empty AND it's not already marked as S-Kav
+        if (lastStationCodeInput && !lastStationCodeInput.value.trim() && (!lastStationCard || lastStationCard.dataset.isSkav !== 'true')) {
+            $('#skavModalText').text(`Station ${manualStationCount}'s code is empty. Is it an S-Kav station (its code will be auto-generated from adjacent stations)? Or do you want to fill its code now?`);
+            
+            currentPotentialSkavCard = lastStationCard;
+            currentPotentialSkavCodeInput = lastStationCodeInput;
+            
+            skavModalInstance.show();
+            return; // Stop here; modal button actions will continue the process
+        }
+    }
+    // If no modal was needed (e.g., first card, or previous card's code filled, or previous card already S-Kav)
+    _proceedToAddActualStationField();
+}
+
+/**
+ * Called from modal: Marks the current last station as S-Kav and proceeds to add a new station.
+ */
+function _handleModalConfirmSkav() {
+    if (currentPotentialSkavCard && currentPotentialSkavCodeInput) {
+        currentPotentialSkavCard.dataset.isSkav = 'true';
+        currentPotentialSkavCodeInput.placeholder = "S-Kav (auto-gen)";
+        // Optional: Visually distinguish S-Kav inputs, e.g., disable or style
+        // $(currentPotentialSkavCodeInput).prop('disabled', true).addClass('skav-input-pending');
+        // Change card header color to indicate S-Kav pending
+        $(currentPotentialSkavCard).find('.card-header').removeClass('bg-primary').addClass('bg-warning text-dark');
+
+    }
+    skavModalInstance.hide();
+    _proceedToAddActualStationField(); // Now add the *next* station
+    // Reset context after use
+    currentPotentialSkavCard = null;
+    currentPotentialSkavCodeInput = null;
+}
+
+/**
+ * Called from modal: Focuses on the empty station code input for manual filling.
+ */
+function _handleModalFillNow() {
+    if (currentPotentialSkavCodeInput) {
+        currentPotentialSkavCodeInput.focus();
+        // Small visual cue or Bootstrap alert could be used here instead of window.alert
+        // For example, highlight the input field or show a temporary message next to it.
+        const feedbackEl = $(currentPotentialSkavCodeInput).closest('.card-body').find('.station-code-feedback');
+        if (feedbackEl.length === 0) {
+             $(currentPotentialSkavCodeInput).after('<div class="form-text text-danger station-code-feedback">Please fill in the station code.</div>');
+        } else {
+            feedbackEl.text('Please fill in the station code.').show();
+        }
+    }
+    skavModalInstance.hide();
+    // Reset context
+    currentPotentialSkavCard = null;
+    currentPotentialSkavCodeInput = null;
+}
+
+/**
+ * Called from modal: Cancels adding a new station.
+ */
+function _handleModalCancelAdd() {
+    skavModalInstance.hide();
+    // Reset context
+    currentPotentialSkavCard = null;
+    currentPotentialSkavCodeInput = null;
+}
+
+
+/**
+ * The core logic for creating and appending a new station card.
+ */
+function _proceedToAddActualStationField() {
+    // Collapse the previously added card's body if it exists and is expanded
+    // This refers to the card BEFORE the one we might have just marked S-Kav, or any card before the new one.
+    if (manualStationCount > 0) {
+        // Find the card that is truly the one before the *new* one we are about to create.
+        // If currentPotentialSkavCard was set, manualStationCount is its number.
+        // The new card will be manualStationCount + 1.
+        // So, the card to collapse is manualStationCount.
+        const prevStationToCollapseIdSuffix = `manual_${manualStationCount}`;
+        const prevCollapseElement = document.getElementById(`collapse_${prevStationToCollapseIdSuffix}`);
+        // Make sure we are not trying to collapse a non-existent element if currentPotentialSkavCard was the very first interaction.
         if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
+             // Check if this card is the one we might have just interacted with via modal.
+             // If it's an S-Kav, maybe we want it to stay open? For now, standard collapse.
             new bootstrap.Collapse(prevCollapseElement, { toggle: false }).hide();
         }
     }
 
-    manualStationCount++;
+    manualStationCount++; // This is the number for the NEW station card
     const container = document.getElementById("stationContainer");
     const stationIdSuffix = `manual_${manualStationCount}`;
     const cardWrapperId = `stationCard_${stationIdSuffix}`;
@@ -761,7 +859,6 @@ function addStationField() {
     cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
     cardWrapper.id = cardWrapperId;
 
-    // Card HTML with Bootstrap Collapse
     cardWrapper.innerHTML = `
         <div class="card shadow p-0 h-100">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
@@ -778,8 +875,7 @@ function addStationField() {
                 <div class="card-body">
                     <label class="form-label">Station Code:</label>
                     <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5">
-
-                    <label class="form-label">Station Name:</label>
+                    <div class="form-text station-code-feedback mb-2"></div> <label class="form-label">Station Name:</label>
                     <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" required>
 
                     <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
@@ -801,21 +897,22 @@ function addStationField() {
         </div>
     `;
     container.appendChild(cardWrapper);
-    setupStationCodeListener(cardWrapper, stationIdSuffix);
-    updateStationNumbers(); // Update all station numbers
+    setupStationCodeListener(cardWrapper, stationIdSuffix); // Setup listener for the new card
+    updateStationNumbers();
 
-    // Ensure the "Finish & Preview" button is visible if there are cards
+    // Scroll the new card into the center of the view
+    cardWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
     if ($('#stationContainer .station-card').length > 0) {
         $('#finishManualInputBtn').show();
     }
-    // Submit button is only shown after "Finish & Preview"
     $('#submitContainer').hide();
 }
+
 
 function removeStationCard(cardId) {
     const card = document.getElementById(cardId);
     if (card) {
-        // If a bootstrap collapse instance exists, dispose of it
         const collapseId = card.querySelector('.collapse')?.id;
         if (collapseId) {
             const collapseInstance = bootstrap.Collapse.getInstance(document.getElementById(collapseId));
@@ -824,117 +921,214 @@ function removeStationCard(cardId) {
             }
         }
         card.remove();
-        updateStationNumbers(); // Re-number stations
+        // After removing a card, we might need to re-evaluate S-Kav statuses
+        // For simplicity, this is not handled here but could be an enhancement
+        updateStationNumbers(); 
         if ($('#stationContainer .station-card').length === 0) {
             $('#finishManualInputBtn').hide();
-            $('#submitContainer').hide(); // Hide submit if no cards left
+            $('#submitContainer').hide();
             manualStationCount = 0; // Reset if all cards removed
+        } else {
+            // Potentially trigger S-Kav updates if a removed card was part of an S-Kav triplet
+            // This requires iterating and checking neighbors of S-Kav cards.
+            // For now, manual re-entry might be needed if an S-Kav's neighbor is removed.
         }
     }
 }
 
-// Updates the visual numbering of stations
 function updateStationNumbers() {
-    $('#stationContainer .station-card').each(function(index) {
-        $(this).find('.station-title-text').text(`Station ${index + 1}`);
+    let visibleStationIndex = 0;
+    $('#stationContainer .station-card').each(function() {
+        visibleStationIndex++;
+        $(this).find('.station-title-text').text(`Station ${visibleStationIndex}`);
+        // Note: This only updates the visual "Station X" title.
+        // The IDs `manual_Y` remain based on the original manualStationCount at creation.
     });
+     // If all cards are removed, reset the counter used for adding new ones.
+    if (visibleStationIndex === 0) {
+        manualStationCount = 0;
+    } else {
+         // Adjust manualStationCount to the highest existing card number if cards were removed from middle
+         // This is tricky because IDs are fixed. A better approach is to always increment or manage a list of available IDs.
+         // For now, manualStationCount will continue from where it left off unless all cards are gone.
+         // If a robust re-numbering of IDs is needed, it's a more complex change.
+         // The current solution should be fine as long as we derive numeric IDs for S-Kav logic from the 'manual_X' suffix.
+    }
 }
 
 function finishManualInput() {
     if ($('#stationContainer .station-card').length > 0) {
-        // Expand all cards
         $('#stationContainer .station-card .collapse').each(function() {
             const collapseElement = this;
             if (!collapseElement.classList.contains('show')) {
                 new bootstrap.Collapse(collapseElement, { toggle: false }).show();
             }
-            // Ensure aria-expanded is true on the controller
             const headerId = $(collapseElement).attr('aria-labelledby');
             if(headerId) {
                 $(`#${headerId}`).attr('aria-expanded', 'true');
             }
         });
-
-        $('#addStationBtn').show(); // Keep "Add Station" button visible for dynamic additions
-        // Optionally change the text or hide "Finish" button
-        // For now, let's keep it, maybe it can act as "Expand All"
-        $('#finishManualInputBtn').text('Expand All Cards').show(); 
+        $('#addStationBtn').show();
+        $('#finishManualInputBtn').text('Expand All Cards').show();    
         $('#submitContainer').show();
     } else {
         alert("Please add at least one station.");
-        $('#finishManualInputBtn').text('Finish & Preview Stations'); // Reset text
+        $('#finishManualInputBtn').text('Finish & Preview Stations');
     }
 }
 
 function setupStationCodeListener(cardElement, stationIdSuffix) {
-    const stationCodeInput = cardElement.querySelector(`#StationCode${stationIdSuffix}`); // Corrected selector
-    if (stationCodeInput) {
-        stationCodeInput.addEventListener('input', () => {
-            const code = stationCodeInput.value.toUpperCase();
-            const lookup = stationLookup[code];
+    const stationCodeInput = cardElement.querySelector(`#StationCode${stationIdSuffix}`);
+    const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
+    const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`);
+    const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
+    const feedbackEl = $(stationCodeInput).siblings('.station-code-feedback');
 
-            const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
-            const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`);
-            const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
 
-            if (lookup) {
-                if (nameEl) nameEl.value = lookup.name || '';
-                if (latEl) latEl.value = lookup.latitude || '';
-                if (lonEl) lonEl.value = lookup.longitude || '';
-            } else {
-                // Clear fields if code is not found or becomes invalid
-                // if (nameEl) nameEl.value = ''; // Decide if you want to clear or leave as is
-                // if (latEl) latEl.value = '';
-                // if (lonEl) lonEl.value = '';
+    stationCodeInput.addEventListener('input', () => {
+        const code = stationCodeInput.value.toUpperCase().trim();
+        const lookup = stationLookup[code];
+        feedbackEl.hide(); // Hide feedback on new input
+
+        if (lookup) {
+            if (nameEl) nameEl.value = lookup.name || '';
+            if (latEl) latEl.value = lookup.latitude || '';
+            if (lonEl) lonEl.value = lookup.longitude || '';
+        } else {
+            // Optional: Clear if not found, or leave as is for manual entry
+            // if (nameEl) nameEl.value = ''; 
+        }
+
+        // --- S-Kav Auto-fill Logic ---
+        const currentNumericId = parseInt(stationIdSuffix.split('_')[1]);
+        if (!currentNumericId) return; // Should not happen with 'manual_X'
+
+        // Function to update an S-Kav station
+        const attemptAutoFillSkav = (skavNumericId, code1, code2) => {
+            const skavCard = document.getElementById(`stationCard_manual_${skavNumericId}`);
+            if (skavCard && skavCard.dataset.isSkav === 'true') {
+                const skavCodeInput = document.getElementById(`StationCodemanual_${skavNumericId}`);
+                if (skavCodeInput && code1 && code2) {
+                    skavCodeInput.value = `${code1}-${code2}`;
+                    // $(skavCodeInput).prop('disabled', false).removeClass('skav-input-pending'); // Re-enable
+                    $(skavCard).find('.card-header').removeClass('bg-warning text-dark').addClass('bg-primary'); // Reset header
+                    delete skavCard.dataset.isSkav; // Mark as filled
+                    skavCodeInput.dispatchEvent(new Event('input')); // Trigger its own lookup
+                }
             }
-        });
-    }
+        };
+
+        // 1. Check if THIS card's input can complete a PREVIOUS S-Kav station (S-Kav is currentNumericId - 1)
+        if (currentNumericId > 1) {
+            const skavCandidateNumericId = currentNumericId - 1; // Potential S-Kav
+            if (currentNumericId > 2) { // S-Kav needs a station before it
+                const beforeSkavNumericId = currentNumericId - 2;
+                const beforeSkavCodeInput = document.getElementById(`StationCodemanual_${beforeSkavNumericId}`);
+                const codeBeforeSkav = beforeSkavCodeInput ? beforeSkavCodeInput.value.trim().toUpperCase() : null;
+                attemptAutoFillSkav(skavCandidateNumericId, codeBeforeSkav, code); // code is current card's code
+            } else { // S-Kav is station 1, this is station 2. Only possible if S-Kav was manually set and we allow prefix-less.
+                // For A-B, station 1 cannot be S-Kav if it needs a preceding station.
+                // If logic allows {CODE_OF_CARD_2}, then handle here. Current logic needs two codes.
+            }
+        }
+
+        // 2. Check if THIS card's input can complete a NEXT S-Kav station (S-Kav is currentNumericId + 1)
+        const nextNumericId = currentNumericId + 1;
+        const afterSkavNumericId = currentNumericId + 2;
+        const skavCandidateNextNumericId = nextNumericId;
+
+        // Check if card 'afterSkavNumericId' exists
+        const afterSkavCard = document.getElementById(`stationCard_manual_${afterSkavNumericId}`);
+        if (afterSkavCard) {
+            const afterSkavCodeInput = document.getElementById(`StationCodemanual_${afterSkavNumericId}`);
+            const codeAfterSkav = afterSkavCodeInput ? afterSkavCodeInput.value.trim().toUpperCase() : null;
+            attemptAutoFillSkav(skavCandidateNextNumericId, code, codeAfterSkav); // code is current card's code
+        }
+    });
 }
 
-// --- Data Submission and Excel Handling (largely unchanged from previous, but ensure consistency) ---
+
+// --- Data Submission and Excel Handling ---
 function submitData() {
     const stationData = [];
     document.getElementById("loadingSpinner").style.display = "block";
     $('#loadingMessage').text('Processing... Please wait.');
 
-    $('#stationContainer .station-card').each(function(index) { // Use index for error reporting if needed
+    let allValid = true;
+    $('#stationContainer .station-card').each(function(index) {
         const card = $(this);
-        const stationVisualNumber = index + 1; // For error messages
+        const stationVisualNumber = index + 1; // For error messages (based on current visual order)
+        
+        // Find the actual station ID suffix (e.g., "manual_X") for more robust field finding
+        const cardId = card.attr('id');
+        const idSuffix = cardId ? cardId.substring(cardId.indexOf('_') + 0) : ''; // includes the "manual_" or "excel_" part
 
-        const name = card.find('.station-name-input').val().trim();
-        const stationCodeValue = card.find('.station-code-input').val().trim().toUpperCase();
-        const staticVal = parseInt(card.find('.optimum-static-input').val()) || 0;
-        const onboardSlotsVal = parseInt(card.find('.onboard-slots-input').val()) || 0;
-        const kavachIDVal = parseInt(card.find('.kavach-id-input').val()) || 0;
-        const latitudeVal = parseFloat(card.find('.latitude-input').val()) || null;
-        const longitudeVal = parseFloat(card.find('.longitude-input').val()) || null;
+        const nameInput = card.find(`#stationName${idSuffix}`);
+        const stationCodeInput = card.find(`#StationCode${idSuffix}`);
+        
+        const name = nameInput.val() ? nameInput.val().trim() : '';
+        const stationCodeValue = stationCodeInput.val() ? stationCodeInput.val().trim().toUpperCase() : '';
 
+        const staticVal = parseInt(card.find(`#OptimumStatic${idSuffix}`).val()) || 0;
+        const onboardSlotsVal = parseInt(card.find(`#onboardSlots${idSuffix}`).val()) || 0;
+        const kavachIDVal = parseInt(card.find(`#KavachID${idSuffix}`).val()) || 0;
+        const latitudeVal = parseFloat(card.find(`#Lattitude${idSuffix}`).val()) || null;
+        const longitudeVal = parseFloat(card.find(`#Longtitude${idSuffix}`).val()) || null;
+
+        // Validation
+        let cardHasError = false;
         if (!name) {
-            alert(`Station Name cannot be empty for Station ${stationVisualNumber}.`);
-            document.getElementById("loadingSpinner").style.display = "none";
-            stationData.length = 0; // Clear array to prevent submission
-            return false; // Exit .each loop
-        }
-        if (!stationCodeValue) {
-            alert(`Station Code cannot be empty for Station ${stationVisualNumber}.`);
-            document.getElementById("loadingSpinner").style.display = "none";
-            stationData.length = 0;
-            return false;
+            alert(`Station Name cannot be empty for Station displayed as #${stationVisualNumber} (ID: ${idSuffix}).`);
+            nameInput.addClass('is-invalid');
+            cardHasError = true;
+        } else {
+            nameInput.removeClass('is-invalid');
         }
 
-        stationData.push({
-            name: name,
-            StationCode: stationCodeValue,
-            Static: staticVal,
-            onboardSlots: onboardSlotsVal,
-            KavachID: kavachIDVal,
-            Lattitude: latitudeVal,
-            Longitude: longitudeVal
-        });
+        if (!stationCodeValue) {
+             // Check if it was an S-Kav that failed to auto-generate
+            if (card.data('isSkav') === 'true') {
+                alert(`Station Code for S-Kav station displayed as #${stationVisualNumber} (ID: ${idSuffix}) could not be auto-generated. Please ensure adjacent station codes are filled or fill this manually.`);
+            } else {
+                alert(`Station Code cannot be empty for Station displayed as #${stationVisualNumber} (ID: ${idSuffix}).`);
+            }
+            stationCodeInput.addClass('is-invalid');
+            cardHasError = true;
+        } else {
+            stationCodeInput.removeClass('is-invalid');
+        }
+        
+        if(cardHasError){
+            allValid = false;
+            // Expand card if collapsed to show error
+            const collapseElement = card.find('.collapse');
+            if (collapseElement.length && !collapseElement.hasClass('show')) {
+                new bootstrap.Collapse(collapseElement[0], { toggle: false }).show();
+            }
+        }
+
+
+        if (allValid) { // Only push if this card passed its own validation step (within loop)
+            stationData.push({
+                name: name,
+                StationCode: stationCodeValue,
+                Static: staticVal,
+                onboardSlots: onboardSlotsVal,
+                KavachID: kavachIDVal,
+                Lattitude: latitudeVal, // Corrected typo from Lattitude
+                Longitude: longitudeVal
+            });
+        }
     });
 
+    if (!allValid) {
+        document.getElementById("loadingSpinner").style.display = "none";
+        alert("Please correct the highlighted errors before submitting.");
+        return; // Stop submission
+    }
+    
     if (stationData.length === 0 && $('#stationContainer .station-card').length > 0) {
-        // This happens if validation inside .each failed
+        // This case implies allValid was false from the start or became false
         document.getElementById("loadingSpinner").style.display = "none";
         return; 
     }
@@ -992,10 +1186,11 @@ function uploadExcel() {
             alert("No valid data found in Excel or invalid format."); return;
         }
         populateFieldsFromExcel(result.data);
-        $('#manualSection').hide();
-        $('#uploadSection').hide(); // Hide upload options after successful processing
+        $('#manualSection').hide(); // Keep manual section hidden
+        $('#uploadSection').hide(); 
+        $('#stationContainer').show(); // Ensure station container is visible
         $('#submitContainer').show();
-        updateStationNumbers(); // Ensure numbering is correct for Excel cards
+        // updateStationNumbers(); // Called by populateFieldsFromExcel
     })
     .catch(err => {
         alert("Failed to upload or process Excel file. " + err.message);
@@ -1006,13 +1201,30 @@ function uploadExcel() {
 function populateFieldsFromExcel(stationDataArray) {
     const container = document.getElementById("stationContainer");
     container.innerHTML = ""; // Clear previous entries
+    manualStationCount = 0; // Reset for excel data, as IDs will be excel_X
 
     stationDataArray.forEach((station, index) => {
-        const stationIdSuffix = `excel_${index + 1}`;
+        // For Excel-populated cards, we use a different ID prefix to avoid collision with manual ones if we were to mix.
+        // However, the current UI switches between manual and upload, clearing the container.
+        // Using 'manualStationCount' here for consistency in ID generation if we ever merge.
+        // Or, better, use a specific excel counter.
+        const excelStationIndex = index + 1;
+        const stationIdSuffix = `excel_${excelStationIndex}`; // Distinct suffix for Excel items
         const cardWrapperId = `stationCard_${stationIdSuffix}`;
+        
         const cardWrapper = document.createElement("div");
         cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
         cardWrapper.id = cardWrapperId;
+
+        // Normalize keys from Excel data (handle different possible capitalizations/spacings)
+        const sCode = station["Station Code"] || station["station code"] || station["StationCode"] || '';
+        const sName = station["Station Name"] || station["station name"] || station["StationName"] || station["name"] || '';
+        const sStatic = station["Static"] || station["Optimum no. of Simultaneous Exclusive Static Profile Transfer"] || 0;
+        const sOnboard = station["Onboard Slots"] || station["onboardSlots"] || station["onboardslots"] || 0;
+        const sKavachID = station["Stationary Kavach ID"] || station["KavachID"] || station["kavachid"] || 0;
+        const sLat = station["Stationary Unit Tower Lattitude"] || station["Lattitude"] || station["latitude"] || ''; // Corrected Lattitude typo
+        const sLon = station["Stationary Unit Tower Longitude"] || station["Longitude"] || station["longitude"] || '';
+
 
         cardWrapper.innerHTML = `
             <div class="card shadow p-0 h-100">
@@ -1023,37 +1235,40 @@ function populateFieldsFromExcel(stationDataArray) {
                      aria-expanded="true" 
                      aria-controls="collapse_${stationIdSuffix}"
                      style="cursor: pointer;">
-                    <span class="station-title-text">Station ${index + 1} (Excel)</span>
+                    <span class="station-title-text">Station ${excelStationIndex} (Excel)</span>
                     <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}')"></button>
                 </div>
                 <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
                     <div class="card-body">
                         <label class="form-label">Station Code:</label>
-                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" value="${station["Station Code"] || ''}">
+                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" value="${sCode}">
+                        <div class="form-text station-code-feedback mb-2"></div>
 
                         <label class="form-label">Station Name:</label>
-                        <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${station["Station Name"] || station["name"] || ''}" required>
+                        <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${sName}" required>
 
                         <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${station["Static"] || station["Optimum no. of Simultaneous Exclusive Static Profile Transfer"] || 0}" required>
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${sStatic}" required>
 
                         <label class="form-label">Onboard Slots:</label>
-                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${station["Onboard Slots"] || station["onboardSlots"] || 0}" required>
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${sOnboard}" required>
                         
                         <label class="form-label">Stationary Kavach ID:</label>
-                        <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0" value="${station["Stationary Kavach ID"] || station["KavachID"] || 0}">
+                        <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0" value="${sKavachID}">
 
                         <label class="form-label">Stationary Unit Tower Latitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" value="${station["Stationary Unit Tower Lattitude"] || station["Lattitude"] || ''}">
+                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" value="${sLat}">
 
                         <label class="form-label">Stationary Unit Tower Longitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${station["Stationary Unit Tower Longitude"] || station["Longitude"] || ''}">
+                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${sLon}">
                     </div>
                 </div>
             </div>
         `;
         container.appendChild(cardWrapper);
-        setupStationCodeListener(cardWrapper, stationIdSuffix);
+        // Excel cards also get the listener, though S-Kav logic primarily targets manual entry.
+        // If an Excel card has an empty code and neighbors, it *could* be auto-filled if manually marked S-Kav, but that's not the primary design.
+        setupStationCodeListener(cardWrapper, stationIdSuffix); 
     });
 
     if (stationDataArray.length > 0) {
@@ -1062,7 +1277,7 @@ function populateFieldsFromExcel(stationDataArray) {
         $('#submitContainer').hide();
         alert("No valid station data to populate from Excel.");
     }
-    updateStationNumbers(); // Critical to call after populating from Excel
+    updateStationNumbers(); // Update visual numbering for Excel cards
 }
 
 
@@ -1084,8 +1299,8 @@ function checkFileReady(fileUrl) {
                     document.getElementById("loadingSpinner").style.display = "none";
                     $('#stationContainer').empty();
                     $('#submitContainer').hide();
-                    showManual(); // Or some other default state
-                    updateStationNumbers(); // Reset numbering display
+                    // Reset to a default view after download
+                    showManual(); // Or showUpload() or clear everything
                 }, 1000);
             } else if (response.status === 404 || attempts >= maxAttempts) { 
                 let message = response.status === 404 ? "File not found or not yet available." : "File processing timed out.";
@@ -1106,6 +1321,19 @@ function checkFileReady(fileUrl) {
 }
 
 document.addEventListener('DOMContentLoaded', function () {
-    showManual(); // Start with manual input view by default, or choose another default
-    // console.log("DOM fully loaded. Initial UI set for manual input.");
+    // Initialize the Bootstrap modal instance
+    const modalElement = document.getElementById('skavModal');
+    if (modalElement) {
+        skavModalInstance = new bootstrap.Modal(modalElement);
+    } else {
+        console.error("S-Kav Modal HTML element not found!");
+    }
+
+    // Setup modal button listeners
+    $('#skavModalIsSkavBtn').on('click', _handleModalConfirmSkav);
+    $('#skavModalFillNowBtn').on('click', _handleModalFillNow);
+    $('#skavModalCancelAddBtn').on('click', _handleModalCancelAdd);
+    
+    // Initial UI setup
+    showManual(); 
 });
