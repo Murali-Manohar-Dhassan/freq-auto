@@ -4,7 +4,7 @@ let skavIdLookup = {};
 
 // --- JSON Loading ---
 function loadSkavIdLookup(callback) {
-    fetch('/static/skavIdLookup.json') // Verify this filename
+    fetch('/static/skavidLookup.json') // Verify this filename
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status} for skavIdLookup.json`);
@@ -62,21 +62,60 @@ function showUpload() {
 
 // --- New Station Addition Workflow ---
 function initiateAddStationSequence() {
-    // Collapse the previously added card's body if it exists and is expanded
-    // manualStationCount here is the count of cards *before* adding a new one.
+    // Validate the current last station card IF it exists
     if (manualStationCount > 0) {
-        const prevStationCardSuffix = `manual_${manualStationCount}`; // Suffix of the *actual* last card
+        const prevStationCardSuffix = `manual_${manualStationCount}`;
+        const prevStationCardId = `stationCard_${prevStationCardSuffix}`;
+        const prevStationCard = $(`#${prevStationCardId}`);
+
+        if (prevStationCard.length) {
+            let cardIsValid = true;
+            let firstInvalidElementInCard = null;
+            // Find all required inputs within this specific card
+            prevStationCard.find('input[required]').each(function() {
+                const input = $(this);
+                input.removeClass('is-invalid'); // Clear previous validation styling
+
+                if (!input.val().trim()) {
+                    cardIsValid = false;
+                    input.addClass('is-invalid');
+                    if (!firstInvalidElementInCard) {
+                        firstInvalidElementInCard = input;
+                    }
+                    // console.warn for debugging if needed
+                }
+            });
+
+            if (!cardIsValid) {
+                alert(`Please fill in all required fields for ${prevStationCard.find('.station-title-text').text()} before adding a new station. The first empty required field has been focused.`);
+                
+                const collapseElement = prevStationCard.find('.collapse');
+                if (collapseElement.length && !collapseElement.hasClass('show')) {
+                    // Use Bootstrap's static method to get or create instance to prevent issues
+                    bootstrap.Collapse.getOrCreateInstance(collapseElement[0]).show();
+                    const headerId = collapseElement.attr('aria-labelledby');
+                    if(headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
+                }
+                if (firstInvalidElementInCard) {
+                    firstInvalidElementInCard.focus();
+                }
+                return; // Stop the sequence
+            }
+        }
+
+        // Collapse the previously added card's body if it exists and is expanded (original logic)
         const prevCollapseElement = document.getElementById(`collapse_${prevStationCardSuffix}`);
         const prevHeaderElement = $(`#headerFor_${prevStationCardSuffix}`);
 
         if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
-            new bootstrap.Collapse(prevCollapseElement, { toggle: false }).hide();
+            // Use Bootstrap's static method
+            bootstrap.Collapse.getOrCreateInstance(prevCollapseElement).hide();
         }
         if (prevHeaderElement) {
-             prevHeaderElement.attr('aria-expanded', 'false');
+            prevHeaderElement.attr('aria-expanded', 'false');
         }
     }
-    _proceedToAddActualStationField();
+    _proceedToAddActualStationField(); // Proceed if current card is valid or no cards yet
 }
 
 function _proceedToAddActualStationField() {
@@ -185,36 +224,53 @@ function updateStationNumbers() {
 function validateAllStationCards() {
     let allValid = true;
     let firstInvalidElement = null;
+    const cardsWithErrors = new Set(); // To store IDs of cards with errors
 
     $('#stationContainer .station-card').each(function(index) {
         const card = $(this);
-        const stationNumber = card.find('.station-title-text').text(); // Get "Station X"
+        const cardId = card.attr('id'); // Get card ID
+        const stationNumberText = card.find('.station-title-text').text();
+        let cardHasError = false;
+
         card.find('input[required]').each(function() {
             const input = $(this);
             input.removeClass('is-invalid'); // Clear previous validation
+
             if (!input.val().trim()) {
                 allValid = false;
+                cardHasError = true; // Mark that this card has an error
                 input.addClass('is-invalid');
                 if (!firstInvalidElement) {
                     firstInvalidElement = input;
                 }
-                const label = input.prev('label').text() || `A required field in ${stationNumber}`;
-                console.warn(`Validation Error: "${label}" in ${stationNumber} is empty.`);
+                const labelText = input.prev('label').text() || input.attr('placeholder') || `A required field`;
+                console.warn(`Validation Error: "${labelText}" in ${stationNumberText} is empty.`);
             }
         });
+
+        if (cardHasError && cardId) {
+            cardsWithErrors.add(cardId);
+        }
     });
 
-    if (!allValid && firstInvalidElement) {
-        alert("Please fill in all required fields in all station cards. The first empty required field has been focused.");
-        // Expand the card containing the first invalid element and focus it
-        const invalidCard = firstInvalidElement.closest('.station-card');
-        const collapseElement = invalidCard.find('.collapse');
-        if (collapseElement.length && !collapseElement.hasClass('show')) {
-            new bootstrap.Collapse(collapseElement[0], { toggle: false }).show();
-            const headerId = collapseElement.attr('aria-labelledby');
-            if(headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
+    if (!allValid) {
+        alert("Please fill in all required fields. Cards with missing information have been expanded, and the first empty field has been focused.");
+
+        cardsWithErrors.forEach(cardId => {
+            const errorCard = $(`#${cardId}`);
+            if (errorCard.length) {
+                const collapseElement = errorCard.find('.collapse');
+                if (collapseElement.length && !collapseElement.hasClass('show')) {
+                    bootstrap.Collapse.getOrCreateInstance(collapseElement[0]).show();
+                    const headerId = collapseElement.attr('aria-labelledby');
+                    if (headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
+                }
+            }
+        });
+        
+        if (firstInvalidElement) {
+            firstInvalidElement.focus();
         }
-        firstInvalidElement.focus();
     }
     return allValid;
 }
@@ -254,34 +310,40 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     const feedbackEl = $(kavachIdInput).closest('.card-body').find('.kavach-id-feedback');
     const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationIdSuffix}`);
 
+    // For debugging, ensure elements are found:
+    // console.log({kavachIdInput, stationCodeEl, nameEl, latEl, lonEl, feedbackEl, suggestionsEl, stationIdSuffix});
+
     if (!kavachIdInput || !suggestionsEl) {
         console.error(`Kavach ID Input or suggestions element not found for suffix: ${stationIdSuffix}`);
         return;
     }
 
-    const autoFilledFields = [nameEl, latEl, lonEl, stationCodeEl]; // stationCodeEl added here
+    const autoFilledFields = [nameEl, latEl, lonEl, stationCodeEl];
 
     const hideSuggestions = () => {
         suggestionsEl.innerHTML = '';
         $(suggestionsEl).hide();
     };
 
-    const handleKavachIdValidation = (isBlurEvent = false) => {
+    const handleKavachIdValidation = (isSelectionEvent = false) => { // Renamed isBlurEvent for clarity
         const kavachId = kavachIdInput.value.trim();
         const lookup = skavIdLookup[kavachId];
+        // For debugging:
+        // console.log(`handleKavachIdValidation for ID "${kavachId}", Lookup found:`, lookup);
 
-        if (!isBlurEvent && feedbackEl && feedbackEl.length) {
-            feedbackEl.text('').hide();
+
+        if (!isSelectionEvent && feedbackEl && feedbackEl.length) { // Clear feedback only if not from a direct selection or blur
+             if (kavachIdInput.value === "") feedbackEl.text('').hide(); // Clear only if input is empty and not a blur/selection
         }
 
-        autoFilledFields.forEach(el => { // Clear previous auto-fill markers
-            if(el) el.dataset.autoFilled = "false";
+
+        autoFilledFields.forEach(el => {
+            if(el) el.dataset.autoFilled = "false"; // Reset auto-fill marker
         });
 
         if (lookup) {
-            // Auto-fill fields
             if (stationCodeEl) {
-                stationCodeEl.value = lookup.stationCode || kavachId; // Use lookup.stationCode if available, else kavachId
+                stationCodeEl.value = lookup.stationCode || ''; // Uses specific stationCode from JSON
                 stationCodeEl.dataset.originalValue = stationCodeEl.value;
                 stationCodeEl.dataset.autoFilled = "true";
             }
@@ -305,27 +367,25 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
                 feedbackEl.text('Kavach ID found. Fields auto-filled.').removeClass('text-danger text-warning').addClass('text-success').show();
                 setTimeout(() => feedbackEl.fadeOut(), 3000);
             }
-        } else {
-            // Clear fields ONLY IF they were previously auto-filled by THIS input change
-            // Or if user expects them to clear when Kavach ID is invalid/empty
-            // For simplicity, we can clear them if no lookup and input is now empty or invalid
-            if (kavachId === '' || isBlurEvent) { // Clear if KavachID is cleared or on blur with no match
-                autoFilledFields.forEach(el => {
-                    if (el && el.dataset.autoFilled === "true") { // Only clear if it was from a previous autofill by this listener
-                        // el.value = ''; // Decided not to clear, user might have manually entered
-                    }
-                });
-            }
+        } else { // No lookup found
+            // Clear fields ONLY IF they were previously auto-filled AND the Kavach ID input is now empty OR it's a blur/selection event
+             if (kavachId === '' || isSelectionEvent) {
+                 autoFilledFields.forEach(el => {
+                     if (el && el.dataset.autoFilled === "true" && kavachId === '') { // Only clear if Kavach ID is now empty
+                         // el.value = ''; // Current code doesn't clear, which is fine. User can manually clear.
+                     }
+                 });
+             }
 
-            if (isBlurEvent && kavachId) {
+            if (isSelectionEvent && kavachId) { // If it was a blur/selection and ID has value but not found
                 if (feedbackEl && feedbackEl.length) {
-                    feedbackEl.text('Kavach ID not found.').addClass('text-danger').removeClass('text-success text-warning').show();
+                    feedbackEl.text('Kavach ID not found. Please verify or enter details manually.').addClass('text-danger').removeClass('text-success text-warning').show();
                 }
             }
         }
     };
-
-    // Add change listeners for confirmation on auto-filled fields
+    
+    // Add change listeners for confirmation on auto-filled fields (original logic is good)
     autoFilledFields.forEach(el => {
         if (!el) return;
         el.addEventListener('blur', function(event) {
@@ -333,21 +393,22 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
             if (targetEl.dataset.autoFilled === "true" && targetEl.value !== targetEl.dataset.originalValue) {
                 const labelText = $(targetEl).prev('label').text() || 'This field';
                 if (!confirm(`${labelText} was auto-filled. Are you sure you want to change it to "${targetEl.value}"?`)) {
-                    targetEl.value = targetEl.dataset.originalValue; // Revert
+                    targetEl.value = targetEl.dataset.originalValue;
                 } else {
-                    // User confirmed the change, so this is the new "original" for this field if they edit again
-                    targetEl.dataset.originalValue = targetEl.value;
-                    // Optional: mark as no longer "auto-filled" by the system, but manually confirmed
-                    // targetEl.dataset.autoFilled = "false";
+                    targetEl.dataset.originalValue = targetEl.value; // User confirmed the change
+                    // targetEl.dataset.autoFilled = "false"; // Optional: mark as manually confirmed
                 }
             }
         });
     });
 
-
     kavachIdInput.addEventListener('input', () => {
         const idValue = kavachIdInput.value.trim();
-        suggestionsEl.innerHTML = '';
+        suggestionsEl.innerHTML = ''; // Clear previous suggestions
+
+        if (feedbackEl && feedbackEl.length) { // Clear non-error feedback on new input
+            if(!feedbackEl.hasClass('text-danger')) feedbackEl.text('').hide();
+        }
 
         if (idValue.length > 0) {
             const matches = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
@@ -361,8 +422,8 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
                         e.preventDefault();
                         kavachIdInput.value = match;
                         hideSuggestions();
-                        handleKavachIdValidation(true); // Treat as blur to auto-fill
-                        kavachIdInput.focus();
+                        handleKavachIdValidation(true); // Treat as a selection/confirmation event
+                        // kavachIdInput.focus(); // TRY COMMENTING THIS OUT if clicks don't register fields
                     });
                     suggestionsEl.appendChild(suggestionItem);
                 });
@@ -370,39 +431,47 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
             } else {
                 hideSuggestions();
             }
-        } else {
+        } else { // Input is empty
             hideSuggestions();
-            // If Kavach ID is cleared, trigger validation to potentially clear fields
-            handleKavachIdValidation(false);
+            handleKavachIdValidation(false); // Kavach ID is cleared, update state (e.g. clear feedback)
         }
-        // Continuous validation (without showing persistent error unless blur)
-        if (idValue.length === kavachIdInput.maxLength && !skavIdLookup[idValue]) {
+
+        // Continuous validation feedback (light)
+        if (idValue.length === parseInt(kavachIdInput.maxLength, 10) && !skavIdLookup[idValue]) {
              if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('Kavach ID may not be valid.').addClass('text-warning').removeClass('text-success text-danger').show();
-            }
+                 feedbackEl.text('Kavach ID may not be valid.').addClass('text-warning').removeClass('text-success text-danger').show();
+             }
         } else if (skavIdLookup[idValue]) {
-             if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('Kavach ID found.').addClass('text-success').removeClass('text-warning text-danger').show();
-                setTimeout(() => feedbackEl.fadeOut(), 2000);
-            }
-        } else {
-            if (feedbackEl && feedbackEl.length && !idValue) { // Cleared input
-                 feedbackEl.text('').hide();
-            }
+             if (feedbackEl && feedbackEl.length) { // ID is valid and found
+                if (!feedbackEl.hasClass('text-success')) { // Avoid flickering if already success
+                    feedbackEl.text('Kavach ID found.').addClass('text-success').removeClass('text-warning text-danger').show();
+                    setTimeout(() => { if(feedbackEl.hasClass('text-success')) feedbackEl.fadeOut(); }, 2000);
+                }
+             }
         }
+        // No "else hide" here for warning, it should persist until blur or correction
     });
 
     kavachIdInput.addEventListener('blur', () => {
-        setTimeout(() => { // Timeout to allow click on suggestion to register
-            hideSuggestions();
-            handleKavachIdValidation(true); // Final validation on blur
-        }, 150);
+        setTimeout(() => {
+            hideSuggestions(); // Always hide suggestions on blur after a delay
+            // Perform full validation/feedback only if input is not empty or was not just cleared.
+            if (kavachIdInput.value.trim() !== "") {
+                 handleKavachIdValidation(true); // Final validation on blur
+            } else {
+                 // If input is empty on blur, ensure feedback is cleared if not an error
+                 if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
+                     feedbackEl.text('').hide();
+                 }
+            }
+        }, 150); // 150ms delay allows click on suggestion to register
     });
 
-    // Keyboard navigation for suggestions
+    // Keyboard navigation (original logic is good)
     kavachIdInput.addEventListener('keydown', (e) => {
         const items = suggestionsEl.querySelectorAll('.list-group-item-action');
-        if (items.length === 0) return;
+        if (!$(suggestionsEl).is(":visible") || items.length === 0) return; // Check if suggestions are visible
+
         let currentFocus = -1;
         items.forEach((item, index) => {
             if (item.classList.contains('active')) currentFocus = index;
@@ -422,13 +491,14 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
             items[currentFocus]?.scrollIntoView({ block: 'nearest' });
         } else if (e.key === 'Enter' && currentFocus > -1) {
             e.preventDefault();
-            items[currentFocus]?.click();
+            items[currentFocus]?.click(); // Simulate click on active suggestion
         } else if (e.key === 'Escape') {
+            e.preventDefault(); // Prevent other escape key actions
             hideSuggestions();
         }
     });
 
-    // Hide suggestions if clicked outside
+    // Hide suggestions if clicked outside (original logic is good)
     document.addEventListener('click', (e) => {
         if (!kavachIdInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
             hideSuggestions();
