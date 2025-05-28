@@ -162,7 +162,7 @@
     "longitude": "77.594194"
   },
   "37004": {
-    "name": "DAKAUR",
+    "name": "Dakaur",
     "zone": "North Central",
     "latitude": "28.413917",
     "longitude": "77.644028"
@@ -336,7 +336,7 @@
     "longitude": "78.272389"
   },
   "37033": {
-    "name": "HIRANGAO N",
+    "name": "Hirangao N",
     "zone": "North Central",
     "latitude": "27.175861",
     "longitude": "78.315389"
@@ -402,7 +402,7 @@
     "longitude": "78.777722"
   },
   "37044": {
-    "name": "BALRAI",
+    "name": "Balrai",
     "zone": "North Central",
     "latitude": "26.920639",
     "longitude": "78.823194"
@@ -414,7 +414,7 @@
     "longitude": "78.870167"
   },
   "37046": {
-    "name": "JGR",
+    "name": "Jgr",
     "zone": "North Central",
     "latitude": "26.871778",
     "longitude": "78.895"
@@ -432,7 +432,7 @@
     "longitude": "78.99775"
   },
   "37049": {
-    "name": "ETAWAH JN.",
+    "name": "Etawah Jn.",
     "zone": "North Central",
     "latitude": "26.786083",
     "longitude": "79.026167"
@@ -444,7 +444,7 @@
     "longitude": "79.0825"
   },
   "37051": {
-    "name": "EKDIL",
+    "name": "Ekdil",
     "zone": "North Central",
     "latitude": "26.766361",
     "longitude": "79.118917"
@@ -456,7 +456,7 @@
     "longitude": "79.165472"
   },
   "37053": {
-    "name": "BHARTHAN A",
+    "name": "Bharthan A",
     "zone": "North Central",
     "latitude": "26.751694",
     "longitude": "79.212611"
@@ -468,7 +468,7 @@
     "longitude": "79.263111"
   },
   "37055": {
-    "name": "SAMHON",
+    "name": "Samhon",
     "zone": "North Central",
     "latitude": "26.734083",
     "longitude": "79.319111"
@@ -480,19 +480,19 @@
     "longitude": "79.35325"
   },
   "37057": {
-    "name": "ACHALDA",
+    "name": "Achalda",
     "zone": "North Central",
     "latitude": "26.702528",
     "longitude": "79.404111"
   },
   "37058": {
-    "name": "PATA",
+    "name": "Pata",
     "zone": "North Central",
     "latitude": "26.666806",
     "longitude": "79.478972"
   },
   "37059": {
-    "name": "PHAPHUND",
+    "name": "Phaphund",
     "zone": "North Central",
     "latitude": "26.632278",
     "longitude": "79.553389"
@@ -504,7 +504,7 @@
     "longitude": "79.587333"
   },
   "37061": {
-    "name": "KANCHAUSI",
+    "name": "Kanchausi",
     "zone": "North Central",
     "latitude": "26.598139",
     "longitude": "79.634639"
@@ -516,7 +516,7 @@
     "longitude": "79.681083"
   },
   "37063": {
-    "name": "JHINJHAK",
+    "name": "Jhinjhak",
     "zone": "North Central",
     "latitude": "26.554639",
     "longitude": "79.735972"
@@ -528,7 +528,7 @@
     "longitude": "79.789806"
   },
   "37065": {
-    "name": "AMBIAPUR",
+    "name": "Ambiapur",
     "zone": "North Central",
     "latitude": "26.515722",
     "longitude": "79.826556"
@@ -540,7 +540,7 @@
     "longitude": "79.879528"
   },
   "37067": {
-    "name": "RURA",
+    "name": "Rura",
     "zone": "North Central",
     "latitude": "26.4845",
     "longitude": "79.906639"
@@ -552,7 +552,7 @@
     "longitude": "79.9585"
   },
   "37069": {
-    "name": "MAITHA",
+    "name": "Maitha",
     "zone": "North Central",
     "latitude": "26.476639",
     "longitude": "80.024083"
@@ -564,7 +564,7 @@
     "longitude": "80.069194"
   },
   "37071": {
-    "name": "BHAUPUR",
+    "name": "Bhaupur",
     "zone": "North Central",
     "latitude": "26.469111",
     "longitude": "80.125417"
@@ -576,19 +576,19 @@
     "longitude": "80.175972"
   },
   "37073": {
-    "name": "PANKI",
+    "name": "Panki",
     "zone": "North Central",
     "latitude": "26.460389",
     "longitude": "80.238028"
   },
   "37074": {
-    "name": "GMC A & B cabin",
+    "name": "GMC A & B Cabin",
     "zone": "North Central",
     "latitude": "26.451806",
     "longitude": "80.315278"
   },
   "37075": {
-    "name": "GMC Power cabin",
+    "name": "GMC Power Cabin",
     "zone": "North Central",
     "latitude": "26.451806",
     "longitude": "80.315278"
@@ -672,7 +672,7 @@
     "longitude": "80.686278"
   },
   "37111": {
-    "name": "RH-2 (ID 37112)",
+    "name": "Rh-2 (Id 37112)",
     "zone": "North Central",
     "latitude": "25.984444",
     "longitude": "80.721889"
@@ -690,7 +690,7 @@
     "longitude": "80.800611"
   },
   "37114": {
-    "name": "RAMA",
+    "name": "Rama",
     "zone": "North Central",
     "latitude": "25.890917",
     "longitude": "80.853139"
@@ -702,7 +702,7 @@
     "longitude": "80.898417"
   },
   "37116": {
-    "name": "RH-2 (ID 37117)",
+    "name": "Rh-2 (Id 37117)",
     "zone": "North Central",
     "latitude": "25.852667",
     "longitude": "80.926806"
@@ -750,7 +750,7 @@
     "longitude": "81.320528"
   },
   "37124": {
-    "name": "RH-2 (ID 37125)",
+    "name": "Rh-2 (Id 37125)",
     "zone": "North Central",
     "latitude": "25.628333",
     "longitude": "81.35975"
@@ -762,7 +762,7 @@
     "longitude": "81.404778"
   },
   "37126": {
-    "name": "BIDANPUR",
+    "name": "Bidanpur",
     "zone": "North Central",
     "latitude": "25.58575",
     "longitude": "81.441472"
@@ -774,7 +774,7 @@
     "longitude": "81.489306"
   },
   "37128": {
-    "name": "Manoharga nj",
+    "name": "Manoharga Nj",
     "zone": "North Central",
     "latitude": "25.524667",
     "longitude": "81.558389"
@@ -786,13 +786,13 @@
     "longitude": "81.623083"
   },
   "37130": {
-    "name": "MANAURI",
+    "name": "Manauri",
     "zone": "North Central",
     "latitude": "25.4715",
     "longitude": "81.66"
   },
   "37131": {
-    "name": "RH-2 (ID 37132)",
+    "name": "Rh-2 (Id 37132)",
     "zone": "North Central",
     "latitude": "25.450222",
     "longitude": "81.701"
@@ -804,13 +804,13 @@
     "longitude": "81.739"
   },
   "37133": {
-    "name": "Subedargan j (Prayagraj)",
+    "name": "Subedargan J (Prayagraj)",
     "zone": "North Central",
     "latitude": "25.4395",
     "longitude": "81.790722"
   },
   "37134": {
-    "name": "RH (ID 37135)",
+    "name": "Rh (Id 37135)",
     "zone": "North Central",
     "latitude": "25.446",
     "longitude": "81.812"
@@ -822,7 +822,7 @@
     "longitude": "81.837028"
   },
   "37136": {
-    "name": "NAINI",
+    "name": "Naini",
     "zone": "North Central",
     "latitude": "25.393083",
     "longitude": "81.860333"
@@ -834,7 +834,7 @@
     "longitude": "81.867139"
   },
   "37138": {
-    "name": "RH-2 (ID 37139)",
+    "name": "Rh-2 (Id 37139)",
     "zone": "North Central",
     "latitude": "25.342",
     "longitude": "81.894"
@@ -846,7 +846,7 @@
     "longitude": "81.916111"
   },
   "37140": {
-    "name": "RH-2 (ID 37141)",
+    "name": "Rh-2 (Id 37141)",
     "zone": "North Central",
     "latitude": "25.281",
     "longitude": "81.963"
@@ -858,7 +858,7 @@
     "longitude": "81.988833"
   },
   "37142": {
-    "name": "RH-2 (ID 37143)",
+    "name": "Rh-2 (Id 37143)",
     "zone": "North Central",
     "latitude": "25.242083",
     "longitude": "82.028111"
@@ -870,7 +870,7 @@
     "longitude": "82.084278"
   },
   "37144": {
-    "name": "RH-2 (ID 37144)",
+    "name": "Rh-2 (Id 37144)",
     "zone": "North Central",
     "latitude": "25.214306",
     "longitude": "82.108056"
@@ -900,7 +900,7 @@
     "longitude": "82.388083"
   },
   "37149": {
-    "name": "RH-1 (ID 37150)",
+    "name": "Rh-1 (Id 37150)",
     "zone": "North Central",
     "latitude": "25.174861",
     "longitude": "82.432111"
@@ -912,7 +912,7 @@
     "longitude": "82.457417"
   },
   "37151": {
-    "name": "VINDYACHA L",
+    "name": "Vindyacha L",
     "zone": "North Central",
     "latitude": "25.159972",
     "longitude": "82.5045"
@@ -948,7 +948,7 @@
     "longitude": "82.864833"
   },
   "37157": {
-    "name": "RH-2 (ID 37158)",
+    "name": "Rh-2 (Id 37158)",
     "zone": "North Central",
     "latitude": "25.114889",
     "longitude": "82.903444"
@@ -960,19 +960,19 @@
     "longitude": "82.948167"
   },
   "37159": {
-    "name": "RH1 (ID 37160)",
+    "name": "Rh1 (Id 37160)",
     "zone": "North Central",
     "latitude": "25.183056",
     "longitude": "82.994194"
   },
   "37160": {
-    "name": "AHRAURA ROAD",
+    "name": "Ahraura Road",
     "zone": "North Central",
     "latitude": "25.197667",
     "longitude": "83.020556"
   },
   "37161": {
-    "name": "JEONATHP UR",
+    "name": "Jeonathp Ur",
     "zone": "North Central",
     "latitude": "25.232361",
     "longitude": "83.056806"
@@ -984,115 +984,115 @@
     "longitude": "83.084472"
   },
   "37163": {
-    "name": "NEW DELHI",
+    "name": "New Delhi",
     "zone": "Northern",
     "latitude": "28.646906",
     "longitude": "77.218458"
   },
   "3011": {
-    "name": "TILAK BRIDGE",
+    "name": "Tilak Bridge",
     "zone": "Northern",
     "latitude": "28.622964",
     "longitude": "77.245044"
   },
   "3012": {
-    "name": "MANDAVLI HALT",
+    "name": "Mandavli Halt",
     "zone": "Northern",
     "latitude": "28.6288",
     "longitude": "77.287914"
   },
   "3051": {
-    "name": "ANAND VIHAR",
+    "name": "Anand Vihar",
     "zone": "Northern",
     "latitude": "28.646131",
     "longitude": "77.311817"
   },
   "3013": {
-    "name": "B PANEL",
+    "name": "B Panel",
     "zone": "Northern",
     "latitude": "28.661594",
     "longitude": "77.3292"
   },
   "3014": {
-    "name": "SAHIBABAD",
+    "name": "Sahibabad",
     "zone": "Northern",
     "latitude": "28.674514",
     "longitude": "77.363472"
   },
   "3015": {
-    "name": "GHAZIABAD",
+    "name": "Ghaziabad",
     "zone": "Northern",
     "latitude": "28.655089",
     "longitude": "77.427294"
   },
   "3016": {
-    "name": "GHAZIABAD ELS",
+    "name": "Ghaziabad Els",
     "zone": "Northern",
     "latitude": "---",
     "longitude": "---"
   },
   "3054": {
-    "name": "CHIPIYANABUZ URG",
+    "name": "Chipiyanabuz Urg",
     "zone": "Northern",
     "latitude": "28.626511",
     "longitude": "77.462311"
   },
   "3017": {
-    "name": "GHAZIABAD- MEERUT CITY",
+    "name": "Ghaziabad - Meerut City",
     "zone": "Northern",
     "latitude": "28.664031",
     "longitude": "77.444542"
   },
   "3052": {
-    "name": "HAZRAT NIZAMUDDIN",
+    "name": "Hazrat Nizamuddin",
     "zone": "Northern",
     "latitude": "28.585597",
     "longitude": "77.253894"
   },
   "3018": {
-    "name": "OKHLA",
+    "name": "Okhla",
     "zone": "Northern",
     "latitude": "28.560311",
     "longitude": "77.264053"
   },
   "3019": {
-    "name": "TUGHLAKABAD",
+    "name": "Tughlakabad",
     "zone": "Northern",
     "latitude": "28.503831",
     "longitude": "77.297819"
   },
   "3020": {
-    "name": "JUNCTION CABIN",
+    "name": "Junction Cabin",
     "zone": "Northern",
     "latitude": "28.458233",
     "longitude": "77.303767"
   },
   "3021": {
-    "name": "FARIDABAD",
+    "name": "Faridabad",
     "zone": "Northern",
     "latitude": "28.414717",
     "longitude": "77.306239"
   },
   "3022": {
-    "name": "FARIDABAD TOWN",
+    "name": "Faridabad Town",
     "zone": "Northern",
     "latitude": "28.377",
     "longitude": "77.3099"
   },
   "3023": {
-    "name": "BALLABHGARH",
+    "name": "Ballabhgarh",
     "zone": "Northern",
     "latitude": "28.338864",
     "longitude": "77.313156"
   },
   "3024": {
-    "name": "PYALA",
+    "name": "Pyala",
     "zone": "Northern",
     "latitude": "28.287099",
     "longitude": "77.3179"
   },
   "3025": {
-    "name": "ASAOTI",
+    "name": "Asaoti",
     "zone": "Northern",
     "latitude": "28.251894",
     "longitude": "77.32385"
@@ -1104,7 +1104,7 @@
     "longitude": "77.334875"
   },
   "3053": {
-    "name": "PALWAL",
+    "name": "Palwal",
     "zone": "Northern",
     "latitude": "28.15585",
     "longitude": "77.341869"
@@ -1116,7 +1116,7 @@
     "longitude": "83.1207"
   },
   "45106": {
-    "name": "Pt. Deendayal Upadhaya Loco- shed",
+    "name": "Pt. Deendayal Upadhaya Loco - Shed",
     "zone": "East Central",
     "latitude": "25.2861",
     "longitude": "83.1716"
@@ -1170,7 +1170,7 @@
     "longitude": "83.4622"
   },
   "45098": {
-    "name": "3.20 KM FROM KMS",
+    "name": "3.20 Km From Kms",
     "zone": "East Central",
     "latitude": "25.2272",
     "longitude": "83.492"
@@ -1224,7 +1224,7 @@
     "longitude": "83.7926"
   },
   "45087": {
-    "name": "3.36 KM From KTQ",
+    "name": "3.36 Km From Ktq",
     "zone": "East Central",
     "latitude": "25.0341",
     "longitude": "83.8213"
@@ -1248,7 +1248,7 @@
     "longitude": "83.946"
   },
   "45081": {
-    "name": "4.17 KM from KMGE",
+    "name": "4.17 Km From Kmge",
     "zone": "East Central",
     "latitude": "24.9609",
     "longitude": "83.9831"
@@ -1296,7 +1296,7 @@
     "longitude": "84.2293"
   },
   "45072": {
-    "name": "Chirailapauthu- Bh",
+    "name": "Chirailapauthu-Bh",
     "zone": "East Central",
     "latitude": "24.8617",
     "longitude": "84.2802"
@@ -1374,7 +1374,7 @@
     "longitude": "84.8506"
   },
   "45057": {
-    "name": "3.6KM From PRY",
+    "name": "3.6Km From PRY",
     "zone": "East Central",
     "latitude": "24.8074",
     "longitude": "84.8858"
@@ -1488,7 +1488,7 @@
     "longitude": "85.4202"
   },
   "45037": {
-    "name": "Lalbagh (Auto- Hut)",
+    "name": "Lalbagh (Auto-Hut)",
     "zone": "East Central",
     "latitude": "24.5089",
     "longitude": "85.4478"
@@ -1524,7 +1524,7 @@
     "longitude": "85.5968"
   },
   "45031": {
-    "name": "IBH (Auto-Hut)",
+    "name": "Ibh (Auto-Hut)",
     "zone": "East Central",
     "latitude": "24.354",
     "longitude": "85.6318"
@@ -1536,7 +1536,7 @@
     "longitude": "85.6577"
   },
   "45029": {
-    "name": "Yadudih (Auto- Hut)",
+    "name": "Yadudih (Auto-Hut)",
     "zone": "East Central",
     "latitude": "24.3333",
     "longitude": "85.6938"
@@ -1620,7 +1620,7 @@
     "longitude": "86.077"
   },
   "45011": {
-    "name": "Bholidih (Auto- Hut)",
+    "name": "Bholidih (Auto-Hut)",
     "zone": "East Central",
     "latitude": "23.8984",
     "longitude": "86.1169"
@@ -1632,7 +1632,7 @@
     "longitude": "86.1525"
   },
   "45014": {
-    "name": "IBP No. 3 (Auto- Hut)",
+    "name": "Ibp No. 3 (Auto-Hut)",
     "zone": "East Central",
     "latitude": "23.8579",
     "longitude": "86.1936"
@@ -1656,7 +1656,7 @@
     "longitude": "86.3437"
   },
   "45005": {
-    "name": "Bhuli Bh (Auto- Hut)",
+    "name": "Bhuli Bh (Auto-Hut)",
     "zone": "East Central",
     "latitude": "23.8018",
     "longitude": "86.395"
@@ -1668,7 +1668,7 @@
     "longitude": "86.428"
   },
   "45002": {
-    "name": "Dokra Bh (Auto- Hut)",
+    "name": "Dokra Bh (Auto-Hut)",
     "zone": "East Central",
     "latitude": "23.7834",
     "longitude": "86.4746"
@@ -1680,13 +1680,13 @@
     "longitude": "86.5169"
   },
   "45000": {
-    "name": "MumbaiCentral",
+    "name": "Mumbai Central",
     "zone": "Western",
     "latitude": "18.970637",
     "longitude": "72.818794"
   },
   "24165": {
-    "name": "LowerParel",
+    "name": "Lower Parel",
     "zone": "Western",
     "latitude": "18.99544",
     "longitude": "72.830177"
