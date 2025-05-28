@@ -13,7 +13,7 @@ let adjacentCodesContext = null; // { prevCode, nextCode }
 // --- JSON Loading ---
 function loadSkavIdLookup(callback) {
     // Ensure this path is correct for your Flask static folder
-    fetch('/static/skavIdLookup.json') 
+    fetch('/static/skavidLookup.json') 
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status} for skavIdLookup.json`);
