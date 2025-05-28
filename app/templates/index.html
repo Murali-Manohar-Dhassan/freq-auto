@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Station Data Input</title>
+    <title>Station Data Input - Kavach ID Workflow</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -12,93 +12,62 @@
         body {
             background-color: #f8f9fa;
             font-family: 'Inter', sans-serif;
-            /* Added a common sans-serif font */
         }
-
         .card {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
-            /* Added shadow transition */
             border-radius: 0.5rem;
-            /* Consistent rounded corners */
         }
-
         .card:hover {
             transform: scale(1.02);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
-            /* Enhanced hover shadow */
         }
-
         .loader {
             display: none;
-            /* Hidden by default */
             text-align: center;
             margin-top: 20px;
             padding: 20px;
-            /* Added padding */
         }
-
-        /* Custom styling for better visual feedback on S-Kav pending inputs */
         .skav-input-pending {
             background-color: #fff3cd;
-            /* Light yellow to indicate pending */
             border-color: #ffeeba;
         }
-
         .btn {
             border-radius: 0.375rem;
-            /* Bootstrap's default rounded corners for buttons */
         }
-
-        /* Ensure station container takes up full width for card layout */
         #stationContainer {
             display: flex;
             flex-wrap: wrap;
             gap: 1rem;
-            /* Spacing between cards */
         }
-
         .station-card {
             min-width: 300px;
-            /* Minimum width for cards */
         }
-
-        /* --- Styles for Station Code Suggestions --- */
-        .station-code-wrapper {
+        .input-wrapper { /* Renamed for clarity */
             position: relative;
-            /* Needed for absolute positioning of suggestions */
         }
-
-        .station-code-suggestions {
+        .suggestions-box { /* Renamed for clarity */
             display: none;
-            /* Hidden by default */
             position: absolute;
             top: 100%;
-            /* Position below the input */
             left: 0;
             right: 0;
             z-index: 1050;
-            /* Ensure it's above other elements */
             border: 1px solid #ccc;
             background-color: white;
             max-height: 200px;
             overflow-y: auto;
             border-radius: 0 0 0.375rem 0.375rem;
-            /* Match Bootstrap's corners */
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
-
-        /* Style for keyboard navigation focus */
-        .station-code-suggestions .list-group-item.active {
+        .suggestions-box .list-group-item.active {
             background-color: #0d6efd;
-            /* Bootstrap primary blue */
             color: white;
         }
-
-        /* --- End Station Code Suggestion Styles --- */
     </style>
 </head>
 
 <body class="container mt-4 pb-5">
+
     <header class="text-center mb-5">
         <h1 class="text-primary">Configuration Parameters Generation Tool</h1>
         <h2 class="text-secondary">for</h4>
@@ -117,7 +86,7 @@
     <div id="manualSection" style="display: none;">
         <div class="row justify-content-center">
             <div class="col-md-8 col-lg-6 text-center">
-                <button class="btn btn-primary w-100 mb-2 shadow-sm" id="addStationBtn" onclick="addStationField()">Add Station</button>
+                <button class="btn btn-primary w-100 mb-2 shadow-sm" id="addStationBtn" onclick="initiateAddStationSequence()">Add Station</button>
                 <button class="btn btn-info w-100 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
             </div>
         </div>
@@ -139,39 +108,64 @@
 
     <div id="stationContainer" class="row mt-4 justify-content-center"></div>
 
-
     <div class="loader" id="loadingSpinner">
         <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
             <span class="visually-hidden">Loading...</span>
         </div>
         <p id="loadingMessage" class="text-primary mt-2 fs-5">Processing... Please wait.</p>
-        </div>
+    </div>
 
     <div class="row mt-4" id="submitContainer" style="display: none;">
         <div class="col-md-8 col-lg-6 mx-auto text-center">
             <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit All Stations</button>
-            </div>
+        </div>
     </div>
 
-    <div class="modal fade" id="skavModal" tabindex="-1" aria-labelledby="skavModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal fade" id="stationTypeModal" tabindex="-1" aria-labelledby="stationTypeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow">
                 <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="skavModalLabel">Station Code Confirmation</h5>
+                    <h5 class="modal-title" id="stationTypeModalLabel">Station Configuration Type</h5>
                 </div>
                 <div class="modal-body">
-                    <p id="skavModalText" class="fs-6">The station code for the previous station is empty. Is this an S-Kav station (its code will be auto-generated from adjacent stations)? Or do you want to fill its code now?</p>
+                    <p id="stationTypeModalText" class="fs-6">Is the Stationary Kavach (S-Kav) located at a Standard Station site?</p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="skavModalIsSkavBtn">Yes, it's S-Kav</button>
-                    <button type="button" class="btn btn-secondary" id="skavModalFillNowBtn">No, I'll fill code now</button>
-                    <button type="button" class="btn btn-warning text-dark" id="skavModalCancelAddBtn">Cancel Adding New Station</button>
+                    <button type="button" class="btn btn-success" id="isStandardSiteBtn">Yes, Standard Site</button>
+                    <button type="button" class="btn btn-warning text-dark" id="isAdjacentSitedBtn">No, S-Kav (Adjacent Codes)</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="{{ url_for('static', filename='script.js') }}"></script> 
-</body>
+    <div class="modal fade" id="adjacentCodesModal" tabindex="-1" aria-labelledby="adjacentCodesModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow">
+                <div class="modal-header bg-warning text-dark">
+                    <h5 class="modal-title" id="adjacentCodesModalLabel">Enter Adjacent Station Codes for S-Kav</h5>
+                </div>
+                <div class="modal-body">
+                    <p>Please provide the station codes of the two standard stations adjacent to this S-Kav location.</p>
+                    <div class="mb-3">
+                        <label for="prevStationCodeInput" class="form-label">Previous Standard Station Code:</label>
+                        <input type="text" class="form-control" id="prevStationCodeInput" placeholder="e.g., STN1" oninput="this.value = this.value.toUpperCase()" maxlength="10">
+                         <div id="prevStationCodeFeedback" class="form-text"></div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="nextStationCodeInput" class="form-label">Next Standard Station Code:</label>
+                        <input type="text" class="form-control" id="nextStationCodeInput" placeholder="e.g., STN3" oninput="this.value = this.value.toUpperCase()" maxlength="10">
+                        <div id="nextStationCodeFeedback" class="form-text"></div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="submitAdjacentCodesBtn">Confirm S-Kav Codes</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    </body>
 </html>
