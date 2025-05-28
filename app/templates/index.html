@@ -74,21 +74,13 @@
         <h1 class="text-primary">Radio Communication Backbone (mComm) of Railway Kavach</h2>
         <h3 class="text-secondary">Center of Excellence for Railway Kavach Technology</h2>
         <h5 class="text-secondary">Version 2.0</h2>
-    </header>
+
+        </header>
 
     <div class="row justify-content-center mb-4">
         <div class="col-md-8 col-lg-6 d-flex justify-content-center gap-2">
             <button class="btn btn-outline-primary flex-grow-1" onclick="showManual()">Manual Input</button>
             <button class="btn btn-outline-secondary flex-grow-1" onclick="showUpload()">Excel Upload</button>
-        </div>
-    </div>
-
-    <div id="manualSection" style="display: none;">
-        <div class="row justify-content-center">
-            <div class="col-md-8 col-lg-6 text-center">
-                <button class="btn btn-primary w-100 mb-2 shadow-sm" id="addStationBtn" onclick="initiateAddStationSequence()">Add Station</button>
-                <button class="btn btn-info w-100 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
-            </div>
         </div>
     </div>
 
@@ -108,64 +100,24 @@
 
     <div id="stationContainer" class="row mt-4 justify-content-center"></div>
 
-    <div class="loader" id="loadingSpinner">
-        <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
-            <span class="visually-hidden">Loading...</span>
+    <div id="manualInputActions" class="row mt-3 justify-content-center" style="display: none;">
+        <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2"> <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn" onclick="initiateAddStationSequence()">Add Station</button>
+            <button class="btn btn-info flex-grow-1 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
         </div>
-        <p id="loadingMessage" class="text-primary mt-2 fs-5">Processing... Please wait.</p>
     </div>
+
+    <div class="loader" id="loadingSpinner">
+        </div>
 
     <div class="row mt-4" id="submitContainer" style="display: none;">
-        <div class="col-md-8 col-lg-6 mx-auto text-center">
-            <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit All Stations</button>
-        </div>
-    </div>
-
-    <div class="modal fade" id="stationTypeModal" tabindex="-1" aria-labelledby="stationTypeModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title" id="stationTypeModalLabel">Station Configuration Type</h5>
-                </div>
-                <div class="modal-body">
-                    <p id="stationTypeModalText" class="fs-6">Is the Stationary Kavach (S-Kav) located at a Standard Station site?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="isStandardSiteBtn">Yes, Standard Site</button>
-                    <button type="button" class="btn btn-warning text-dark" id="isAdjacentSitedBtn">No, S-Kav (Adjacent Codes)</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
+        <div class="col-md-8 col-lg-6 mx-auto text-center position-relative">
+            <div id="submitArrowGuide" style="display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 2.5rem; color: #0d6efd; margin-bottom: 5px; line-height: 1;">
+                ⬇️
             </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="adjacentCodesModal" tabindex="-1" aria-labelledby="adjacentCodesModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content shadow">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title" id="adjacentCodesModalLabel">Enter Adjacent Station Codes for S-Kav</h5>
-                </div>
-                <div class="modal-body">
-                    <p>Please provide the station codes of the two standard stations adjacent to this S-Kav location.</p>
-                    <div class="mb-3">
-                        <label for="prevStationCodeInput" class="form-label">Previous Standard Station Code:</label>
-                        <input type="text" class="form-control" id="prevStationCodeInput" placeholder="e.g., STN1" oninput="this.value = this.value.toUpperCase()" maxlength="10">
-                         <div id="prevStationCodeFeedback" class="form-text"></div>
-                    </div>
-                    <div class="mb-3">
-                        <label for="nextStationCodeInput" class="form-label">Next Standard Station Code:</label>
-                        <input type="text" class="form-control" id="nextStationCodeInput" placeholder="e.g., STN3" oninput="this.value = this.value.toUpperCase()" maxlength="10">
-                        <div id="nextStationCodeFeedback" class="form-text"></div>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="submitAdjacentCodesBtn">Confirm S-Kav Codes</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                </div>
-            </div>
+            <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit & Generate sheet</button>
         </div>
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script>
-    </body>
+</body>
 </html>

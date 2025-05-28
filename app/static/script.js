@@ -41,12 +41,16 @@ document.addEventListener('DOMContentLoaded', function () {
 
 // --- UI Control Functions ---
 function showManual() {
-    $('#manualSection').show();
+    // $('#manualSection').show(); // This line is no longer needed if the div is removed
     $('#uploadSection').hide();
     $('#stationContainer').empty().show();
-    $('#addStationBtn').show();
-    $('#finishManualInputBtn').text('Finish & Preview Stations').hide();
+
+    $('#manualInputActions').show(); // Show the new container for action buttons
+    $('#addStationBtn').show();      // This button is inside #manualInputActions
+    $('#finishManualInputBtn').text('Finish & Preview Stations').hide(); // Also inside
+
     $('#submitContainer').hide();
+    $('#submitArrowGuide').hide(); // Ensure arrow is hidden initially
     manualStationCount = 0;
     updateStationNumbers();
 }
