@@ -44,6 +44,7 @@ def allocate_slots(
         station_name = station_data["name"]
         optimum_static_param = station_data["Static"]
         requested_onboard_slots = station_data["onboardSlots"]
+        station_code, skavach_id, latitude, longitude = station_data["StationCode"], station_data["KavachID"], station_data["Lattitude"], station_data["Longitude"]
         
         val_for_roundup = ((optimum_static_param * 120) + (requested_onboard_slots - optimum_static_param) * 40 + 100) / 66
         calculated_station_slots = math.ceil(val_for_roundup)
@@ -226,6 +227,10 @@ def allocate_slots(
 
             allocations.append({
                 "Station": s_name, "Frequency": s_freq,
+                "Stationary Kavach ID":skavach_id,
+                "Station Code":station_code,
+                "Latitude":latitude,
+                "Longitude":longitude,
                 "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": final_plan_to_commit["calculated_station_slots"],
                 "Stationary Kavach Slots Allocated": ", ".join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:]))),
@@ -382,19 +387,31 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         if station_specific_data_rows.empty: continue
         station_data_row = station_specific_data_rows.iloc[0]
 
-        # Row 7 (Stationary Kavach ID Data - Blank with left alignment)
-        ws.cell(row=label_stationary_kavach_id_row, column=excel_data_col).alignment = left_align_v_center
+        # Row 7: Stationary Kavach ID
+        cell_id_r7 = ws.cell(row=label_stationary_kavach_id_row, column=excel_data_col)
+        cell_id_r7.value = station_data_row.get("Stationary Kavach ID", "")
+        cell_id_r7.alignment = center_align_v_center_no_wrap
+
 
         # Row 8 (Rotated Station Names)
         header_cell_rotated = ws.cell(row=header_excel_row, column=excel_data_col)
         header_cell_rotated.value = station_name
-        header_cell_rotated.alignment = Alignment(text_rotation=90, horizontal='center', vertical='center')
+        header_cell_rotated.alignment = center_align_v_center_no_wrap
         
-        # Rows 9, 10, 11 (Station Code, Lat, Long Data - Blank with left alignment)
-        ws.cell(row=label_station_code_row, column=excel_data_col).alignment = left_align_v_center
-        ws.cell(row=label_lat_row, column=excel_data_col).alignment = left_align_v_center
-        ws.cell(row=label_long_row, column=excel_data_col).alignment = left_align_v_center
+        # Row 9: Station Code
+        cell_code_r9 = ws.cell(row=label_station_code_row, column=excel_data_col)
+        cell_code_r9.value = station_data_row.get("Station Code", "")
+        cell_code_r9.alignment = center_align_v_center_no_wrap
 
+        # Row 10: Latitude
+        cell_lat_r10 = ws.cell(row=label_lat_row, column=excel_data_col)
+        cell_lat_r10.value = station_data_row.get("Latitude", "")
+        cell_lat_r10.alignment = center_align_v_center_no_wrap
+
+        # Row 11: Longitude
+        cell_long_r11 = ws.cell(row=label_long_row, column=excel_data_col)
+        cell_long_r11.value = station_data_row.get("Longitude", "")
+        cell_long_r11.alignment = center_align_v_center_no_wrap
         # Row 12 (Optimum Static Values)
         # User's code uses "Static". Ensure this column exists in results_df.
         # If your allocate_slots provides "Optimum Static Param", change "Static" to that.
@@ -439,7 +456,6 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
                     tx_window_text_r15 = f"P{slot_numbers_r15[0]}-P{slot_numbers_r15[-1]+cell_stat_count_r14.value - 1}"
         cell_tx_window_r15 = ws.cell(row=label_tx_window_row, column=excel_data_col)
         cell_tx_window_r15.value = tx_window_text_r15
-        cell_tx_window_r15.alignment = center_align_v_center
         cell_tx_window_r15.alignment = center_align_v_center_no_wrap 
 
         # Row 16 (Onboard Count Data)
