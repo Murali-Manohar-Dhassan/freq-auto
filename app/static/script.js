@@ -7,7 +7,6 @@ let currentPotentialSkavCodeInput = null; // Its code input
 
 // --- JSON Loading ---
 function loadStationLookup(callback) {
-    // Make sure this path is correct based on your Flask static folder setup
     fetch('/static/stationLookup.json') 
         .then(response => {
             if (!response.ok) {
@@ -48,14 +47,13 @@ document.addEventListener('DOMContentLoaded', function () {
             console.error("S-Kav Modal element not found!");
         }
         
-        // Show the initial view
         showManual();
         // --- END ADDED ---
     });
 });
 
 
-// --- UI Control Functions (No Changes Needed) ---
+// --- UI Control Functions ---
 function showManual() {
     $('#manualSection').show();
     $('#uploadSection').hide();
@@ -88,7 +86,7 @@ function addStationField() {
         const lastStationCodeInput = document.getElementById(`StationCode${lastStationIdSuffix}`);
 
         if (lastStationCodeInput && !lastStationCodeInput.value.trim() && (!lastStationCard || lastStationCard.dataset.isSkav !== 'true')) {
-            $('#skavModalText').text(`Station ${manualStationCount}'s code is empty. Is it an S-Kav station (its code will be auto-generated from adjacent stations)? Or do you want to fill its code now?`);
+            $('#skavModalText').text(`Station ${manualStationCount}'s code is empty. Is it an S-Kavach station (its code will be auto-generated from adjacent stations)? Or do you want to fill its code now?`);
             currentPotentialSkavCard = lastStationCard;
             currentPotentialSkavCodeInput = lastStationCodeInput;
             if (skavModalInstance) { // Check if modal is initialized
@@ -178,30 +176,31 @@ function _proceedToAddActualStationField() {
             </div>
             <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
                 <div class="card-body">
-                    <label class="form-label">Station Code:</label>
+
+                    <label class="form-label">Stationary Kavach ID:</label>
+                    <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}">
+
+                    <label class="form-label">Station Name:</label>
+                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" required>
+
+                    <label class="form-label">Station    Code:</label>
                     <div class="station-code-wrapper"> 
                         <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" autocomplete="off">
                         <div class="station-code-suggestions list-group" id="suggestions_${stationIdSuffix}"></div> 
                     </div>
                     <div class="form-text station-code-feedback mb-2"></div> 
 
-                    <label class="form-label">Station Name:</label>
-                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" required>
+                    <label class="form-label">Stationary Unit Tower Latitude:</label>
+                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}">
+
+                    <label class="form-label">Stationary Unit Tower Longitude:</label>
+                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}">
 
                     <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
                     <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" required>
 
                     <label class="form-label">Onboard Slots:</label>
                     <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" required>
-                    
-                    <label class="form-label">Stationary Kavach ID:</label>
-                    <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0">
-
-                    <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}">
-
-                    <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}">
                 </div>
             </div>
         </div>
@@ -529,13 +528,13 @@ function submitData() {
 
         if (allValid) { // Only push if this card passed its own validation step (within loop)
             stationData.push({
+                KavachID: kavachIDVal,
                 name: name,
                 StationCode: stationCodeValue,
+                Lattitude: latitudeVal, // Corrected typo from Lattitude
+                Longitude: longitudeVal,
                 Static: staticVal,
                 onboardSlots: onboardSlotsVal,
-                KavachID: kavachIDVal,
-                Lattitude: latitudeVal, // Corrected typo from Lattitude
-                Longitude: longitudeVal
             });
         }
     });
@@ -659,27 +658,29 @@ function populateFieldsFromExcel(stationDataArray) {
                 </div>
                 <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
                     <div class="card-body">
-                        <label class="form-label">Station Code:</label>
-                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" value="${sCode}">
-                        <div class="form-text station-code-feedback mb-2"></div>
+
+                        <label class="form-label">Stationary Kavach ID:</label>
+                        <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0" value="${sKavachID}">
 
                         <label class="form-label">Station Name:</label>
                         <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${sName}" required>
 
-                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${sStatic}" required>
-
-                        <label class="form-label">Onboard Slots:</label>
-                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${sOnboard}" required>
-                        
-                        <label class="form-label">Stationary Kavach ID:</label>
-                        <input type="number" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" min="0" value="${sKavachID}">
-
+                        <label class="form-label">Station Code:</label>
+                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" oninput="this.value = this.value.toUpperCase()" maxlength="5" value="${sCode}">
+                        <div class="form-text station-code-feedback mb-2"></div>
+                                              
                         <label class="form-label">Stationary Unit Tower Latitude:</label>
                         <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" value="${sLat}">
 
                         <label class="form-label">Stationary Unit Tower Longitude:</label>
                         <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${sLon}">
+                        
+                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${sStatic}" required>
+
+                        <label class="form-label">Onboard Slots:</label>
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${sOnboard}" required>
+
                     </div>
                 </div>
             </div>

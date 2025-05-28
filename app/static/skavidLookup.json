@@ -1,0 +1,1724 @@
+{
+  "24200": {
+    "name": "Ahmedabad Jn",
+    "zone": "Western",
+    "latitude": "23.03185",
+    "longitude": "72.602317"
+  },
+  "24201": {
+    "name": "Kankariya Cabin",
+    "zone": "Western",
+    "latitude": "23.008447",
+    "longitude": "72.606519"
+  },
+  "24202": {
+    "name": "Vatva",
+    "zone": "Western",
+    "latitude": "22.961097",
+    "longitude": "72.628953"
+  },
+  "24203": {
+    "name": "Geratpur",
+    "zone": "Western",
+    "latitude": "22.916156",
+    "longitude": "72.6556"
+  },
+  "24204": {
+    "name": "Barejadi Nandej",
+    "zone": "Western",
+    "latitude": "22.895372",
+    "longitude": "72.677761"
+  },
+  "24205": {
+    "name": "Kanij",
+    "zone": "Western",
+    "latitude": "22.865236",
+    "longitude": "72.706131"
+  },
+  "24206": {
+    "name": "LC-294",
+    "zone": "Western",
+    "latitude": "22.8474",
+    "longitude": "72.724661"
+  },
+  "24207": {
+    "name": "Mahemadabad & Kheda Rd",
+    "zone": "Western",
+    "latitude": "22.818733",
+    "longitude": "72.753567"
+  },
+  "24208": {
+    "name": "LC-286",
+    "zone": "Western",
+    "latitude": "22.790944",
+    "longitude": "72.776072"
+  },
+  "24209": {
+    "name": "Gothaj",
+    "zone": "Western",
+    "latitude": "22.758256",
+    "longitude": "72.802875"
+  },
+  "24210": {
+    "name": "LC-278",
+    "zone": "Western",
+    "latitude": "22.736442",
+    "longitude": "72.821164"
+  },
+  "24211": {
+    "name": "Nadiad Jn",
+    "zone": "Western",
+    "latitude": "22.697347",
+    "longitude": "72.855053"
+  },
+  "24212": {
+    "name": "Utarsanda",
+    "zone": "Western",
+    "latitude": "22.656278",
+    "longitude": "72.887725"
+  },
+  "24213": {
+    "name": "Kanjari Boriyavi",
+    "zone": "Western",
+    "latitude": "22.615089",
+    "longitude": "72.922664"
+  },
+  "24214": {
+    "name": "LC-264",
+    "zone": "Western",
+    "latitude": "22.588172",
+    "longitude": "72.944175"
+  },
+  "24215": {
+    "name": "Anand Jn",
+    "zone": "Western",
+    "latitude": "22.560683",
+    "longitude": "72.968275"
+  },
+  "24216": {
+    "name": "LC-258",
+    "zone": "Western",
+    "latitude": "22.542061",
+    "longitude": "72.982539"
+  },
+  "24217": {
+    "name": "Vadod",
+    "zone": "Western",
+    "latitude": "22.515181",
+    "longitude": "73.007906"
+  },
+  "24218": {
+    "name": "Adas Road",
+    "zone": "Western",
+    "latitude": "22.487117",
+    "longitude": "73.033414"
+  },
+  "24219": {
+    "name": "Vasad Jn",
+    "zone": "Western",
+    "latitude": "22.453242",
+    "longitude": "73.060614"
+  },
+  "24220": {
+    "name": "LC-246",
+    "zone": "Western",
+    "latitude": "22.427506",
+    "longitude": "73.084375"
+  },
+  "24221": {
+    "name": "Ranoli",
+    "zone": "Western",
+    "latitude": "22.406072",
+    "longitude": "73.112589"
+  },
+  "24222": {
+    "name": "Bajva",
+    "zone": "Western",
+    "latitude": "22.369228",
+    "longitude": "73.142183"
+  },
+  "24223": {
+    "name": "Maripat",
+    "zone": "North Central",
+    "latitude": "28.587861",
+    "longitude": "77.49625"
+  },
+  "37001": {
+    "name": "Dadari",
+    "zone": "North Central",
+    "latitude": "28.539361",
+    "longitude": "77.537472"
+  },
+  "37002": {
+    "name": "LSC-5",
+    "zone": "North Central",
+    "latitude": "28.514167",
+    "longitude": "77.558417"
+  },
+  "37003": {
+    "name": "Ajaibpur",
+    "zone": "North Central",
+    "latitude": "28.472639",
+    "longitude": "77.594194"
+  },
+  "37004": {
+    "name": "DAKAUR",
+    "zone": "North Central",
+    "latitude": "28.413917",
+    "longitude": "77.644028"
+  },
+  "37005": {
+    "name": "LSC-10",
+    "zone": "North Central",
+    "latitude": "28.371333",
+    "longitude": "77.679528"
+  },
+  "37006": {
+    "name": "Wair",
+    "zone": "North Central",
+    "latitude": "28.349556",
+    "longitude": "77.698667"
+  },
+  "37007": {
+    "name": "Chola",
+    "zone": "North Central",
+    "latitude": "28.310167",
+    "longitude": "77.731917"
+  },
+  "37008": {
+    "name": "LSC-13",
+    "zone": "North Central",
+    "latitude": "28.271361",
+    "longitude": "77.764417"
+  },
+  "37009": {
+    "name": "Sikandarpur",
+    "zone": "North Central",
+    "latitude": "28.247278",
+    "longitude": "77.785083"
+  },
+  "37010": {
+    "name": "Khurja Jn.",
+    "zone": "North Central",
+    "latitude": "28.212639",
+    "longitude": "77.814417"
+  },
+  "37011": {
+    "name": "LSC-17",
+    "zone": "North Central",
+    "latitude": "28.172056",
+    "longitude": "77.848278"
+  },
+  "37012": {
+    "name": "Danwar",
+    "zone": "North Central",
+    "latitude": "28.12875",
+    "longitude": "77.884972"
+  },
+  "37013": {
+    "name": "ECUU-26",
+    "zone": "North Central",
+    "latitude": "28.08825",
+    "longitude": "77.919"
+  },
+  "37014": {
+    "name": "Somna",
+    "zone": "North Central",
+    "latitude": "28.055028",
+    "longitude": "77.947278"
+  },
+  "37015": {
+    "name": "LSC-22",
+    "zone": "North Central",
+    "latitude": "28.018972",
+    "longitude": "77.97725"
+  },
+  "37016": {
+    "name": "Kulwa",
+    "zone": "North Central",
+    "latitude": "27.981389",
+    "longitude": "78.008917"
+  },
+  "37017": {
+    "name": "Mehrawal",
+    "zone": "North Central",
+    "latitude": "27.937306",
+    "longitude": "78.042889"
+  },
+  "37018": {
+    "name": "Aligarh Jn.",
+    "zone": "North Central",
+    "latitude": "27.889722",
+    "longitude": "78.075556"
+  },
+  "37019": {
+    "name": "Daudkhan",
+    "zone": "North Central",
+    "latitude": "27.830694",
+    "longitude": "78.098889"
+  },
+  "37020": {
+    "name": "Mandrak",
+    "zone": "North Central",
+    "latitude": "27.769111",
+    "longitude": "78.110611"
+  },
+  "37021": {
+    "name": "Sasni",
+    "zone": "North Central",
+    "latitude": "27.703583",
+    "longitude": "78.122722"
+  },
+  "37022": {
+    "name": "LSC-35",
+    "zone": "North Central",
+    "latitude": "27.676361",
+    "longitude": "78.127583"
+  },
+  "37023": {
+    "name": "Hathras Jn.",
+    "zone": "North Central",
+    "latitude": "27.62775",
+    "longitude": "78.135167"
+  },
+  "37024": {
+    "name": "LSC-38",
+    "zone": "North Central",
+    "latitude": "27.582556",
+    "longitude": "78.145056"
+  },
+  "37025": {
+    "name": "Pora",
+    "zone": "North Central",
+    "latitude": "27.530444",
+    "longitude": "78.154861"
+  },
+  "37026": {
+    "name": "LSC-40",
+    "zone": "North Central",
+    "latitude": "27.501972",
+    "longitude": "78.159972"
+  },
+  "37027": {
+    "name": "Jalesar Road",
+    "zone": "North Central",
+    "latitude": "27.445056",
+    "longitude": "78.170556"
+  },
+  "37028": {
+    "name": "Chamrola",
+    "zone": "North Central",
+    "latitude": "27.38925",
+    "longitude": "78.181278"
+  },
+  "37029": {
+    "name": "Barhan Jn.",
+    "zone": "North Central",
+    "latitude": "27.329194",
+    "longitude": "78.192056"
+  },
+  "37030": {
+    "name": "Mitawali",
+    "zone": "North Central",
+    "latitude": "27.258833",
+    "longitude": "78.205111"
+  },
+  "37031": {
+    "name": "Tundla Jn.",
+    "zone": "North Central",
+    "latitude": "27.210556",
+    "longitude": "78.231917"
+  },
+  "37032": {
+    "name": "LSC-49",
+    "zone": "North Central",
+    "latitude": "27.192667",
+    "longitude": "78.272389"
+  },
+  "37033": {
+    "name": "HIRANGAO N",
+    "zone": "North Central",
+    "latitude": "27.175861",
+    "longitude": "78.315389"
+  },
+  "37034": {
+    "name": "Firozabad",
+    "zone": "North Central",
+    "latitude": "27.147528",
+    "longitude": "78.386056"
+  },
+  "37035": {
+    "name": "LSC-54",
+    "zone": "North Central",
+    "latitude": "27.125",
+    "longitude": "78.452"
+  },
+  "37036": {
+    "name": "Makhanpur",
+    "zone": "North Central",
+    "latitude": "27.115667",
+    "longitude": "78.4825"
+  },
+  "37037": {
+    "name": "LSC-56",
+    "zone": "North Central",
+    "latitude": "27.097",
+    "longitude": "78.54"
+  },
+  "37038": {
+    "name": "Shikohabad",
+    "zone": "North Central",
+    "latitude": "27.086444",
+    "longitude": "78.581806"
+  },
+  "37039": {
+    "name": "LSC-57",
+    "zone": "North Central",
+    "latitude": "27.069",
+    "longitude": "78.604"
+  },
+  "37040": {
+    "name": "Kauara",
+    "zone": "North Central",
+    "latitude": "27.029028",
+    "longitude": "78.6645"
+  },
+  "37041": {
+    "name": "LSC-61",
+    "zone": "North Central",
+    "latitude": "26.998",
+    "longitude": "78.711"
+  },
+  "37042": {
+    "name": "Bhadan",
+    "zone": "North Central",
+    "latitude": "26.98",
+    "longitude": "78.737333"
+  },
+  "37043": {
+    "name": "ECU U-60",
+    "zone": "North Central",
+    "latitude": "26.952222",
+    "longitude": "78.777722"
+  },
+  "37044": {
+    "name": "BALRAI",
+    "zone": "North Central",
+    "latitude": "26.920639",
+    "longitude": "78.823194"
+  },
+  "37045": {
+    "name": "LSC-65",
+    "zone": "North Central",
+    "latitude": "26.889444",
+    "longitude": "78.870167"
+  },
+  "37046": {
+    "name": "JGR",
+    "zone": "North Central",
+    "latitude": "26.871778",
+    "longitude": "78.895"
+  },
+  "37047": {
+    "name": "Sarai Bhupat",
+    "zone": "North Central",
+    "latitude": "26.8315",
+    "longitude": "78.9545"
+  },
+  "37048": {
+    "name": "LSC-69",
+    "zone": "North Central",
+    "latitude": "26.80225",
+    "longitude": "78.99775"
+  },
+  "37049": {
+    "name": "ETAWAH JN.",
+    "zone": "North Central",
+    "latitude": "26.786083",
+    "longitude": "79.026167"
+  },
+  "37050": {
+    "name": "LSC-74",
+    "zone": "North Central",
+    "latitude": "26.77175",
+    "longitude": "79.0825"
+  },
+  "37051": {
+    "name": "EKDIL",
+    "zone": "North Central",
+    "latitude": "26.766361",
+    "longitude": "79.118917"
+  },
+  "37052": {
+    "name": "LSC-76",
+    "zone": "North Central",
+    "latitude": "26.758778",
+    "longitude": "79.165472"
+  },
+  "37053": {
+    "name": "BHARTHAN A",
+    "zone": "North Central",
+    "latitude": "26.751694",
+    "longitude": "79.212611"
+  },
+  "37054": {
+    "name": "LSC-79",
+    "zone": "North Central",
+    "latitude": "26.743472",
+    "longitude": "79.263111"
+  },
+  "37055": {
+    "name": "SAMHON",
+    "zone": "North Central",
+    "latitude": "26.734083",
+    "longitude": "79.319111"
+  },
+  "37056": {
+    "name": "LSC-81",
+    "zone": "North Central",
+    "latitude": "26.725778",
+    "longitude": "79.35325"
+  },
+  "37057": {
+    "name": "ACHALDA",
+    "zone": "North Central",
+    "latitude": "26.702528",
+    "longitude": "79.404111"
+  },
+  "37058": {
+    "name": "PATA",
+    "zone": "North Central",
+    "latitude": "26.666806",
+    "longitude": "79.478972"
+  },
+  "37059": {
+    "name": "PHAPHUND",
+    "zone": "North Central",
+    "latitude": "26.632278",
+    "longitude": "79.553389"
+  },
+  "37060": {
+    "name": "LSC-87",
+    "zone": "North Central",
+    "latitude": "26.618111",
+    "longitude": "79.587333"
+  },
+  "37061": {
+    "name": "KANCHAUSI",
+    "zone": "North Central",
+    "latitude": "26.598139",
+    "longitude": "79.634639"
+  },
+  "37062": {
+    "name": "LSC-90",
+    "zone": "North Central",
+    "latitude": "26.577917",
+    "longitude": "79.681083"
+  },
+  "37063": {
+    "name": "JHINJHAK",
+    "zone": "North Central",
+    "latitude": "26.554639",
+    "longitude": "79.735972"
+  },
+  "37064": {
+    "name": "LSC-93",
+    "zone": "North Central",
+    "latitude": "26.531139",
+    "longitude": "79.789806"
+  },
+  "37065": {
+    "name": "AMBIAPUR",
+    "zone": "North Central",
+    "latitude": "26.515722",
+    "longitude": "79.826556"
+  },
+  "37066": {
+    "name": "LSC-96",
+    "zone": "North Central",
+    "latitude": "26.492056",
+    "longitude": "79.879528"
+  },
+  "37067": {
+    "name": "RURA",
+    "zone": "North Central",
+    "latitude": "26.4845",
+    "longitude": "79.906639"
+  },
+  "37068": {
+    "name": "ECU-88",
+    "zone": "North Central",
+    "latitude": "26.481528",
+    "longitude": "79.9585"
+  },
+  "37069": {
+    "name": "MAITHA",
+    "zone": "North Central",
+    "latitude": "26.476639",
+    "longitude": "80.024083"
+  },
+  "37070": {
+    "name": "LSC-101",
+    "zone": "North Central",
+    "latitude": "26.472972",
+    "longitude": "80.069194"
+  },
+  "37071": {
+    "name": "BHAUPUR",
+    "zone": "North Central",
+    "latitude": "26.469111",
+    "longitude": "80.125417"
+  },
+  "37072": {
+    "name": "LSC-104",
+    "zone": "North Central",
+    "latitude": "26.464833",
+    "longitude": "80.175972"
+  },
+  "37073": {
+    "name": "PANKI",
+    "zone": "North Central",
+    "latitude": "26.460389",
+    "longitude": "80.238028"
+  },
+  "37074": {
+    "name": "GMC A & B cabin",
+    "zone": "North Central",
+    "latitude": "26.451806",
+    "longitude": "80.315278"
+  },
+  "37075": {
+    "name": "GMC Power cabin",
+    "zone": "North Central",
+    "latitude": "26.451806",
+    "longitude": "80.315278"
+  },
+  "37076": {
+    "name": "Kanpur Loco",
+    "zone": "North Central",
+    "latitude": "26.445611",
+    "longitude": "80.341972"
+  },
+  "37077": {
+    "name": "Kanpur Electric Loco Shed",
+    "zone": "North Central",
+    "latitude": "26.455417",
+    "longitude": "80.320528"
+  },
+  "37100": {
+    "name": "Kanpur Central",
+    "zone": "North Central",
+    "latitude": "26.452972",
+    "longitude": "80.349028"
+  },
+  "37101": {
+    "name": "Chandari",
+    "zone": "North Central",
+    "latitude": "26.42725",
+    "longitude": "80.361167"
+  },
+  "37102": {
+    "name": "Chakeri",
+    "zone": "North Central",
+    "latitude": "26.379306",
+    "longitude": "80.409222"
+  },
+  "37103": {
+    "name": "Rooma",
+    "zone": "North Central",
+    "latitude": "26.351583",
+    "longitude": "80.437222"
+  },
+  "37104": {
+    "name": "Sirsaul",
+    "zone": "North Central",
+    "latitude": "26.2955",
+    "longitude": "80.464528"
+  },
+  "37105": {
+    "name": "Prempur",
+    "zone": "North Central",
+    "latitude": "26.245278",
+    "longitude": "80.483694"
+  },
+  "37106": {
+    "name": "Karbigwan",
+    "zone": "North Central",
+    "latitude": "26.203222",
+    "longitude": "80.501806"
+  },
+  "37107": {
+    "name": "Aung",
+    "zone": "North Central",
+    "latitude": "26.160444",
+    "longitude": "80.548139"
+  },
+  "37108": {
+    "name": "Bindki Road",
+    "zone": "North Central",
+    "latitude": "26.117056",
+    "longitude": "80.581389"
+  },
+  "37109": {
+    "name": "Kanspur Gugauli",
+    "zone": "North Central",
+    "latitude": "26.065083",
+    "longitude": "80.634861"
+  },
+  "37110": {
+    "name": "Malwan",
+    "zone": "North Central",
+    "latitude": "26.017389",
+    "longitude": "80.686278"
+  },
+  "37111": {
+    "name": "RH-2 (ID 37112)",
+    "zone": "North Central",
+    "latitude": "25.984444",
+    "longitude": "80.721889"
+  },
+  "37112": {
+    "name": "Kurasti Kalan",
+    "zone": "North Central",
+    "latitude": "25.95875",
+    "longitude": "80.749861"
+  },
+  "37113": {
+    "name": "Fatehpur",
+    "zone": "North Central",
+    "latitude": "25.918639",
+    "longitude": "80.800611"
+  },
+  "37114": {
+    "name": "RAMA",
+    "zone": "North Central",
+    "latitude": "25.890917",
+    "longitude": "80.853139"
+  },
+  "37115": {
+    "name": "Faizullapur",
+    "zone": "North Central",
+    "latitude": "25.867361",
+    "longitude": "80.898417"
+  },
+  "37116": {
+    "name": "RH-2 (ID 37117)",
+    "zone": "North Central",
+    "latitude": "25.852667",
+    "longitude": "80.926806"
+  },
+  "37117": {
+    "name": "Rasulabad",
+    "zone": "North Central",
+    "latitude": "25.827361",
+    "longitude": "80.977139"
+  },
+  "37118": {
+    "name": "Sath Naraini",
+    "zone": "North Central",
+    "latitude": "25.794833",
+    "longitude": "81.039278"
+  },
+  "37119": {
+    "name": "Khaga",
+    "zone": "North Central",
+    "latitude": "25.762806",
+    "longitude": "81.101"
+  },
+  "37120": {
+    "name": "Katoghan",
+    "zone": "North Central",
+    "latitude": "25.730639",
+    "longitude": "81.163889"
+  },
+  "37121": {
+    "name": "Kanwar",
+    "zone": "North Central",
+    "latitude": "25.703972",
+    "longitude": "81.214528"
+  },
+  "37122": {
+    "name": "Athsarai",
+    "zone": "North Central",
+    "latitude": "25.678806",
+    "longitude": "81.262528"
+  },
+  "37123": {
+    "name": "Sirathu",
+    "zone": "North Central",
+    "latitude": "25.6495",
+    "longitude": "81.320528"
+  },
+  "37124": {
+    "name": "RH-2 (ID 37125)",
+    "zone": "North Central",
+    "latitude": "25.628333",
+    "longitude": "81.35975"
+  },
+  "37125": {
+    "name": "Shujatpur",
+    "zone": "North Central",
+    "latitude": "25.604833",
+    "longitude": "81.404778"
+  },
+  "37126": {
+    "name": "BIDANPUR",
+    "zone": "North Central",
+    "latitude": "25.58575",
+    "longitude": "81.441472"
+  },
+  "37127": {
+    "name": "Bharwari",
+    "zone": "North Central",
+    "latitude": "25.559694",
+    "longitude": "81.489306"
+  },
+  "37128": {
+    "name": "Manoharga nj",
+    "zone": "North Central",
+    "latitude": "25.524667",
+    "longitude": "81.558389"
+  },
+  "37129": {
+    "name": "Saiyid Sarawan",
+    "zone": "North Central",
+    "latitude": "25.4905",
+    "longitude": "81.623083"
+  },
+  "37130": {
+    "name": "MANAURI",
+    "zone": "North Central",
+    "latitude": "25.4715",
+    "longitude": "81.66"
+  },
+  "37131": {
+    "name": "RH-2 (ID 37132)",
+    "zone": "North Central",
+    "latitude": "25.450222",
+    "longitude": "81.701"
+  },
+  "37132": {
+    "name": "Bamhrauli",
+    "zone": "North Central",
+    "latitude": "25.445194",
+    "longitude": "81.739"
+  },
+  "37133": {
+    "name": "Subedargan j (Prayagraj)",
+    "zone": "North Central",
+    "latitude": "25.4395",
+    "longitude": "81.790722"
+  },
+  "37134": {
+    "name": "RH (ID 37135)",
+    "zone": "North Central",
+    "latitude": "25.446",
+    "longitude": "81.812"
+  },
+  "37135": {
+    "name": "Prayagraj Junction",
+    "zone": "North Central",
+    "latitude": "25.445056",
+    "longitude": "81.837028"
+  },
+  "37136": {
+    "name": "NAINI",
+    "zone": "North Central",
+    "latitude": "25.393083",
+    "longitude": "81.860333"
+  },
+  "37137": {
+    "name": "Prayagraj Chheoki",
+    "zone": "North Central",
+    "latitude": "25.377056",
+    "longitude": "81.867139"
+  },
+  "37138": {
+    "name": "RH-2 (ID 37139)",
+    "zone": "North Central",
+    "latitude": "25.342",
+    "longitude": "81.894"
+  },
+  "37139": {
+    "name": "Karchana",
+    "zone": "North Central",
+    "latitude": "25.313194",
+    "longitude": "81.916111"
+  },
+  "37140": {
+    "name": "RH-2 (ID 37141)",
+    "zone": "North Central",
+    "latitude": "25.281",
+    "longitude": "81.963"
+  },
+  "37141": {
+    "name": "Bheerpur",
+    "zone": "North Central",
+    "latitude": "25.265806",
+    "longitude": "81.988833"
+  },
+  "37142": {
+    "name": "RH-2 (ID 37143)",
+    "zone": "North Central",
+    "latitude": "25.242083",
+    "longitude": "82.028111"
+  },
+  "37143": {
+    "name": "Meja Road",
+    "zone": "North Central",
+    "latitude": "25.223722",
+    "longitude": "82.084278"
+  },
+  "37144": {
+    "name": "RH-2 (ID 37144)",
+    "zone": "North Central",
+    "latitude": "25.214306",
+    "longitude": "82.108056"
+  },
+  "37145": {
+    "name": "Unchdih Railway",
+    "zone": "North Central",
+    "latitude": "25.192417",
+    "longitude": "82.164194"
+  },
+  "37146": {
+    "name": "Mandah Road",
+    "zone": "North Central",
+    "latitude": "25.163917",
+    "longitude": "82.237167"
+  },
+  "37147": {
+    "name": "Jigna",
+    "zone": "North Central",
+    "latitude": "25.157722",
+    "longitude": "82.316722"
+  },
+  "37148": {
+    "name": "Gaipura Railway",
+    "zone": "North Central",
+    "latitude": "25.160806",
+    "longitude": "82.388083"
+  },
+  "37149": {
+    "name": "RH-1 (ID 37150)",
+    "zone": "North Central",
+    "latitude": "25.174861",
+    "longitude": "82.432111"
+  },
+  "37150": {
+    "name": "Birohi",
+    "zone": "North Central",
+    "latitude": "25.171028",
+    "longitude": "82.457417"
+  },
+  "37151": {
+    "name": "VINDYACHA L",
+    "zone": "North Central",
+    "latitude": "25.159972",
+    "longitude": "82.5045"
+  },
+  "37152": {
+    "name": "Mirzapur",
+    "zone": "North Central",
+    "latitude": "25.135306",
+    "longitude": "82.570667"
+  },
+  "37153": {
+    "name": "Jhingura",
+    "zone": "North Central",
+    "latitude": "25.124333",
+    "longitude": "82.651583"
+  },
+  "37154": {
+    "name": "Pahara",
+    "zone": "North Central",
+    "latitude": "25.119889",
+    "longitude": "82.723556"
+  },
+  "37155": {
+    "name": "Dagmagpur",
+    "zone": "North Central",
+    "latitude": "25.098",
+    "longitude": "82.803"
+  },
+  "37156": {
+    "name": "Chunar Jn.",
+    "zone": "North Central",
+    "latitude": "25.103667",
+    "longitude": "82.864833"
+  },
+  "37157": {
+    "name": "RH-2 (ID 37158)",
+    "zone": "North Central",
+    "latitude": "25.114889",
+    "longitude": "82.903444"
+  },
+  "37158": {
+    "name": "Kailahat",
+    "zone": "North Central",
+    "latitude": "25.156167",
+    "longitude": "82.948167"
+  },
+  "37159": {
+    "name": "RH1 (ID 37160)",
+    "zone": "North Central",
+    "latitude": "25.183056",
+    "longitude": "82.994194"
+  },
+  "37160": {
+    "name": "AHRAURA ROAD",
+    "zone": "North Central",
+    "latitude": "25.197667",
+    "longitude": "83.020556"
+  },
+  "37161": {
+    "name": "JEONATHP UR",
+    "zone": "North Central",
+    "latitude": "25.232361",
+    "longitude": "83.056806"
+  },
+  "37162": {
+    "name": "BH-K",
+    "zone": "North Central",
+    "latitude": "25.251722",
+    "longitude": "83.084472"
+  },
+  "37163": {
+    "name": "NEW DELHI",
+    "zone": "Northern",
+    "latitude": "28.646906",
+    "longitude": "77.218458"
+  },
+  "3011": {
+    "name": "TILAK BRIDGE",
+    "zone": "Northern",
+    "latitude": "28.622964",
+    "longitude": "77.245044"
+  },
+  "3012": {
+    "name": "MANDAVLI HALT",
+    "zone": "Northern",
+    "latitude": "28.6288",
+    "longitude": "77.287914"
+  },
+  "3051": {
+    "name": "ANAND VIHAR",
+    "zone": "Northern",
+    "latitude": "28.646131",
+    "longitude": "77.311817"
+  },
+  "3013": {
+    "name": "B PANEL",
+    "zone": "Northern",
+    "latitude": "28.661594",
+    "longitude": "77.3292"
+  },
+  "3014": {
+    "name": "SAHIBABAD",
+    "zone": "Northern",
+    "latitude": "28.674514",
+    "longitude": "77.363472"
+  },
+  "3015": {
+    "name": "GHAZIABAD",
+    "zone": "Northern",
+    "latitude": "28.655089",
+    "longitude": "77.427294"
+  },
+  "3016": {
+    "name": "GHAZIABAD ELS",
+    "zone": "Northern",
+    "latitude": "---",
+    "longitude": "---"
+  },
+  "3054": {
+    "name": "CHIPIYANABUZ URG",
+    "zone": "Northern",
+    "latitude": "28.626511",
+    "longitude": "77.462311"
+  },
+  "3017": {
+    "name": "GHAZIABAD- MEERUT CITY",
+    "zone": "Northern",
+    "latitude": "28.664031",
+    "longitude": "77.444542"
+  },
+  "3052": {
+    "name": "HAZRAT NIZAMUDDIN",
+    "zone": "Northern",
+    "latitude": "28.585597",
+    "longitude": "77.253894"
+  },
+  "3018": {
+    "name": "OKHLA",
+    "zone": "Northern",
+    "latitude": "28.560311",
+    "longitude": "77.264053"
+  },
+  "3019": {
+    "name": "TUGHLAKABAD",
+    "zone": "Northern",
+    "latitude": "28.503831",
+    "longitude": "77.297819"
+  },
+  "3020": {
+    "name": "JUNCTION CABIN",
+    "zone": "Northern",
+    "latitude": "28.458233",
+    "longitude": "77.303767"
+  },
+  "3021": {
+    "name": "FARIDABAD",
+    "zone": "Northern",
+    "latitude": "28.414717",
+    "longitude": "77.306239"
+  },
+  "3022": {
+    "name": "FARIDABAD TOWN",
+    "zone": "Northern",
+    "latitude": "28.377",
+    "longitude": "77.3099"
+  },
+  "3023": {
+    "name": "BALLABHGARH",
+    "zone": "Northern",
+    "latitude": "28.338864",
+    "longitude": "77.313156"
+  },
+  "3024": {
+    "name": "PYALA",
+    "zone": "Northern",
+    "latitude": "28.287099",
+    "longitude": "77.3179"
+  },
+  "3025": {
+    "name": "ASAOTI",
+    "zone": "Northern",
+    "latitude": "28.251894",
+    "longitude": "77.32385"
+  },
+  "3026": {
+    "name": "PH10",
+    "zone": "Northern",
+    "latitude": "28.194125",
+    "longitude": "77.334875"
+  },
+  "3053": {
+    "name": "PALWAL",
+    "zone": "Northern",
+    "latitude": "28.15585",
+    "longitude": "77.341869"
+  },
+  "3027": {
+    "name": "Pt. Deendayal Upadhaya",
+    "zone": "East Central",
+    "latitude": "25.2804",
+    "longitude": "83.1207"
+  },
+  "45106": {
+    "name": "Pt. Deendayal Upadhaya Loco- shed",
+    "zone": "East Central",
+    "latitude": "25.2861",
+    "longitude": "83.1716"
+  },
+  "45092": {
+    "name": "Flyover Cabin",
+    "zone": "East Central",
+    "latitude": "25.2736",
+    "longitude": "83.1846"
+  },
+  "45105": {
+    "name": "Ganjkhwaja Jn.",
+    "zone": "East Central",
+    "latitude": "25.2668",
+    "longitude": "83.2256"
+  },
+  "45104": {
+    "name": "LC-78",
+    "zone": "East Central",
+    "latitude": "25.2611",
+    "longitude": "83.2679"
+  },
+  "45103": {
+    "name": "Chandauli Majhwar",
+    "zone": "East Central",
+    "latitude": "25.2586",
+    "longitude": "83.3033"
+  },
+  "45102": {
+    "name": "LC-75",
+    "zone": "East Central",
+    "latitude": "25.2534",
+    "longitude": "83.3504"
+  },
+  "45101": {
+    "name": "Saidraja",
+    "zone": "East Central",
+    "latitude": "25.2479",
+    "longitude": "83.3892"
+  },
+  "45100": {
+    "name": "LC-70",
+    "zone": "East Central",
+    "latitude": "25.2401",
+    "longitude": "83.4312"
+  },
+  "45099": {
+    "name": "Karamnasa",
+    "zone": "East Central",
+    "latitude": "25.2337",
+    "longitude": "83.4622"
+  },
+  "45098": {
+    "name": "3.20 KM FROM KMS",
+    "zone": "East Central",
+    "latitude": "25.2272",
+    "longitude": "83.492"
+  },
+  "45097": {
+    "name": "Dhanaichha",
+    "zone": "East Central",
+    "latitude": "25.208",
+    "longitude": "83.5386"
+  },
+  "45096": {
+    "name": "Durgauti",
+    "zone": "East Central",
+    "latitude": "25.1922",
+    "longitude": "83.581"
+  },
+  "45094": {
+    "name": "Bhabua Rd.",
+    "zone": "East Central",
+    "latitude": "25.1726",
+    "longitude": "83.6193"
+  },
+  "45093": {
+    "name": "Muthani",
+    "zone": "East Central",
+    "latitude": "25.1421",
+    "longitude": "83.6614"
+  },
+  "45091": {
+    "name": "LC-56",
+    "zone": "East Central",
+    "latitude": "25.1202",
+    "longitude": "83.6924"
+  },
+  "45090": {
+    "name": "Pusauli",
+    "zone": "East Central",
+    "latitude": "25.0973",
+    "longitude": "83.7228"
+  },
+  "45089": {
+    "name": "LC-53",
+    "zone": "East Central",
+    "latitude": "25.0744",
+    "longitude": "83.755"
+  },
+  "45088": {
+    "name": "Kudra",
+    "zone": "East Central",
+    "latitude": "25.0494",
+    "longitude": "83.7926"
+  },
+  "45087": {
+    "name": "3.36 KM From KTQ",
+    "zone": "East Central",
+    "latitude": "25.0341",
+    "longitude": "83.8213"
+  },
+  "45086": {
+    "name": "Khurmabad Rd.- Bh",
+    "zone": "East Central",
+    "latitude": "25.0216",
+    "longitude": "83.848"
+  },
+  "45085": {
+    "name": "Shiusagar Rd.",
+    "zone": "East Central",
+    "latitude": "25.0002",
+    "longitude": "83.8957"
+  },
+  "45083": {
+    "name": "Kumahu",
+    "zone": "East Central",
+    "latitude": "24.9775",
+    "longitude": "83.946"
+  },
+  "45081": {
+    "name": "4.17 KM from KMGE",
+    "zone": "East Central",
+    "latitude": "24.9609",
+    "longitude": "83.9831"
+  },
+  "45080": {
+    "name": "Sasaram Jn",
+    "zone": "East Central",
+    "latitude": "24.9564",
+    "longitude": "84.0194"
+  },
+  "45079": {
+    "name": "LC-39",
+    "zone": "East Central",
+    "latitude": "24.9566",
+    "longitude": "84.0571"
+  },
+  "45078": {
+    "name": "Karwandia",
+    "zone": "East Central",
+    "latitude": "24.9505",
+    "longitude": "84.0923"
+  },
+  "45077": {
+    "name": "LC-36",
+    "zone": "East Central",
+    "latitude": "24.9422",
+    "longitude": "84.1188"
+  },
+  "45076": {
+    "name": "Pahleza",
+    "zone": "East Central",
+    "latitude": "24.9326",
+    "longitude": "84.1468"
+  },
+  "45075": {
+    "name": "Dehri-On-Sone",
+    "zone": "East Central",
+    "latitude": "24.9145",
+    "longitude": "84.1858"
+  },
+  "45074": {
+    "name": "Sonnagar Jn",
+    "zone": "East Central",
+    "latitude": "24.8822",
+    "longitude": "84.2293"
+  },
+  "45072": {
+    "name": "Chirailapauthu- Bh",
+    "zone": "East Central",
+    "latitude": "24.8617",
+    "longitude": "84.2802"
+  },
+  "45070": {
+    "name": "Anugrah Narayan Rd.",
+    "zone": "East Central",
+    "latitude": "24.8558",
+    "longitude": "84.3302"
+  },
+  "45068": {
+    "name": "LC-29 (Kurhma Naresh Halt)",
+    "zone": "East Central",
+    "latitude": "24.8481",
+    "longitude": "84.3959"
+  },
+  "45067": {
+    "name": "Phesar",
+    "zone": "East Central",
+    "latitude": "24.8453",
+    "longitude": "84.4184"
+  },
+  "45066": {
+    "name": "Bagohikusa Bh",
+    "zone": "East Central",
+    "latitude": "24.8401",
+    "longitude": "84.4627"
+  },
+  "45065": {
+    "name": "Jakhim",
+    "zone": "East Central",
+    "latitude": "24.8294",
+    "longitude": "84.5256"
+  },
+  "45064": {
+    "name": "Deo Road Bh",
+    "zone": "East Central",
+    "latitude": "24.8224",
+    "longitude": "84.5646"
+  },
+  "45063": {
+    "name": "LC-20",
+    "zone": "East Central",
+    "latitude": "24.8165",
+    "longitude": "84.6071"
+  },
+  "45062": {
+    "name": "Rafiganj",
+    "zone": "East Central",
+    "latitude": "24.8197",
+    "longitude": "84.6339"
+  },
+  "45061": {
+    "name": "LC-16",
+    "zone": "East Central",
+    "latitude": "24.819",
+    "longitude": "84.6782"
+  },
+  "45060": {
+    "name": "Ismailpur",
+    "zone": "East Central",
+    "latitude": "24.815",
+    "longitude": "84.724"
+  },
+  "45059": {
+    "name": "Guraru",
+    "zone": "East Central",
+    "latitude": "24.811",
+    "longitude": "84.7913"
+  },
+  "45058": {
+    "name": "Paraiya",
+    "zone": "East Central",
+    "latitude": "24.8095",
+    "longitude": "84.8506"
+  },
+  "45057": {
+    "name": "3.6KM From PRY",
+    "zone": "East Central",
+    "latitude": "24.8074",
+    "longitude": "84.8858"
+  },
+  "45056": {
+    "name": "Kastha",
+    "zone": "East Central",
+    "latitude": "24.8026",
+    "longitude": "84.9206"
+  },
+  "45055": {
+    "name": "Gaya West Cabin",
+    "zone": "East Central",
+    "latitude": "24.7988",
+    "longitude": "84.9711"
+  },
+  "45054": {
+    "name": "Gaya Jn.",
+    "zone": "East Central",
+    "latitude": "24.8038",
+    "longitude": "84.9994"
+  },
+  "45053": {
+    "name": "Manpur Jn.",
+    "zone": "East Central",
+    "latitude": "24.8066",
+    "longitude": "85.0447"
+  },
+  "45052": {
+    "name": "LC-67A",
+    "zone": "East Central",
+    "latitude": "24.7846",
+    "longitude": "85.0555"
+  },
+  "45051": {
+    "name": "Bandhua",
+    "zone": "East Central",
+    "latitude": "24.7524",
+    "longitude": "85.0663"
+  },
+  "45050": {
+    "name": "IBH (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.7281",
+    "longitude": "85.0925"
+  },
+  "45049": {
+    "name": "Tankuppa",
+    "zone": "East Central",
+    "latitude": "24.7038",
+    "longitude": "85.1194"
+  },
+  "45048": {
+    "name": "Bansinala Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.6663",
+    "longitude": "85.1603"
+  },
+  "45047": {
+    "name": "LC-39CT",
+    "zone": "East Central",
+    "latitude": "24.6455",
+    "longitude": "85.1831"
+  },
+  "45046": {
+    "name": "Paharpur",
+    "zone": "East Central",
+    "latitude": "24.6242",
+    "longitude": "85.2065"
+  },
+  "45045": {
+    "name": "IBP No. 10 (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.589",
+    "longitude": "85.2528"
+  },
+  "45044": {
+    "name": "Gurpa",
+    "zone": "East Central",
+    "latitude": "24.5613",
+    "longitude": "85.299"
+  },
+  "45043": {
+    "name": "Yadugram Bh",
+    "zone": "East Central",
+    "latitude": "24.5398",
+    "longitude": "85.3387"
+  },
+  "45042": {
+    "name": "Banskatwa Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.546",
+    "longitude": "85.3698"
+  },
+  "45041": {
+    "name": "Nathganj Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.5469",
+    "longitude": "85.3812"
+  },
+  "45039": {
+    "name": "NGY-T2-DLW",
+    "zone": "East Central",
+    "latitude": "24.53",
+    "longitude": "85.3904"
+  },
+  "45038": {
+    "name": "Dilwa",
+    "zone": "East Central",
+    "latitude": "24.5377",
+    "longitude": "85.4202"
+  },
+  "45037": {
+    "name": "Lalbagh (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "24.5089",
+    "longitude": "85.4478"
+  },
+  "45036": {
+    "name": "Gujhandi",
+    "zone": "East Central",
+    "latitude": "24.4978",
+    "longitude": "85.4637"
+  },
+  "45035": {
+    "name": "IBP MP. 9 (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.4699",
+    "longitude": "85.4987"
+  },
+  "45034": {
+    "name": "Koderma",
+    "zone": "East Central",
+    "latitude": "24.4347",
+    "longitude": "85.5289"
+  },
+  "45033": {
+    "name": "Larabad Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.4084",
+    "longitude": "85.5617"
+  },
+  "45032": {
+    "name": "Hirodih",
+    "zone": "East Central",
+    "latitude": "24.3828",
+    "longitude": "85.5968"
+  },
+  "45031": {
+    "name": "IBH (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.354",
+    "longitude": "85.6318"
+  },
+  "45030": {
+    "name": "Sharamatanr",
+    "zone": "East Central",
+    "latitude": "24.3441",
+    "longitude": "85.6577"
+  },
+  "45029": {
+    "name": "Yadudih (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "24.3333",
+    "longitude": "85.6938"
+  },
+  "45028": {
+    "name": "Parasabad",
+    "zone": "East Central",
+    "latitude": "24.3074",
+    "longitude": "85.7395"
+  },
+  "45027": {
+    "name": "Dasarah Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.2744",
+    "longitude": "85.7906"
+  },
+  "45025": {
+    "name": "Chaubey",
+    "zone": "East Central",
+    "latitude": "24.2371",
+    "longitude": "85.816"
+  },
+  "45024": {
+    "name": "Keshwari Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.2077",
+    "longitude": "85.8498"
+  },
+  "45023": {
+    "name": "Hazaribagh Rd.",
+    "zone": "East Central",
+    "latitude": "24.1745",
+    "longitude": "85.8916"
+  },
+  "45021": {
+    "name": "Garea Bihar Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.1331",
+    "longitude": "85.909"
+  },
+  "45019": {
+    "name": "Chichaki",
+    "zone": "East Central",
+    "latitude": "24.1118",
+    "longitude": "85.9467"
+  },
+  "45018": {
+    "name": "Karamabad Bh (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "24.0821",
+    "longitude": "85.9683"
+  },
+  "45017": {
+    "name": "Chaudhuri Bandh",
+    "zone": "East Central",
+    "latitude": "24.0555",
+    "longitude": "85.99"
+  },
+  "45016": {
+    "name": "Chegro Bh (Auto)",
+    "zone": "East Central",
+    "latitude": "24.0226",
+    "longitude": "86.0241"
+  },
+  "45015": {
+    "name": "Parasnath",
+    "zone": "East Central",
+    "latitude": "23.9874",
+    "longitude": "86.0375"
+  },
+  "45013": {
+    "name": "LC-13C (Auto-Hut)",
+    "zone": "East Central",
+    "latitude": "23.9602",
+    "longitude": "86.0564"
+  },
+  "45012": {
+    "name": "Nimiaghat",
+    "zone": "East Central",
+    "latitude": "23.9317",
+    "longitude": "86.077"
+  },
+  "45011": {
+    "name": "Bholidih (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "23.8984",
+    "longitude": "86.1169"
+  },
+  "45010": {
+    "name": "Netaji Subhas Chandra Bose Gomoh",
+    "zone": "East Central",
+    "latitude": "23.8717",
+    "longitude": "86.1525"
+  },
+  "45014": {
+    "name": "IBP No. 3 (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "23.8579",
+    "longitude": "86.1936"
+  },
+  "45008": {
+    "name": "Matari",
+    "zone": "East Central",
+    "latitude": "23.8406",
+    "longitude": "86.2392"
+  },
+  "45007": {
+    "name": "Nichitpur-H",
+    "zone": "East Central",
+    "latitude": "23.8257",
+    "longitude": "86.2874"
+  },
+  "45006": {
+    "name": "Tetulmari",
+    "zone": "East Central",
+    "latitude": "23.8145",
+    "longitude": "86.3437"
+  },
+  "45005": {
+    "name": "Bhuli Bh (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "23.8018",
+    "longitude": "86.395"
+  },
+  "45003": {
+    "name": "Dhanbad",
+    "zone": "East Central",
+    "latitude": "23.7926",
+    "longitude": "86.428"
+  },
+  "45002": {
+    "name": "Dokra Bh (Auto- Hut)",
+    "zone": "East Central",
+    "latitude": "23.7834",
+    "longitude": "86.4746"
+  },
+  "45001": {
+    "name": "Pradhankhunta Jn.",
+    "zone": "East Central",
+    "latitude": "23.7724",
+    "longitude": "86.5169"
+  },
+  "45000": {
+    "name": "MumbaiCentral",
+    "zone": "Western",
+    "latitude": "18.970637",
+    "longitude": "72.818794"
+  },
+  "24165": {
+    "name": "LowerParel",
+    "zone": "Western",
+    "latitude": "18.99544",
+    "longitude": "72.830177"
+  },
+  "24164": {
+    "name": "Dadar",
+    "zone": "Western",
+    "latitude": "19.007737",
+    "longitude": "72.835997"
+  },
+  "24163": {
+    "name": "Bandra",
+    "zone": "Western",
+    "latitude": "19.028408",
+    "longitude": "72.846854"
+  },
+  "24162": {
+    "name": "Santacruz",
+    "zone": "Western",
+    "latitude": "19.055394",
+    "longitude": "72.840888"
+  },
+  "24161": {
+    "name": "Andheri",
+    "zone": "Western",
+    "latitude": "19.080766",
+    "longitude": "72.842058"
+  },
+  "24160": {
+    "name": "Andheri",
+    "zone": "Western",
+    "latitude": "19.120346",
+    "longitude": "72.847358"
+  }
+}

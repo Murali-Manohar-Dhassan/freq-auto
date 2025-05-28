@@ -100,9 +100,11 @@
 
 <body class="container mt-4 pb-5">
     <header class="text-center mb-5">
-        <h1 class="text-primary">Center of Excellence for Railway Kavach Technology</h1>
-
-        <h2 class="h4 text-secondary">Configuration parameters Generation tool for Radio Communication Backbone (mComm) of Railway Kavach</h2>
+        <h1 class="text-primary">Configuration Parameters Generation Tool</h1>
+        <h2 class="text-secondary">for</h4>
+        <h1 class="text-primary">Radio Communication Backbone (mComm) of Railway Kavach</h2>
+        <h3 class="text-secondary">Center of Excellence for Railway Kavach Technology</h2>
+        <h5 class="text-secondary">Version 2.0</h2>
     </header>
 
     <div class="row justify-content-center mb-4">
@@ -170,33 +172,6 @@
     </div>
 
     <script src="{{ url_for('static', filename='script.js') }}"></script> 
-    <script>
-        // --- Make sure your stationLookup object is defined here or loaded before script.js ---
-        let stationLookup = {
-            "STN1": { "name": "Station One", "latitude": 10.1, "longitude": 20.2 },
-            "STN2": { "name": "Station Two", "latitude": 10.3, "longitude": 20.4 },
-            "XYZ":  { "name": "Station XYZ", "latitude": 11.1, "longitude": 21.2 },
-            "ABC":  { "name": "Station ABC", "latitude": 11.3, "longitude": 21.4 },
-            "TEST": { "name": "Test Station", "latitude": 12.0, "longitude": 22.0 }
-            // ... Add all your actual station codes here ...
-        };
-
-        // --- Initialize Bootstrap Modal ---
-        // Ensure this runs after the DOM is loaded, or put it at the end / in your script.js
-        document.addEventListener('DOMContentLoaded', function() {
-            const skavModalElement = document.getElementById('skavModal');
-            skavModalInstance = new bootstrap.Modal(skavModalElement);
-
-            // Add event listeners for modal buttons here or within your script.js
-             document.getElementById('skavModalIsSkavBtn').addEventListener('click', _handleModalConfirmSkav);
-             document.getElementById('skavModalFillNowBtn').addEventListener('click', _handleModalFillNow);
-             document.getElementById('skavModalCancelAddBtn').addEventListener('click', _handleModalCancelAdd);
-
-             // Set initial view (optional, if you want manual shown by default)
-             // showManual(); 
-        });
-
-    </script>
 </body>
 
 </html>
