@@ -347,7 +347,7 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
 
         if (lookup) {
             if (stationCodeEl) {
-                stationCodeEl.value = lookup.stationCode || ''; // Uses specific stationCode from JSON
+                stationCodeEl.value = lookup.code || ''; // Uses specific stationCode from JSON
                 stationCodeEl.dataset.originalValue = stationCodeEl.value;
                 stationCodeEl.dataset.autoFilled = "true";
             }
