@@ -21,11 +21,24 @@
             transform: scale(1.02);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
-        .loader {
-            display: none;
+        .loader-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(255, 255, 255, 0.75); /* Semi-transparent white background */
+        display: flex; /* Used to center the content */
+        justify-content: center;
+        align-items: center;
+        z-index: 1060; /* Ensures it's above other content (Bootstrap modals are ~1050-1055) */
+    }
+        .loader-content { /* Optional: if you want a distinct box for the spinner */
             text-align: center;
-            margin-top: 20px;
-            padding: 20px;
+            padding: 25px;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
         }
         .skav-input-pending {
             background-color: #fff3cd;
@@ -106,8 +119,14 @@
         </div>
     </div>
 
-    <div class="loader" id="loadingSpinner">
+    <div class="loader-overlay" id="loadingSpinnerOverlay" style="display: none;">
+        <div class="loader-content">
+            <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p id="loadingMessage" class="text-primary mt-2 fs-5 mb-0">Processing... Please wait.</p>
         </div>
+    </div>
 
     <div class="row mt-4" id="submitContainer" style="display: none;">
         <div class="col-md-8 col-lg-6 mx-auto text-center position-relative">

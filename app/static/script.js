@@ -524,11 +524,13 @@ function submitData() {
         // Helper function to get numerical value, defaulting to 0 if parsing fails or empty
         const getIntValue = (selector) => {
             const val = card.find(selector).val();
-            return val ? parseInt(val, 10) : 0; // Or handle NaN/empty differently if needed
+            const parsed = parseInt(val, 10);
+            return isNaN(parsed) ? 0 : parsed; // Return 0 if empty or not a number
         };
         const getFloatValue = (selector) => {
             const val = card.find(selector).val();
-            return val ? parseFloat(val) : 0.0; // Or handle NaN/empty differently
+            const parsed = parseFloat(val);
+            return isNaN(parsed) ? 0.0 : parsed; // Return 0.0 if empty or not a number
         };
 
         const station = {
@@ -549,37 +551,46 @@ function submitData() {
         return;
     }
 
-    console.log("Submitting Data (with numbers):", stationsData); // For verification
-    $('#loadingSpinner').show();
+    console.log("Submitting Data (with numbers):", stationsData);
     $('#loadingMessage').text('Submitting data to server...');
+    $('#loadingSpinnerOverlay').show(); // THEN show the overlay
 
     fetch("/allocate_slots_endpoint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(stationsData)
     })
-    // ... rest of your fetch logic
     .then(response => {
         if (!response.ok) { // Check for non-2xx responses
             return response.json().then(errData => { // Try to parse error response
                 throw new Error(errData.error || errData.message || `Server error: ${response.status}`);
             }).catch(() => { // If parsing error response fails
-                throw new Error(`Server error: ${response.status}`);
+                throw new Error(`Server error: ${response.status} - Unable to parse error response.`);
             });
         }
         return response.json();
     })
     .then(data => {
         if (data.fileUrl) {
+            // Assuming checkFileReady will handle further UI updates,
+            // including potentially updating #loadingMessage and eventually hiding the spinner.
+            // If checkFileReady is quick and just triggers a download, you might hide the spinner here
+            // or just before window.location.href in checkFileReady.
+            $('#loadingMessage').text('Preparing your download...'); // Update message
             checkFileReady(data.fileUrl);
+            // IMPORTANT: Your checkFileReady function should hide #loadingSpinnerOverlay
+            // once the file is ready/downloaded or if an error occurs during that stage.
+            // Example: if checkFileReady directly triggers download:
+            // window.location.href = data.fileUrl;
+            // setTimeout(() => $('#loadingSpinnerOverlay').hide(), 1000); // Hide after a short delay
         } else {
-            alert(data.message || data.error || "Unknown error generating file from server.");
-            $('#loadingSpinner').hide();
+            alert(data.message || data.error || "Unknown response from server after submission.");
+            $('#loadingSpinnerOverlay').hide(); // Hide on error or unexpected response
         }
     })
     .catch(err => {
         alert("Submission Error: " + err.message);
-        $('#loadingSpinner').hide();
+        $('#loadingSpinnerOverlay').hide(); // Hide on network error or exception
     });
 }
 
