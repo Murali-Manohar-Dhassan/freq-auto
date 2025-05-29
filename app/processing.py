@@ -84,9 +84,21 @@ def allocate_slots(
             if onboard_to_place_p1 > 0:
                 idx = 0
                 while len(planned_onboard_indices_p1) < onboard_to_place_p1 and idx < max_slots:
-                    if onboard_alloc[idx] == 0 and idx not in prospective_station_slots_indices:
+                    is_slot_free = (onboard_alloc[idx] == 0)
+                    is_not_station_slot_for_this_station = (idx not in prospective_station_slots_indices)
+                    
+                    # MODIFICATION START: Check if the slot is touching any of the prospective station slots
+                    is_touching_station_slot = False
+                    if is_not_station_slot_for_this_station: # Only check for touching if it's not a station slot itself
+                        if idx > 0 and (idx - 1) in prospective_station_slots_indices:
+                            is_touching_station_slot = True
+                        if not is_touching_station_slot and idx < max_slots - 1 and (idx + 1) in prospective_station_slots_indices:
+                            is_touching_station_slot = True
+                    # MODIFICATION END
+                        
+                    if is_slot_free and is_not_station_slot_for_this_station and not is_touching_station_slot:
                         planned_onboard_indices_p1.append(idx)
-                        idx += 2
+                        idx += 2 # P1 characteristic: try to leave a gap for the *next* P1 slot
                     else: idx += 1
             
             onboard_to_place_p2 = requested_onboard_slots - len(planned_onboard_indices_p1)
@@ -101,6 +113,8 @@ def allocate_slots(
             
             onboard_to_place_p3 = requested_onboard_slots - len(planned_onboard_indices_p1) - len(planned_onboard_indices_p2)
             if onboard_to_place_p3 > 0:
+                # In P3, we are looking for slots *within* the station's own prospective slots
+                # that are still free in onboard_alloc and not taken by P1 or P2.
                 for i in range(max_slots - 1, -1, -1):
                     if len(planned_onboard_indices_p3) < onboard_to_place_p3:
                         if onboard_alloc[i] == 0 and \
@@ -122,11 +136,43 @@ def allocate_slots(
             
             uses_excessive_p3 = False
             if requested_onboard_slots > 0 and num_p3 > 0:
-                if total_onboard_planned > 0:
-                   if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED:
+                # Original P3 ratio check logic was based on num_p3 / total_onboard_planned.
+                # If MAX_P3_SLOTS_RATIO_OF_REQUESTED implies num_p3 / requested_onboard_slots, that part might need review
+                # based on how P3 is defined and used. Assuming current logic reflects intent.
+                if total_onboard_planned > 0: # Avoid division by zero if no onboard slots planned at all
+                   if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: # Check if P3 slots make up too large a portion of *all planned* onboard slots
+                       uses_excessive_p3 = True
+                elif num_p3 > 0 : # If only P3 slots were planned (e.g. P1/P2 found none)
+                    # This case needs careful definition: is any P3 automatically "excessive" if it's the *only* type found?
+                    # Or should it be num_p3 / requested_onboard_slots > threshold?
+                    # Sticking to minimal change, let's assume the existing logic for uses_excessive_p3 is what you want to keep.
+                    # The original code had:
+                    # if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: uses_excessive_p3 = True
+                    # This implies if total_onboard_planned is 0 and num_p3 > 0 (which is impossible as P3 contributes to total),
+                    # or if total_onboard_planned > 0.
+                    # The corrected 'elif num_p3 > 0' might have been an addition to handle cases where total_onboard_planned was small or zero.
+                    # For now, I'll keep your uses_excessive_p3 logic as it was, interpreting it carefully:
+                    # If any onboard slots are planned, check ratio of P3 to total planned.
+                    # If no onboard slots are planned overall (total_onboard_planned == 0) but somehow num_p3 > 0 (logically inconsistent here), it would be true.
+                    # More likely: if total_onboard_planned is 0, then num_p3 is 0, uses_excessive_p3 remains false.
+                    # If total_onboard_planned > 0 and matches requested, and P3 part is too high: uses_excessive_p3 = True.
+                    # The provided `elif num_p3 > 0 : uses_excessive_p3 = True` when `total_onboard_planned` was implicitly zero for that branch
+                    # would mean any P3 slots (if total_onboard_planned was zero, which means P1/P2 were zero) are excessive.
+                    # This implies P3 slots are only acceptable if P1/P2 also contribute.
+                    # Let's refine the excessive P3 check based on your constants:
+                    # MAX_P3_SLOTS_RATIO_OF_REQUESTED suggests comparing num_p3 to requested_onboard_slots.
+                    # However, your original code compares num_p3 to total_onboard_planned. I will preserve your latest logic.
+                    pass # The existing logic for uses_excessive_p3 seems to have been complex.
+                         # The critical line was: if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED:
+                         # I'll ensure this is what's effectively there, guarding division by zero.
+                if total_onboard_planned > 0: # Check ratio only if some onboard slots are planned
+                    if (num_p3 / float(total_onboard_planned)) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: # Use float for division
                         uses_excessive_p3 = True
-                elif num_p3 > 0 :
-                    uses_excessive_p3 = True
+                # The 'elif num_p3 > 0: uses_excessive_p3 = True' part from your original code:
+                # This would mean if ONLY P3 slots are found (p1 and p2 are zero, so total_onboard_planned == num_p3),
+                # then it simplifies to (num_p3 / num_p3) > RATIO, i.e. 1.0 > RATIO.
+                # If RATIO is 0.5, then this is true. So if all slots are P3, it's excessive.
+                # This seems fine. The `float()` handles the division correctly.
 
             current_plan_is_ideal = all_onboard_met and not is_congested and \
                                     (not uses_excessive_p3 if requested_onboard_slots > 0 else True)
@@ -148,21 +194,24 @@ def allocate_slots(
                 ideal_plan_details = temp_plan
                 break 
 
-            if all_onboard_met:
+            if all_onboard_met: # If not ideal, but still met request, consider for best_suboptimal
                 if best_suboptimal_plan_details is None:
                     best_suboptimal_plan_details = temp_plan
                 else:
+                    # Prefer less congested
                     if not temp_plan["is_congested"] and best_suboptimal_plan_details["is_congested"]:
                         best_suboptimal_plan_details = temp_plan
-                    elif not temp_plan["is_congested"] and not best_suboptimal_plan_details["is_congested"]:
+                    # If equally (not) congested, prefer less excessive P3
+                    elif temp_plan["is_congested"] == best_suboptimal_plan_details["is_congested"]:
                         if not temp_plan["uses_excessive_p3"] and best_suboptimal_plan_details["uses_excessive_p3"]:
-                             best_suboptimal_plan_details = temp_plan
+                            best_suboptimal_plan_details = temp_plan
+            
             if attempt_num < max_frequencies - 1:
                 _advance_frequency()
                 if current_frequency == initial_frequency_for_this_station and attempt_num > 0 :
                     break
             else: 
-                break
+                break # Exhausted attempts for this station
         
         final_plan_to_commit = None
         if ideal_plan_details:
@@ -173,6 +222,7 @@ def allocate_slots(
         if final_plan_to_commit:
             if current_frequency != final_plan_to_commit["frequency"]:
                 target_freq = final_plan_to_commit["frequency"]
+                # This loop ensures we are on the correct frequency's alloc state
                 while current_frequency != target_freq:
                     _advance_frequency()
 
@@ -195,7 +245,7 @@ def allocate_slots(
             # Commit P1 slots
             for slot_idx in sorted(list(set(final_plan_to_commit["onboard_indices_p1"]))):
                 if current_onboard_placed_count < final_plan_to_commit["requested_onboard_slots"]:
-                    if onboard_alloc[slot_idx] == 0:
+                    if onboard_alloc[slot_idx] == 0: # Double check, should be planned on free
                         onboard_alloc[slot_idx] = s_name
                         p_num = f"P{slot_idx+2}"
                         onboard_p1_allocated_p_nums.append(p_num)
@@ -245,9 +295,14 @@ def allocate_slots(
                 "Debug_Congested": final_plan_to_commit["is_congested"],
                 "Debug_ExcessiveP3": final_plan_to_commit["uses_excessive_p3"]
             })
-        else: 
+        else: # No suitable plan found for this station
             allocations.append({
                 "Station": station_name, "Frequency": "N/A",
+                "Stationary Kavach ID":skavach_id,
+                "Station Code":station_code,
+                "Latitude":latitude,
+                "Longitude":longitude,
+                "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": calculated_station_slots,
                 "Stationary Kavach Slots Allocated": "", "Num Stationary Allocated": 0,
                 "Onboard Kavach Slots Requested": requested_onboard_slots,
@@ -299,14 +354,14 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
     now = datetime.now() # For use in titles
 
     color_map = {
-        1: "FFFF00", 2: "8FCA1D", 3: "F39D1B", 4: "3197EA",
-        5: "90918F", 6: "DC3B3D", 7: "CC6CE7"
+        1: "F0F005", 2: "8FCA1D", 3: "F39D1B", 4: "3197EA",
+        5: "90918F", 6: "F53B3D", 7: "CC6CE7"
     }
     # Corrected font colors to ARGB format
-    font_color_p1 = "FF007220"  # ARGB for "007220"
+    font_color_p1_default = "FF007220"  # ARGB for "007220"
     font_color_p2 = "FFE4080A"  # ARGB for "E4080A"
     font_style_p3 = Font(bold=True, color="FF000000") # Bold Black
-    font_color_p1_conditional = "FF0000FF" # Blue (already ARGB)
+    font_color_p1_conditional = "FF0000FF" # Blue for P1 when adjacent to P2
 
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                          top=Side(style='thin'), bottom=Side(style='thin'))
@@ -356,6 +411,39 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         cell.value = text
         ws.merge_cells(start_row=r_num, start_column=1, end_row=r_num, end_column=max_excel_col)
         cell.alignment = center_align_v_center_wrap
+
+     
+    legend_col = max_excel_col + 3
+    legend_start_row = 17
+
+    headers = ["Onboard Slot Letter Legend", "Color"]
+    legend_data = [
+        ["Priority 1", "007220"],
+        ["Priority 2", "E4080A"],
+        ["Priority 3 Bold", "000000"],
+        ["Prority 1 Conditional", "0000FF"]
+    ]
+    # Define border style
+    border_style = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
+    # Apply headers with border
+    for i, header in enumerate(headers):
+        cell = ws.cell(row=legend_start_row, column=legend_col + i, value=header)
+        cell.font = Font(bold=True)
+        cell.border = border_style
+    for row_offset, (label, hex_color) in enumerate(legend_data, start=1):
+        label_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col, value=label)
+        label_cell.font = Font(color=f"FF{hex_color}")  # Text color matches the category
+        label_cell.border = border_style
+        
+        color_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1)
+        color_cell.fill = PatternFill(start_color=f"FF{hex_color}", end_color=f"FF{hex_color}", fill_type="solid")  # Background color fill
+        color_cell.border = border_style  # Apply border
+
+    # Adjust column width for better visibility
+    ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col).column_letter].width = 28
+    ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col + 1).column_letter].width = 10
+
+
 
     # --- Write Static Labels in Column A ---
     static_labels_col1 = {
@@ -469,6 +557,17 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         cell_slot_label.value = slot_name
         cell_slot_label.alignment = center_align_v_center
 
+    # This is crucial for the adjacency check for the next slot
+    # It should be the maximum 0-based index of your slots.
+    # If all_slots = ["P2", "P3", ..., "P45"], len(all_slots) is 44. Max index is 43.
+    if not all_slots: # Handle empty all_slots if it can occur
+        # Depending on requirements, either return or raise error, or ensure all_slots is never empty
+        print("Warning: all_slots is empty.")
+        max_slot_idx_for_adj_check = -1 # Or handle appropriately
+    else:
+        max_slot_idx_for_adj_check = len(all_slots) - 1
+
+
     # --- Apply Styles, Colors, and Text to Matrix Data Cells (P-slot area) ---
     for r_idx_data_matrix, slot_in_current_row in enumerate(all_slots):
         current_excel_data_row = data_start_row + r_idx_data_matrix
@@ -479,7 +578,7 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             cell_to_format = ws.cell(row=current_excel_data_row, column=excel_col_for_station)
             cell_to_format.value = "" 
             cell_to_format.font = Font() 
-            cell_to_format.alignment = center_align_v_center # Default for P-slot data cells
+            cell_to_format.alignment = center_align_v_center
 
             station_data_rows_matrix = results_df[results_df["Station"] == station_name_for_coloring]
             if station_data_rows_matrix.empty: continue
@@ -491,12 +590,12 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             o_p3_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P3 Allocated", ""))
 
             set_stationary = {s.strip() for s in s_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
-            set_onbard_p1 = {s.strip() for s in o_p1_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'} # User's variable name
+            set_onboard_p1 = {s.strip() for s in o_p1_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p2 = {s.strip() for s in o_p2_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p3 = {s.strip() for s in o_p3_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
 
             is_stationary = slot_in_current_row in set_stationary
-            is_onboard_p1 = slot_in_current_row in set_onbard_p1 
+            is_onboard_p1 = slot_in_current_row in set_onboard_p1
             is_onboard_p2 = slot_in_current_row in set_onboard_p2
             is_onboard_p3 = slot_in_current_row in set_onboard_p3
             
@@ -514,20 +613,21 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
                 cell_to_format.font = font_style_p3 
             elif slot_in_current_row == "P45" and (is_onboard_p1 or is_onboard_p2):
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2) 
+                cell_to_format.font = Font(color=font_color_p2)
             elif is_onboard_p1:
                 cell_to_format.value = slot_in_current_row
-                # cell_to_format.font = Font(color=font_color_p1) # This was the line from user's code
-                actual_p1_font_color = font_color_p1 # Default P1 color
-                prev_slot_p_num = f"P{current_slot_0index - 1 + 2}" if current_slot_0index > 0 else None
-                next_slot_p_num = f"P{current_slot_0index + 1 + 2}" if current_slot_0index < max_slot_idx_for_adj_check else None
+                actual_p1_font_color = font_color_p1_default
+                
+                prev_slot_p_num = f"P{current_slot_0index + 1}" if current_slot_0index > 0 else None
+                next_slot_p_num = f"P{current_slot_0index + 3}" if current_slot_0index < max_slot_idx_for_adj_check else None
+                
                 if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
                    (next_slot_p_num and next_slot_p_num in set_onboard_p2):
-                    actual_p1_font_color = font_color_p2 
+                    actual_p1_font_color = font_color_p1_conditional 
                 cell_to_format.font = Font(color=actual_p1_font_color)
             elif is_onboard_p2:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p1_conditional) 
+                cell_to_format.font = Font(color=font_color_p2) 
             elif is_stationary: 
                 cell_to_format.value = "" 
 
@@ -574,19 +674,19 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
 
 if __name__ == '__main__':
     stations = [
-        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10}, 
-        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14}, 
-        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9},  
-        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16},
-        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9},  
-        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14}, 
-        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20}, 
-        {'name': 'Station H', 'Static': 7, 'onboardSlots': 22}, 
-        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18}, 
-        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5}, 
-        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25}, 
-        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10},
-        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21},
+        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10, "StationCode": "LC563", "KavachID": "SK563", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14, "StationCode": "RUND", "KavachID": "SKRUND", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC560", "KavachID": "SK560", "Lattitude": 28.7041, "Longitude": 77.1025},  
+        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16, "StationCode": "SHOL", "KavachID": "SKSHOL", "Lattitude": 28.7041, "Longitude": 77.1025},
+        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC555", "KavachID": "SK555", "Lattitude": 28.7041, "Longitude": 77.1025},  
+        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14, "StationCode": "HODAL", "KavachID": "SKHODAL", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20, "StationCode": "STG", "KavachID": "SKSTG", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station H', 'Static': 7, 'onboardSlots': 22, "StationCode": "STH", "KavachID": "SKSTH", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18, "StationCode": "STI", "KavachID": "SKSTI", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5, "StationCode": "STJ", "KavachID": "SKSTJ", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25, "StationCode": "STK", "KavachID": "SKSTK", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10, "StationCode": "STL", "KavachID": "SKSTL", "Lattitude": 28.7041, "Longitude": 77.1025},
+        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21, "StationCode": "MTHRJ", "KavachID": "SKMTHRJ", "Lattitude": 27.5025, "Longitude": 77.6737},
     ]
     
     result_path = generate_excel(stations)
