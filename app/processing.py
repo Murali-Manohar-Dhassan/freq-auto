@@ -358,10 +358,10 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         5: "90918F", 6: "F53B3D", 7: "CC6CE7"
     }
     # Corrected font colors to ARGB format
-    font_color_p1_default = "FF007220"  # ARGB for "007220"
-    font_color_p2 = "FFE4080A"  # ARGB for "E4080A"
-    font_style_p3 = Font(bold=True, color="FF000000") # Bold Black
-    font_color_p1_conditional = "FF0000FF" # Blue for P1 when adjacent to P2
+    font_color_p1_default = "007220"  # ARGB for "007220"
+    font_color_p2 = "E4080A"  # ARGB for "E4080A"
+    font_style_p3 = Font(bold=True, color="000000") # Bold Black
+    font_color_p1_conditional = "0000FF" # Blue for P1 when adjacent to P2
 
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                          top=Side(style='thin'), bottom=Side(style='thin'))
@@ -413,15 +413,15 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         cell.alignment = center_align_v_center_wrap
 
      
-    legend_col = max_excel_col + 3
-    legend_start_row = 17
+    legend_col = 1
+    legend_start_row = 61
 
-    headers = ["Onboard Slot Letter Legend", "Color"]
+    headers = ["Legend: Onboard Tx Slot Priorities", "Color"]
     legend_data = [
-        ["Priority 1", "007220"],
-        ["Priority 2", "E4080A"],
-        ["Priority 3 Bold", "000000"],
-        ["Prority 1 Conditional", "0000FF"]
+        ["Priority 1 Green", "007220"],
+        ["Priority 2 Blue Bold", "0000FF"],
+        ["Priority 3 Red", "E4080A"],
+        ["Prority 4 Black Bold", "000000"]
     ]
     # Define border style
     border_style = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
@@ -431,16 +431,19 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         cell.font = Font(bold=True)
         cell.border = border_style
     for row_offset, (label, hex_color) in enumerate(legend_data, start=1):
+        bold = label.endswith("Bold")  # Check if the label should be bold
+        
         label_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col, value=label)
-        label_cell.font = Font(color=f"FF{hex_color}")  # Text color matches the category
+        label_cell.font = Font(bold=bold, color=f"FF{hex_color}")  # Apply bold formatting conditionally
         label_cell.border = border_style
         
         color_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1)
-        color_cell.fill = PatternFill(start_color=f"FF{hex_color}", end_color=f"FF{hex_color}", fill_type="solid")  # Background color fill
-        color_cell.border = border_style  # Apply border
+        color_cell.fill = PatternFill(start_color=f"FF{hex_color}", end_color=f"FF{hex_color}", fill_type="solid")  # Background color
+        color_cell.border = border_style
+
 
     # Adjust column width for better visibility
-    ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col).column_letter].width = 28
+    ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col).column_letter].width = 36
     ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col + 1).column_letter].width = 10
 
 
@@ -624,7 +627,9 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
                 if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
                    (next_slot_p_num and next_slot_p_num in set_onboard_p2):
                     actual_p1_font_color = font_color_p1_conditional 
-                cell_to_format.font = Font(color=actual_p1_font_color)
+                    cell_to_format.font = Font(bold=True, color=actual_p1_font_color) # Bold if adjacent to P2
+                else:
+                    cell_to_format.font = Font(color=actual_p1_font_color)
             elif is_onboard_p2:
                 cell_to_format.value = slot_in_current_row
                 cell_to_format.font = Font(color=font_color_p2) 

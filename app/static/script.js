@@ -229,39 +229,103 @@ function validateAllStationCards() {
     let allValid = true;
     let firstInvalidElement = null;
     const cardsWithErrors = new Set(); // To store IDs of cards with errors
+    const seenKavachIds = new Map(); // Key: KavachID, Value: stationNumberText of first occurrence
 
     $('#stationContainer .station-card').each(function(index) {
         const card = $(this);
         const cardId = card.attr('id'); // Get card ID
         const stationNumberText = card.find('.station-title-text').text();
-        let cardHasError = false;
+        let cardHasErrorForThisIteration  = false; // Tracks errors found in this specific validation pass for THIS card
 
-        card.find('input[required]').each(function() {
+        // --- Kavach ID Uniqueness and Validity Check ---
+        const kavachIdInput = card.find('.kavach-id-input');
+        const kavachIdValue  = kavachIdInput.val().trim();
+        const kavachFeedbackEl = card.find('.kavach-id-feedback');
+
+        // Clear previous 'is-invalid' from this function's pass for Kavach ID, but respect live validation's state if possible
+        // For simplicity, let's ensure it's re-evaluated for emptiness and duplication here.
+        kavachIdInput.removeClass('is-invalid'); // Reset for this validation pass
+        // Do not clear text-danger from feedbackEl if it was set by live validation for duplicates/not found
+        // kavachFeedbackEl.text('').hide().removeClass('text-danger text-warning text-success');
+
+        if (!kavachIdValue && kavachIdInput.prop('required')) { // Check if empty AND required
+            allValid = false;
+            cardHasErrorForThisIteration = true;
+            kavachIdInput.addClass('is-invalid');
+            if (!kavachFeedbackEl.hasClass('text-danger')) { // Don't overwrite more specific errors
+                 kavachFeedbackEl.text('Kavach ID is required.').addClass('text-danger').show();
+            }
+            if (!firstInvalidElement) firstInvalidElement = kavachIdInput;
+        } else if (kavachIdValue) {
+            if (seenKavachIds.has(kavachIdValue)) { // Duplicate found
+                allValid = false;
+                cardHasErrorForThisIteration = true;
+                kavachIdInput.addClass('is-invalid');
+                kavachFeedbackEl.text(`Duplicate ID. Used in ${seenKavachIds.get(kavachIdValue)}.`).addClass('text-danger').show();
+                if (!firstInvalidElement) firstInvalidElement = kavachIdInput;
+
+                // Also mark the FIRST instance of the duplicate as an error if not already
+                const firstInstanceCardId = $(`#stationContainer .station-card .kavach-id-input`).filter(function() { return $(this).val().trim() === kavachIdValue; }).first().closest('.station-card').attr('id');
+                if (firstInstanceCardId && firstInstanceCardId !== cardId) {
+                    const firstInstanceCard = $(`#${firstInstanceCardId}`);
+                    firstInstanceCard.find('.kavach-id-input').addClass('is-invalid');
+                    firstInstanceCard.find('.kavach-id-feedback').text('Duplicate ID. This ID is used again.').addClass('text-danger').show();
+                    cardsWithErrors.add(firstInstanceCardId); // Ensure original duplicate card is also expanded
+                }
+
+            } else {
+                seenKavachIds.set(kavachIdValue, stationNumberText);
+                // If not a duplicate, check if it's in skavIdLookup (if live validation didn't already mark it)
+                if (!skavIdLookup[kavachIdValue]) {
+                    allValid = false; // Or just a warning? For now, treat as invalid if not in master.
+                    cardHasErrorForThisIteration = true;
+                    kavachIdInput.addClass('is-invalid');
+                    if (!kavachFeedbackEl.hasClass('text-danger')) {
+                        kavachFeedbackEl.text('Kavach ID not found in master list.').addClass('text-danger').show();
+                    }
+                    if (!firstInvalidElement) firstInvalidElement = kavachIdInput;
+                } else {
+                     // It's unique and found in lookup - mark valid if no other issues
+                     // kavachIdInput.addClass('is-valid'); // Bootstrap's 'is-valid' can be used
+                }
+            }
+        }
+
+        // --- Check other required fields (excluding Kavach ID as it's handled above) ---
+        card.find('input[required]').not('.kavach-id-input').each(function() {
             const input = $(this);
-            input.removeClass('is-invalid'); // Clear previous validation
+            input.removeClass('is-invalid'); // Clear previous 'is-invalid' for these fields for this pass
 
             if (!input.val().trim()) {
                 allValid = false;
-                cardHasError = true; // Mark that this card has an error
+                cardHasErrorForThisIteration = true; // Mark that this card has an error
                 input.addClass('is-invalid');
+                // Find and display error for this specific field if a feedback div exists or create one
+                const fieldLabel = input.prev('label').text() || input.attr('placeholder') || 'Field';
                 if (!firstInvalidElement) {
                     firstInvalidElement = input;
                 }
-                const labelText = input.prev('label').text() || input.attr('placeholder') || `A required field`;
-                console.warn(`Validation Error: "${labelText}" in ${stationNumberText} is empty.`);
+                console.warn(`Validation Error: "${fieldLabel}" in ${stationNumberText} is empty.`);
             }
         });
 
-        if (cardHasError && cardId) {
+        if (cardHasErrorForThisIteration  && cardId) {
             cardsWithErrors.add(cardId);
         }
     });
 
     if (!allValid) {
-        alert("Please fill in all required fields. Cards with missing information have been expanded, and the first empty field has been focused.");
+        let alertMessage = "Please correct all errors. ";
+        if (cardsWithErrors.size > 0) {
+            alertMessage += "Cards with errors have been expanded.";
+        }
+        if (firstInvalidElement) {
+            alertMessage += " The first problematic field has been focused.";
+        }
+        alert(alertMessage);
 
-        cardsWithErrors.forEach(cardId => {
-            const errorCard = $(`#${cardId}`);
+        cardsWithErrors.forEach(cardIdWithError => {
+            const errorCard = $(`#${cardIdWithError}`);
             if (errorCard.length) {
                 const collapseElement = errorCard.find('.collapse');
                 if (collapseElement.length && !collapseElement.hasClass('show')) {
@@ -330,61 +394,81 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     };
 
     const handleKavachIdValidation = (isSelectionEvent = false) => { // Renamed isBlurEvent for clarity
-        const kavachId = kavachIdInput.value.trim();
-        const lookup = skavIdLookup[kavachId];
+        const currentKavachIdValue  = kavachIdInput.value.trim();
+        const lookupData  = skavIdLookup[currentKavachIdValue ];
         // For debugging:
         // console.log(`handleKavachIdValidation for ID "${kavachId}", Lookup found:`, lookup);
 
-
-        if (!isSelectionEvent && feedbackEl && feedbackEl.length) { // Clear feedback only if not from a direct selection or blur
-             if (kavachIdInput.value === "") feedbackEl.text('').hide(); // Clear only if input is empty and not a blur/selection
+        autoFilledFields.forEach(el => { if(el) el.dataset.autoFilled = "false"; }); // Reset auto-filled state
+        kavachIdInput.classList.remove('is-invalid', 'is-valid');
+        if (feedbackEl && feedbackEl.length) {
+            feedbackEl.text('').hide().removeClass('text-success text-warning text-danger');
         }
 
+        // 1. Check for Duplicates (highest priority feedback)
+        let isDuplicate = false;
+        if (currentKavachIdValue) {
+            $('#stationContainer .station-card').each(function() {
+                const otherCardInput = $(this).find('.kavach-id-input')[0];
+                // Check if it's a different card's input and has the same value
+                if (otherCardInput && otherCardInput !== kavachIdInput && $(otherCardInput).val().trim() === currentKavachIdValue) {
+                    isDuplicate = true;
+                    return false; // Break .each()
+                }
+            });
+        }
 
-        autoFilledFields.forEach(el => {
-            if(el) el.dataset.autoFilled = "false"; // Reset auto-fill marker
-        });
-
-        if (lookup) {
+        if (isDuplicate) {
+            kavachIdInput.classList.add('is-invalid');
+            if (feedbackEl && feedbackEl.length) {
+                feedbackEl.text('This Kavach ID is already used. Please use a unique ID.').addClass('text-danger').show();
+            }
+            // Do not proceed to auto-fill if it's a duplicate
+        } else if (lookupData) {
+            // 2. Valid Kavach ID Found (and not a duplicate) - Auto-fill
+            kavachIdInput.classList.add('is-valid');
             if (stationCodeEl) {
-                stationCodeEl.value = lookup.code || ''; // Uses specific stationCode from JSON
+                stationCodeEl.value = lookupData.code || ''; // Uses specific stationCode from JSON
                 stationCodeEl.dataset.originalValue = stationCodeEl.value;
                 stationCodeEl.dataset.autoFilled = "true";
             }
             if (nameEl) {
-                nameEl.value = lookup.name || '';
+                nameEl.value = lookupData.name || '';
                 nameEl.dataset.originalValue = nameEl.value;
                 nameEl.dataset.autoFilled = "true";
             }
             if (latEl) {
-                latEl.value = lookup.latitude || '';
+                latEl.value = lookupData.latitude || '';
                 latEl.dataset.originalValue = latEl.value;
                 latEl.dataset.autoFilled = "true";
             }
             if (lonEl) {
-                lonEl.value = lookup.longitude || '';
+                lonEl.value = lookupData.longitude || '';
                 lonEl.dataset.originalValue = lonEl.value;
                 lonEl.dataset.autoFilled = "true";
             }
 
             if (feedbackEl && feedbackEl.length) {
                 feedbackEl.text('Kavach ID found. Fields auto-filled.').removeClass('text-danger text-warning').addClass('text-success').show();
-                setTimeout(() => feedbackEl.fadeOut(), 3000);
+                setTimeout(() => { if (feedbackEl.hasClass('text-success')) feedbackEl.fadeOut();}, 3000);
             }
-        } else { // No lookup found
+        } else if (currentKavachIdValue && isSelectionEvent) {
+            // 3. Kavach ID entered but not found in lookup (and not duplicate, and it's a blur/selection event)
+            kavachIdInput.classList.add('is-invalid');
+            if (feedbackEl && feedbackEl.length) {
+                feedbackEl.text('Kavach ID not found. Please verify or enter details manually.').addClass('text-danger').show();
+            }
+        } else if (currentKavachIdValue && isSelectionEvent) { // No lookup found
+            // 4. Kavach ID is required, empty, and blurred (let global validation handle exact message for empty required)
             // Clear fields ONLY IF they were previously auto-filled AND the Kavach ID input is now empty OR it's a blur/selection event
-             if (kavachId === '' || isSelectionEvent) {
-                 autoFilledFields.forEach(el => {
-                     if (el && el.dataset.autoFilled === "true" && kavachId === '') { // Only clear if Kavach ID is now empty
-                         // el.value = ''; // Current code doesn't clear, which is fine. User can manually clear.
-                     }
-                 });
+            kavachIdInput.classList.add('is-invalid');
+             if (feedbackEl && feedbackEl.length) { // Optional: specific feedback for empty required Kavach ID
+                 feedbackEl.text('Kavach ID is required.').addClass('text-danger').show();
              }
-
-            if (isSelectionEvent && kavachId) { // If it was a blur/selection and ID has value but not found
-                if (feedbackEl && feedbackEl.length) {
-                    feedbackEl.text('Kavach ID not found. Please verify or enter details manually.').addClass('text-danger').removeClass('text-success text-warning').show();
-                }
+        } else if (!currentKavachIdValue) {
+            // 5. Kavach ID input is empty (and not a required blur event) - clear feedback
+            if (feedbackEl && feedbackEl.length) {
+                feedbackEl.text('').hide();
             }
         }
     };
@@ -409,15 +493,28 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     kavachIdInput.addEventListener('input', () => {
         const idValue = kavachIdInput.value.trim();
         suggestionsEl.innerHTML = ''; // Clear previous suggestions
+        kavachIdInput.classList.remove('is-valid'); // Remove valid status while typing
 
-        if (feedbackEl && feedbackEl.length) { // Clear non-error feedback on new input
-            if(!feedbackEl.hasClass('text-danger')) feedbackEl.text('').hide();
+        if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) { // Clear non-error feedback on new input
+             feedbackEl.text('').hide(); // Clear non-error feedback on new input
         }
 
+        // Get Kavach IDs currently used in OTHER cards
+        const currentlyUsedIdsInOtherCards = new Set();
+        $('#stationContainer .station-card').each(function() {
+            const otherCardInput = $(this).find('.kavach-id-input')[0];
+            if (otherCardInput && otherCardInput !== kavachIdInput) { // Exclude self
+                const usedId = $(otherCardInput).val().trim();
+                if (usedId) {
+                    currentlyUsedIdsInOtherCards.add(usedId);
+                }
+            }
+        });
         if (idValue.length > 0) {
-            const matches = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
-            if (matches.length > 0) {
-                matches.slice(0, 10).forEach(match => {
+            const potentialMatches  = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
+            const availableMatches = potentialMatches.filter(match => !currentlyUsedIdsInOtherCards.has(match) || match === idValue); // Allow current value if it's being edited
+            if (availableMatches.length > 0) {
+                availableMatches.slice(0, 10).forEach(match => {
                     const suggestionItem = document.createElement('a');
                     suggestionItem.href = '#';
                     suggestionItem.classList.add('list-group-item', 'list-group-item-action', 'py-1', 'px-2');
@@ -427,7 +524,7 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
                         kavachIdInput.value = match;
                         hideSuggestions();
                         handleKavachIdValidation(true); // Treat as a selection/confirmation event
-                        // kavachIdInput.focus(); // TRY COMMENTING THIS OUT if clicks don't register fields
+                        kavachIdInput.focus(); // TRY COMMENTING THIS OUT if clicks don't register fields
                     });
                     suggestionsEl.appendChild(suggestionItem);
                 });
@@ -440,10 +537,10 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
             handleKavachIdValidation(false); // Kavach ID is cleared, update state (e.g. clear feedback)
         }
 
-        // Continuous validation feedback (light)
-        if (idValue.length === parseInt(kavachIdInput.maxLength, 10) && !skavIdLookup[idValue]) {
-             if (feedbackEl && feedbackEl.length) {
-                 feedbackEl.text('Kavach ID may not be valid.').addClass('text-warning').removeClass('text-success text-danger').show();
+        // Light, continuous feedback (optional, handleKavachIdValidation on blur is more definitive)
+        if (idValue.length === parseInt(kavachIdInput.maxLength, 10) && !skavIdLookup[idValue] && !currentlyUsedIdsInOtherCards.has(idValue)) {
+             if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) { // Only show warning if not already an error
+                 feedbackEl.text('Kavach ID may not exist in master list.').addClass('text-warning').removeClass('text-success text-danger').show();
              }
         } else if (skavIdLookup[idValue]) {
              if (feedbackEl && feedbackEl.length) { // ID is valid and found
@@ -581,8 +678,8 @@ function submitData() {
             // IMPORTANT: Your checkFileReady function should hide #loadingSpinnerOverlay
             // once the file is ready/downloaded or if an error occurs during that stage.
             // Example: if checkFileReady directly triggers download:
-            // window.location.href = data.fileUrl;
-            // setTimeout(() => $('#loadingSpinnerOverlay').hide(), 1000); // Hide after a short delay
+            window.location.href = data.fileUrl;
+            setTimeout(() => $('#loadingSpinnerOverlay').hide(), 2000); // Hide after a short delay
         } else {
             alert(data.message || data.error || "Unknown response from server after submission.");
             $('#loadingSpinnerOverlay').hide(); // Hide on error or unexpected response
