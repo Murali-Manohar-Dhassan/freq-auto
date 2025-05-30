@@ -704,7 +704,7 @@ function checkFileReady(fileUrl) {
                 if (response.ok && response.status === 200) {
                     $('#loadingMessage').text('File ready! Starting download...');
                     setTimeout(() => {
-                        window.location.href = fileUrl;
+                        //window.location.href = fileUrl; // Trigger download
                         $('#loadingSpinner').hide();
                         $('#stationContainer').empty();
                         $('#submitContainer').hide();
