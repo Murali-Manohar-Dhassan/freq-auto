@@ -4,161 +4,161 @@
     "zone": "Western",
     "latitude": "23.03185",
     "longitude": "72.602317",
-    "code": null
+    "code": "ADI"
   },
   "24201": {
     "name": "Kankariya Cabin",
     "zone": "Western",
     "latitude": "23.008447",
     "longitude": "72.606519",
-    "code": null
+    "code": "KKF"
   },
   "24202": {
     "name": "Vatva",
     "zone": "Western",
     "latitude": "22.961097",
     "longitude": "72.628953",
-    "code": null
+    "code": "VTA"
   },
   "24203": {
     "name": "Geratpur",
     "zone": "Western",
     "latitude": "22.916156",
     "longitude": "72.6556",
-    "code": null
+    "code": "GER"
   },
   "24204": {
     "name": "Barejadi Nandej",
     "zone": "Western",
     "latitude": "22.895372",
     "longitude": "72.677761",
-    "code": null
+    "code": "BJD"
   },
   "24205": {
     "name": "Kanij",
     "zone": "Western",
     "latitude": "22.865236",
     "longitude": "72.706131",
-    "code": null
+    "code": "KANJ"
   },
   "24206": {
     "name": "LC - 294",
     "zone": "Western",
     "latitude": "22.8474",
     "longitude": "72.724661",
-    "code": null
+    "code": "LC-294"
   },
   "24207": {
     "name": "Mahemadabad & Kheda Rd",
     "zone": "Western",
     "latitude": "22.818733",
     "longitude": "72.753567",
-    "code": null
+    "code": "MHD"
   },
   "24208": {
     "name": "LC - 286",
     "zone": "Western",
     "latitude": "22.790944",
     "longitude": "72.776072",
-    "code": null
+    "code": "LC-286"
   },
   "24209": {
     "name": "Gothaj",
     "zone": "Western",
     "latitude": "22.758256",
     "longitude": "72.802875",
-    "code": null
+    "code": "GTE"
   },
   "24210": {
     "name": "LC - 278",
     "zone": "Western",
     "latitude": "22.736442",
     "longitude": "72.821164",
-    "code": null
+    "code": "LC-278"
   },
   "24211": {
     "name": "Nadiad Jn",
     "zone": "Western",
     "latitude": "22.697347",
     "longitude": "72.855053",
-    "code": null
+    "code": "ND"
   },
   "24212": {
     "name": "Utarsanda",
     "zone": "Western",
     "latitude": "22.656278",
     "longitude": "72.887725",
-    "code": null
+    "code": "UTD"
   },
   "24213": {
     "name": "Kanjari Boriyavi",
     "zone": "Western",
     "latitude": "22.615089",
     "longitude": "72.922664",
-    "code": null
+    "code": "KBRV"
   },
   "24214": {
     "name": "LC - 264",
     "zone": "Western",
     "latitude": "22.588172",
     "longitude": "72.944175",
-    "code": null
+    "code": "LC-264"
   },
   "24215": {
     "name": "Anand Jn",
     "zone": "Western",
     "latitude": "22.560683",
     "longitude": "72.968275",
-    "code": null
+    "code": "ANND"
   },
   "24216": {
     "name": "LC - 258",
     "zone": "Western",
     "latitude": "22.542061",
     "longitude": "72.982539",
-    "code": null
+    "code": "LC-258"
   },
   "24217": {
     "name": "Vadod",
     "zone": "Western",
     "latitude": "22.515181",
     "longitude": "73.007906",
-    "code": null
+    "code": "VXD"
   },
   "24218": {
     "name": "Adas Road",
     "zone": "Western",
     "latitude": "22.487117",
     "longitude": "73.033414",
-    "code": null
+    "code": "ADD"
   },
   "24219": {
     "name": "Vasad Jn",
     "zone": "Western",
     "latitude": "22.453242",
     "longitude": "73.060614",
-    "code": null
+    "code": "VDA"
   },
   "24220": {
     "name": "LC - 246",
     "zone": "Western",
     "latitude": "22.427506",
     "longitude": "73.084375",
-    "code": null
+    "code": "LC-246"
   },
   "24221": {
     "name": "Ranoli",
     "zone": "Western",
     "latitude": "22.406072",
     "longitude": "73.112589",
-    "code": null
+    "code": "RNO"
   },
   "24222": {
     "name": "Bajva",
     "zone": "Western",
     "latitude": "22.369228",
     "longitude": "73.142183",
-    "code": null
+    "code": "BJW"
   },
   "37001": {
     "name": "Maripat",
@@ -207,7 +207,7 @@
     "zone": "North Central",
     "latitude": "28.349556",
     "longitude": "77.698667",
-    "code": "WIR"
+    "code": "WAIR"
   },
   "37008": {
     "name": "Chola",
@@ -1147,614 +1147,614 @@
     "longitude": "83.084472",
     "code": "BH-K"
   },
-  "3710": {
+  "03710": {
     "name": "New Delhi",
     "zone": "Northern",
     "latitude": "28.646906",
     "longitude": "77.218458",
-    "code": null
+    "code": "NDLS"
   },
-  "3011": {
+  "03011": {
     "name": "Tilak Bridge",
     "zone": "Northern",
     "latitude": "28.622964",
     "longitude": "77.245044",
-    "code": null
+    "code": "TKJ"
   },
-  "3012": {
+  "03012": {
     "name": "Mandavli Halt",
     "zone": "Northern",
     "latitude": "28.6288",
     "longitude": "77.287914",
-    "code": null
+    "code": "MNDY"
   },
-  "3051": {
+  "03051": {
     "name": "Anand Vihar",
     "zone": "Northern",
     "latitude": "28.646131",
     "longitude": "77.311817",
-    "code": null
+    "code": "ANVT"
   },
-  "3013": {
+  "03013": {
     "name": "B Panel",
     "zone": "Northern",
     "latitude": "28.661594",
     "longitude": "77.3292",
-    "code": null
+    "code": "DSBP-B"
   },
-  "3014": {
+  "03014": {
     "name": "Sahibabad",
     "zone": "Northern",
     "latitude": "28.674514",
     "longitude": "77.363472",
-    "code": null
+    "code": "DSBP"
   },
-  "3015": {
+  "03015": {
     "name": "Ghaziabad",
     "zone": "Northern",
     "latitude": "28.655089",
     "longitude": "77.427294",
-    "code": null
+    "code": "GZB"
   },
-  "3016": {
+  "03016": {
     "name": "Ghaziabad Els",
     "zone": "Northern",
-    "latitude": "---",
-    "longitude": "---",
-    "code": null
+    "latitude": "28.635789",
+    "longitude": "77.440556",
+    "code": "GHZ-ELS"
   },
-  "3054": {
+  "03054": {
     "name": "Chipiyanabuz Urg",
     "zone": "Northern",
     "latitude": "28.626511",
     "longitude": "77.462311",
-    "code": null
+    "code": "CPYZ"
   },
-  "3017": {
-    "name": "Ghaziabad - Meerut City",
+  "03017": {
+    "name": "Meerut City",
     "zone": "Northern",
     "latitude": "28.664031",
     "longitude": "77.444542",
-    "code": null
+    "code": "MTC"
   },
-  "3052": {
+  "03052": {
     "name": "Hazrat Nizamuddin",
     "zone": "Northern",
     "latitude": "28.585597",
     "longitude": "77.253894",
-    "code": null
+    "code": "NZM"
   },
-  "3018": {
+  "03018": {
     "name": "Okhla",
     "zone": "Northern",
     "latitude": "28.560311",
     "longitude": "77.264053",
-    "code": null
+    "code": "OKA"
   },
-  "3019": {
+  "03019": {
     "name": "Tughlakabad",
     "zone": "Northern",
     "latitude": "28.503831",
     "longitude": "77.297819",
-    "code": null
+    "code": "TKD"
   },
-  "3020": {
+  "03020": {
     "name": "Junction Cabin",
     "zone": "Northern",
     "latitude": "28.458233",
     "longitude": "77.303767",
-    "code": null
+    "code": "JNCB"
   },
-  "3021": {
+  "03021": {
     "name": "Faridabad",
     "zone": "Northern",
     "latitude": "28.414717",
     "longitude": "77.306239",
-    "code": null
+    "code": "FDB"
   },
-  "3022": {
-    "name": "Faridabad Town",
+  "03022": {
+    "name": "Faridabad New Town",
     "zone": "Northern",
     "latitude": "28.377",
     "longitude": "77.3099",
-    "code": null
+    "code": "FDN"
   },
-  "3023": {
+  "03023": {
     "name": "Ballabhgarh",
     "zone": "Northern",
     "latitude": "28.338864",
     "longitude": "77.313156",
-    "code": null
+    "code": "BVH"
   },
-  "3024": {
+  "03024": {
     "name": "Pyala",
     "zone": "Northern",
     "latitude": "28.287099",
     "longitude": "77.3179",
-    "code": null
+    "code": "PYLA"
   },
-  "3025": {
+  "03025": {
     "name": "Asaoti",
     "zone": "Northern",
     "latitude": "28.251894",
     "longitude": "77.32385",
-    "code": null
+    "code": "AST"
   },
-  "3026": {
-    "name": "Ph10",
+  "03026": {
+    "name": "PH10",
     "zone": "Northern",
     "latitude": "28.194125",
     "longitude": "77.334875",
-    "code": null
+    "code": "PH10-1"
   },
-  "3053": {
+  "03053": {
     "name": "Palwal",
     "zone": "Northern",
     "latitude": "28.15585",
     "longitude": "77.341869",
-    "code": null
+    "code": "PWL"
   },
-  "3027": {
-    "name": "Pt. Deendayal Upadhaya",
+  "03027": {
+    "name": "Pt. Deendayal Upadhaya Jn",
     "zone": "East Central",
     "latitude": "25.2804",
     "longitude": "83.1207",
-    "code": null
+    "code": "DDU"
   },
   "45106": {
     "name": "Pt. Deendayal Upadhaya Loco - Shed",
     "zone": "East Central",
     "latitude": "25.2861",
     "longitude": "83.1716",
-    "code": null
+    "code": "PDUL-LS"
   },
   "45092": {
     "name": "Flyover Cabin",
     "zone": "East Central",
     "latitude": "25.2736",
     "longitude": "83.1846",
-    "code": null
+    "code": "FOCS"
   },
   "45105": {
     "name": "Ganjkhwaja Jn.",
     "zone": "East Central",
     "latitude": "25.2668",
     "longitude": "83.2256",
-    "code": null
+    "code": "GAQ"
   },
   "45104": {
     "name": "LC - 78",
     "zone": "East Central",
     "latitude": "25.2611",
     "longitude": "83.2679",
-    "code": null
+    "code": "LC-78"
   },
   "45103": {
     "name": "Chandauli Majhwar",
     "zone": "East Central",
     "latitude": "25.2586",
     "longitude": "83.3033",
-    "code": null
+    "code": "CDMR"
   },
   "45102": {
     "name": "LC - 75",
     "zone": "East Central",
     "latitude": "25.2534",
     "longitude": "83.3504",
-    "code": null
+    "code": "LC-75"
   },
   "45101": {
     "name": "Saidraja",
     "zone": "East Central",
     "latitude": "25.2479",
     "longitude": "83.3892",
-    "code": null
+    "code": "SYJ"
   },
   "45100": {
     "name": "LC - 70",
     "zone": "East Central",
     "latitude": "25.2401",
     "longitude": "83.4312",
-    "code": null
+    "code": "LC-70"
   },
   "45099": {
     "name": "Karamnasa",
     "zone": "East Central",
     "latitude": "25.2337",
     "longitude": "83.4622",
-    "code": null
+    "code": "KMS"
   },
   "45098": {
-    "name": "3.20 Km From Kms",
+    "name": "UKF KMS",
     "zone": "East Central",
     "latitude": "25.2272",
     "longitude": "83.492",
-    "code": null
+    "code": "UKF-KMS"
   },
   "45097": {
     "name": "Dhanaichha",
     "zone": "East Central",
     "latitude": "25.208",
     "longitude": "83.5386",
-    "code": null
+    "code": "DCX"
   },
   "45096": {
     "name": "Durgauti",
     "zone": "East Central",
     "latitude": "25.1922",
     "longitude": "83.581",
-    "code": null
+    "code": "DGO"
   },
   "45094": {
     "name": "Bhabua Rd.",
     "zone": "East Central",
     "latitude": "25.1726",
     "longitude": "83.6193",
-    "code": null
+    "code": "BBU"
   },
   "45093": {
     "name": "Muthani",
     "zone": "East Central",
     "latitude": "25.1421",
     "longitude": "83.6614",
-    "code": null
+    "code": "MTGE"
   },
   "45091": {
     "name": "LC - 56",
     "zone": "East Central",
     "latitude": "25.1202",
     "longitude": "83.6924",
-    "code": null
+    "code": "LC-56"
   },
   "45090": {
     "name": "Pusauli",
     "zone": "East Central",
     "latitude": "25.0973",
     "longitude": "83.7228",
-    "code": null
+    "code": "PSE"
   },
   "45089": {
     "name": "LC - 53",
     "zone": "East Central",
     "latitude": "25.0744",
     "longitude": "83.755",
-    "code": null
+    "code": "LC-53"
   },
   "45088": {
     "name": "Kudra",
     "zone": "East Central",
     "latitude": "25.0494",
     "longitude": "83.7926",
-    "code": null
+    "code": "KTQ"
   },
   "45087": {
-    "name": "3.36 Km From Ktq",
+    "name": "UKF KTQ",
     "zone": "East Central",
     "latitude": "25.0341",
     "longitude": "83.8213",
-    "code": null
+    "code": "UKF-KTQ"
   },
   "45086": {
-    "name": "Khurmabad Rd. - Bh",
+    "name": "Khurmabad Road",
     "zone": "East Central",
     "latitude": "25.0216",
     "longitude": "83.848",
-    "code": null
+    "code": "KVD"
   },
   "45085": {
-    "name": "Shiusagar Rd.",
+    "name": "Shiusagar Road",
     "zone": "East Central",
     "latitude": "25.0002",
     "longitude": "83.8957",
-    "code": null
+    "code": "SSG"
   },
   "45083": {
     "name": "Kumahu",
     "zone": "East Central",
     "latitude": "24.9775",
     "longitude": "83.946",
-    "code": null
+    "code": "KMGE"
   },
   "45081": {
-    "name": "4.17 Km From Kmge",
+    "name": "UKF Kmge",
     "zone": "East Central",
     "latitude": "24.9609",
     "longitude": "83.9831",
-    "code": null
+    "code": "UKF-KMGE"
   },
   "45080": {
-    "name": "Sasaram Jn",
+    "name": "Sasaram",
     "zone": "East Central",
     "latitude": "24.9564",
     "longitude": "84.0194",
-    "code": null
+    "code": "SSM"
   },
   "45079": {
     "name": "LC - 39",
     "zone": "East Central",
     "latitude": "24.9566",
     "longitude": "84.0571",
-    "code": null
+    "code": "LC-39"
   },
   "45078": {
     "name": "Karwandia",
     "zone": "East Central",
     "latitude": "24.9505",
     "longitude": "84.0923",
-    "code": null
+    "code": "KWD"
   },
   "45077": {
     "name": "LC - 36",
     "zone": "East Central",
     "latitude": "24.9422",
     "longitude": "84.1188",
-    "code": null
+    "code": "LC-36"
   },
   "45076": {
-    "name": "Pahleza",
+    "name": "Pahlejaghat",
     "zone": "East Central",
     "latitude": "24.9326",
     "longitude": "84.1468",
-    "code": null
+    "code": "PHLG"
   },
   "45075": {
-    "name": "Dehri - On - Sone",
+    "name": "Dehri On Sone",
     "zone": "East Central",
     "latitude": "24.9145",
     "longitude": "84.1858",
-    "code": null
+    "code": "DOS"
   },
   "45074": {
     "name": "Sonnagar Jn",
     "zone": "East Central",
     "latitude": "24.8822",
     "longitude": "84.2293",
-    "code": null
+    "code": "SEB"
   },
   "45072": {
-    "name": "Chirailapauthu - Bh",
+    "name": "Chiraila Pauthu",
     "zone": "East Central",
     "latitude": "24.8617",
     "longitude": "84.2802",
-    "code": null
+    "code": "CPBH"
   },
   "45070": {
-    "name": "Anugrah Narayan Rd.",
+    "name": "Anugrah Narayan Road",
     "zone": "East Central",
     "latitude": "24.8558",
     "longitude": "84.3302",
-    "code": null
+    "code": "AUBR"
   },
   "45068": {
     "name": "LC - 29 (Kurhma Naresh Halt)",
     "zone": "East Central",
     "latitude": "24.8481",
     "longitude": "84.3959",
-    "code": null
+    "code": "LC-29"
   },
   "45067": {
     "name": "Phesar",
     "zone": "East Central",
     "latitude": "24.8453",
     "longitude": "84.4184",
-    "code": null
+    "code": "PES"
   },
   "45066": {
     "name": "Bagohikusa Bh",
     "zone": "East Central",
     "latitude": "24.8401",
     "longitude": "84.4627",
-    "code": null
+    "code": "BGKB-BH"
   },
   "45065": {
     "name": "Jakhim",
     "zone": "East Central",
     "latitude": "24.8294",
     "longitude": "84.5256",
-    "code": null
+    "code": "JHN"
   },
   "45064": {
-    "name": "Deo Road Bh",
+    "name": "Deo Road",
     "zone": "East Central",
     "latitude": "24.8224",
     "longitude": "84.5646",
-    "code": null
+    "code": "DORD"
   },
   "45063": {
     "name": "LC - 20",
     "zone": "East Central",
     "latitude": "24.8165",
     "longitude": "84.6071",
-    "code": null
+    "code": "LC-20"
   },
   "45062": {
     "name": "Rafiganj",
     "zone": "East Central",
     "latitude": "24.8197",
     "longitude": "84.6339",
-    "code": null
+    "code": "RFJ"
   },
   "45061": {
     "name": "LC - 16",
     "zone": "East Central",
     "latitude": "24.819",
     "longitude": "84.6782",
-    "code": null
+    "code": "LC-16"
   },
   "45060": {
     "name": "Ismailpur",
     "zone": "East Central",
     "latitude": "24.815",
     "longitude": "84.724",
-    "code": null
+    "code": "IMGE"
   },
   "45059": {
     "name": "Guraru",
     "zone": "East Central",
     "latitude": "24.811",
     "longitude": "84.7913",
-    "code": null
+    "code": "GRRU"
   },
   "45058": {
     "name": "Paraiya",
     "zone": "East Central",
     "latitude": "24.8095",
     "longitude": "84.8506",
-    "code": null
+    "code": "PRY"
   },
   "45057": {
-    "name": "3.6Km From Pry",
+    "name": "UNK Pry",
     "zone": "East Central",
     "latitude": "24.8074",
     "longitude": "84.8858",
-    "code": null
+    "code": "UNKP-PRY"
   },
   "45056": {
     "name": "Kastha",
     "zone": "East Central",
     "latitude": "24.8026",
     "longitude": "84.9206",
-    "code": null
+    "code": "KSTA"
   },
   "45055": {
-    "name": "Gaya West Cabin",
+    "name": "West Cabin Gaya",
     "zone": "East Central",
     "latitude": "24.7988",
     "longitude": "84.9711",
-    "code": null
+    "code": "WCB"
   },
   "45054": {
-    "name": "Gaya Jn.",
+    "name": "Gaya Jn",
     "zone": "East Central",
     "latitude": "24.8038",
     "longitude": "84.9994",
-    "code": null
+    "code": "GAYA"
   },
   "45053": {
-    "name": "Manpur Jn.",
+    "name": "Manpur Jn",
     "zone": "East Central",
     "latitude": "24.8066",
     "longitude": "85.0447",
-    "code": null
+    "code": "MPO"
   },
   "45052": {
     "name": "LC - 67A",
     "zone": "East Central",
     "latitude": "24.7846",
     "longitude": "85.0555",
-    "code": null
+    "code": "lC-67A"
   },
   "45051": {
     "name": "Bandhua",
     "zone": "East Central",
     "latitude": "24.7524",
     "longitude": "85.0663",
-    "code": null
+    "code": "BNF"
   },
   "45050": {
-    "name": "Ibh (Auto - Hut)",
+    "name": "ibh (Auto - Hut)",
     "zone": "East Central",
     "latitude": "24.7281",
     "longitude": "85.0925",
-    "code": null
+    "code": "IBHAH-HUT"
   },
   "45049": {
     "name": "Tankuppa",
     "zone": "East Central",
     "latitude": "24.7038",
     "longitude": "85.1194",
-    "code": null
+    "code": "TKN"
   },
   "45048": {
-    "name": "Bansinala Bh (Auto - Hut)",
+    "name": "Bansinala Halt",
     "zone": "East Central",
     "latitude": "24.6663",
     "longitude": "85.1603",
-    "code": null
+    "code": "BNSL"
   },
   "45047": {
-    "name": "LC - 39Ct",
+    "name": "LC - 39CT",
     "zone": "East Central",
     "latitude": "24.6455",
     "longitude": "85.1831",
-    "code": null
+    "code": "LC-39CT"
   },
   "45046": {
     "name": "Paharpur",
     "zone": "East Central",
     "latitude": "24.6242",
     "longitude": "85.2065",
-    "code": null
+    "code": "PRP"
   },
   "45045": {
     "name": "Ibp No. 10 (Auto - Hut)",
     "zone": "East Central",
     "latitude": "24.589",
     "longitude": "85.2528",
-    "code": null
+    "code": "IBPH-10"
   },
   "45044": {
     "name": "Gurpa",
     "zone": "East Central",
     "latitude": "24.5613",
     "longitude": "85.299",
-    "code": null
+    "code": "GAP"
   },
   "45043": {
     "name": "Yadugram Bh",
     "zone": "East Central",
     "latitude": "24.5398",
     "longitude": "85.3387",
-    "code": null
+    "code": "YGM"
   },
   "45042": {
-    "name": "Banskatwa Bh (Auto - Hut)",
+    "name": "Banskatwa B H",
     "zone": "East Central",
     "latitude": "24.546",
     "longitude": "85.3698",
-    "code": null
+    "code": "BSCP"
   },
   "45041": {
-    "name": "Nathganj Bh (Auto - Hut)",
+    "name": "Nath Ganj)",
     "zone": "East Central",
     "latitude": "24.5469",
     "longitude": "85.3812",
-    "code": null
+    "code": "NGY"
   },
   "45039": {
     "name": "Ngy - T2 - Dlw",
     "zone": "East Central",
     "latitude": "24.53",
     "longitude": "85.3904",
-    "code": null
+    "code": "NGY-DLW"
   },
   "45038": {
     "name": "Dilwa",
     "zone": "East Central",
     "latitude": "24.5377",
     "longitude": "85.4202",
-    "code": null
+    "code": "DLW"
   },
   "45037": {
-    "name": "Lalbagh (Auto - Hut)",
+    "name": "Lalbagh",
     "zone": "East Central",
     "latitude": "24.5089",
     "longitude": "85.4478",
-    "code": null
+    "code": "LBZ"
   },
   "45036": {
     "name": "Gujhandi",
     "zone": "East Central",
     "latitude": "24.4978",
     "longitude": "85.4637",
-    "code": null
+    "code": "GJD"
   },
   "45035": {
-    "name": "Ibp Mp. 9 (Auto - Hut)",
+    "name": "IBP MP. 9 (Auto - Hut)",
     "zone": "East Central",
     "latitude": "24.4699",
     "longitude": "85.4987",
-    "code": null
+    "code": "IBHMP-9"
   },
   "45034": {
     "name": "Koderma",
@@ -1764,109 +1764,109 @@
     "code": "KQR"
   },
   "45033": {
-    "name": "Larabad Bh (Auto - Hut)",
+    "name": "Larabad",
     "zone": "East Central",
     "latitude": "24.4084",
     "longitude": "85.5617",
-    "code": null
+    "code": "LRB"
   },
   "45032": {
     "name": "Hirodih",
     "zone": "East Central",
     "latitude": "24.3828",
     "longitude": "85.5968",
-    "code": null
+    "code": "HRE"
   },
   "45031": {
     "name": "Ibh (Auto - Hut)",
     "zone": "East Central",
     "latitude": "24.354",
     "longitude": "85.6318",
-    "code": null
+    "code": "IBHAH-HUT"
   },
   "45030": {
     "name": "Sharamatanr",
     "zone": "East Central",
     "latitude": "24.3441",
     "longitude": "85.6577",
-    "code": null
+    "code": "SMND"
   },
   "45029": {
-    "name": "Yadudih (Auto - Hut)",
+    "name": "Yadudih",
     "zone": "East Central",
     "latitude": "24.3333",
     "longitude": "85.6938",
-    "code": null
+    "code": "YDD"
   },
   "45028": {
     "name": "Parasabad",
     "zone": "East Central",
     "latitude": "24.3074",
     "longitude": "85.7395",
-    "code": null
+    "code": "PSB"
   },
   "45027": {
-    "name": "Dasarah Bh (Auto - Hut)",
+    "name": "Dasarah",
     "zone": "East Central",
     "latitude": "24.2744",
     "longitude": "85.7906",
-    "code": null
+    "code": "DSME"
   },
   "45025": {
     "name": "Chaubey",
     "zone": "East Central",
     "latitude": "24.2371",
     "longitude": "85.816",
-    "code": null
+    "code": "CBH"
   },
   "45024": {
-    "name": "Keshwari Bh (Auto - Hut)",
+    "name": "Keshwari",
     "zone": "East Central",
     "latitude": "24.2077",
     "longitude": "85.8498",
-    "code": null
+    "code": "KSHB"
   },
   "45023": {
-    "name": "Hazaribagh Rd.",
+    "name": "Hazaribagh Road",
     "zone": "East Central",
     "latitude": "24.1745",
     "longitude": "85.8916",
-    "code": null
+    "code": "HZD"
   },
   "45021": {
-    "name": "Garea Bihar Bh (Auto - Hut)",
+    "name": "Garea Bihar",
     "zone": "East Central",
     "latitude": "24.1331",
     "longitude": "85.909",
-    "code": null
+    "code": "GRBH"
   },
   "45019": {
     "name": "Chichaki",
     "zone": "East Central",
     "latitude": "24.1118",
     "longitude": "85.9467",
-    "code": null
+    "code": "CCK"
   },
   "45018": {
-    "name": "Karamabad Bh (Auto - Hut)",
+    "name": "Karamabad",
     "zone": "East Central",
     "latitude": "24.0821",
     "longitude": "85.9683",
-    "code": null
+    "code": "KRYR"
   },
   "45017": {
     "name": "Chaudhuri Bandh",
     "zone": "East Central",
     "latitude": "24.0555",
     "longitude": "85.99",
-    "code": null
+    "code": "CDB"
   },
   "45016": {
-    "name": "Chegro Bh (Auto)",
+    "name": "Chegro",
     "zone": "East Central",
     "latitude": "24.0226",
     "longitude": "86.0241",
-    "code": null
+    "code": "CEME"
   },
   "45015": {
     "name": "Parasnath",
@@ -1880,112 +1880,112 @@
     "zone": "East Central",
     "latitude": "23.9602",
     "longitude": "86.0564",
-    "code": null
+    "code": "LCAH-13C"
   },
   "45012": {
     "name": "Nimiaghat",
     "zone": "East Central",
     "latitude": "23.9317",
     "longitude": "86.077",
-    "code": null
+    "code": "NMG"
   },
   "45011": {
-    "name": "Bholidih (Auto - Hut)",
+    "name": "Bholidih",
     "zone": "East Central",
     "latitude": "23.8984",
     "longitude": "86.1169",
-    "code": null
+    "code": "BLME"
   },
   "45010": {
     "name": "Netaji Subhas Chandra Bose Gomoh",
     "zone": "East Central",
     "latitude": "23.8717",
     "longitude": "86.1525",
-    "code": null
+    "code": "GMO"
   },
   "45014": {
-    "name": "Ibp No. 3 (Auto - Hut)",
+    "name": "IBP No. 3 (Auto - Hut)",
     "zone": "East Central",
     "latitude": "23.8579",
     "longitude": "86.1936",
-    "code": null
+    "code": "IBPAH-3"
   },
   "45008": {
     "name": "Matari",
     "zone": "East Central",
     "latitude": "23.8406",
     "longitude": "86.2392",
-    "code": null
+    "code": "MRQ"
   },
   "45007": {
-    "name": "Nichitpur - H",
+    "name": "Nichitpur",
     "zone": "East Central",
     "latitude": "23.8257",
     "longitude": "86.2874",
-    "code": null
+    "code": "NPJE"
   },
   "45006": {
     "name": "Tetulmari",
     "zone": "East Central",
     "latitude": "23.8145",
     "longitude": "86.3437",
-    "code": null
+    "code": "TET"
   },
   "45005": {
-    "name": "Bhuli Bh (Auto - Hut)",
+    "name": "Bhuli",
     "zone": "East Central",
     "latitude": "23.8018",
     "longitude": "86.395",
-    "code": null
+    "code": "BHN"
   },
   "45003": {
-    "name": "Dhanbad",
+    "name": " Dhanbad Jn",
     "zone": "East Central",
     "latitude": "23.7926",
     "longitude": "86.428",
     "code": "DHN"
   },
   "45002": {
-    "name": "Dokra Bh (Auto - Hut)",
+    "name": "Dokra Halt",
     "zone": "East Central",
     "latitude": "23.7834",
     "longitude": "86.4746",
-    "code": null
+    "code": "DOKM"
   },
   "45001": {
-    "name": "Pradhankhunta Jn.",
+    "name": "Pradhankhunta",
     "zone": "East Central",
     "latitude": "23.7724",
     "longitude": "86.5169",
-    "code": null
+    "code": "PKA"
   },
   "45000": {
     "name": "Mumbai Central",
     "zone": "Western",
     "latitude": "18.970637",
     "longitude": "72.818794",
-    "code": null
+    "code": "MMCT"
   },
   "24165": {
-    "name": "Lower Parel",
+    "name": "Mumbai Lower Parel",
     "zone": "Western",
     "latitude": "18.99544",
     "longitude": "72.830177",
-    "code": null
+    "code": "PL"
   },
   "24164": {
     "name": "Dadar",
     "zone": "Western",
     "latitude": "19.007737",
     "longitude": "72.835997",
-    "code": null
+    "code": "DR"
   },
   "24163": {
     "name": "Bandra",
     "zone": "Western",
     "latitude": "19.028408",
     "longitude": "72.846854",
-    "code": null
+    "code": "BA"
   },
   "24162": {
     "name": "Santacruz",
@@ -1995,17 +1995,17 @@
     "code": "STC"
   },
   "24161": {
-    "name": "Andheri",
+    "name": "Ville Parle",
     "zone": "Western",
     "latitude": "19.080766",
     "longitude": "72.842058",
-    "code": null
+    "code": "VLP"
   },
   "24160": {
     "name": "Andheri",
     "zone": "Western",
     "latitude": "19.120346",
     "longitude": "72.847358",
-    "code": null
+    "code": "ADH"
   }
 }
