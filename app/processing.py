@@ -468,7 +468,7 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         if r_num == header_excel_row: # "Station Name" label
             cell.alignment = center_align_v_center
         else:
-            cell.alignment = left_align_v_center_wrap
+            cell.alignment = center_align_v_center
 
 
     # --- Populate Data for Specific Rows (Columns B onwards) ---

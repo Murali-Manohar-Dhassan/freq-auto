@@ -16,25 +16,24 @@
         #floatingBrand {
             position: fixed;
             top: 100px;
-            left: -400px; /* start off-screen */
+            left: -1000px; /* start off-screen */
             z-index: 1050;
             background: rgba(255, 255, 255, 0.8);
             padding: 8px 16px;
             border-radius: 0 8px 8px 0;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             transition: left 0.5s ease-in-out;
-            font-size: 1.1rem; /* ✅ Change size: try 1.5rem or 2rem for larger text */
-            font-weight: 600;        /* ✅ Make it bolder (normal, 500, 600, 700, etc.) */
-            font-family: 'Inter', sans-serif;  /* ✅ Use your preferred font eg, ['Roboto Slab', serif;], ['Orbitron', sans-serif;] futruistic */
-            letter-spacing: 0.5px;   /* ✅ Optional: gives a spaced look */
-            writing-mode: vertical-rl; /* For Horizontal [horizontal-tb] */
-            text-orientation: mixed; /* For Horizontal [initial] */
-            /* Horizontal, Largr, Bold, Inter
+            /*font-size: 1.1rem; 
+            font-weight: 600; 
+            font-family: 'Inter', sans-serif;  
+            letter-spacing: 0.5px;
+            writing-mode: vertical-rl; 
+            text-orientation: mixed; */
+            /* Horizontal, Largr, Bold, Inter */
             font-size: 1.8rem;
-            font-weight: 700;
-            font-family: 'Inter', sans-serif;
+            font-weight: 800;
+            font-family: 'Roboto Slab', serif;
             writing-mode: horizontal-tb;
-            */
             /* Vertical, Thin,
             font-size: 1rem;
             font-weight: 400;
@@ -42,6 +41,7 @@
             writing-mode: vertical-rl;
             text-orientation: mixed;
             */
+            /* ✅ Use your preferred font eg, ['Roboto Slab', serif;], ['Orbitron', sans-serif;] futruistic, ['Inter', sans-serif] */
         }
         #floatingBrand.show {
             left: 0; /* slide into view */
@@ -122,7 +122,7 @@
         <h5 class="text-secondary">Version 2.0</h2>
 
         </header>
-        <div id="floatingBrand" class="text-primary fw-bold">
+        <div id="floatingBrand" class="text-primary fw-bold" style="width: 430px;">
             <span>🚆 Center of Excellence for Railway Kavach Technology</span>
         </div>
 
