@@ -47,7 +47,7 @@ function showManual() {
 
     $('#manualInputActions').show(); // Show the new container for action buttons
     $('#addStationBtn').show();      // This button is inside #manualInputActions
-    $('#finishManualInputBtn').text('Finish & Preview Stations').hide(); // Also inside
+    $('#finishManualInputBtn').text('Finish & Preview Stations').hide();
 
     $('#submitContainer').hide();
     $('#submitArrowGuide').hide(); // Ensure arrow is hidden initially

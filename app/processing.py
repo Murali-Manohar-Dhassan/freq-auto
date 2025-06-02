@@ -18,300 +18,216 @@ def allocate_slots(
     max_slots: int = 44,
     max_frequencies: int = 7
 ) -> list[dict]:
-    allocations: list[dict] = []
-    current_frequency: int = 1
-    station_alloc: list[str | int] = [0] * max_slots
-    onboard_alloc: list[str | int] = [0] * max_slots
-
-    ONBOARD_CONGESTION_THRESHOLD_RATIO = 0.80
-    MAX_P3_SLOTS_RATIO_OF_REQUESTED = 0.5
-
-    def _reset_frequency_allocations():
-        nonlocal station_alloc, onboard_alloc
-        station_alloc[:] = [0] * max_slots
-        onboard_alloc[:] = [0] * max_slots
-
-    def _advance_frequency():
-        nonlocal current_frequency
-        current_frequency += 1
-        if current_frequency > max_frequencies:
-            current_frequency = 1
-        _reset_frequency_allocations()
-
-    _reset_frequency_allocations()
+    allocations_output: list[dict] = []
+    
+    # Store allocation state (station names or 0) for each slot on each frequency
+    frequency_slot_maps = {
+        f_id: {
+            'station_alloc': [0] * max_slots, 
+            'onboard_alloc': [0] * max_slots  
+        }
+        for f_id in range(1, max_frequencies + 1)
+    }
 
     for station_data in stations:
         station_name = station_data["name"]
         optimum_static_param = station_data["Static"]
         requested_onboard_slots = station_data["onboardSlots"]
-        station_code, skavach_id, latitude, longitude = station_data["StationCode"], station_data["KavachID"], station_data["Lattitude"], station_data["Longitude"]
+        station_code = station_data["StationCode"]
+        skavach_id = station_data["KavachID"]
+        latitude = station_data["Lattitude"]
+        longitude = station_data["Longitude"]
         
         val_for_roundup = ((optimum_static_param * 120) + (requested_onboard_slots - optimum_static_param) * 40 + 100) / 66
-        calculated_station_slots = math.ceil(val_for_roundup)
+        calculated_station_slots_needed = math.ceil(val_for_roundup)
 
-        initial_frequency_for_this_station = current_frequency
-        best_suboptimal_plan_details = None
-        ideal_plan_details = None
+        committed_plan_details_for_station = None
 
-        for attempt_num in range(max_frequencies):
-            current_freq_stat_available = station_alloc.count(0)
-            if calculated_station_slots > current_freq_stat_available:
-                if attempt_num < max_frequencies - 1:
-                    _advance_frequency()
-                    if current_frequency == initial_frequency_for_this_station and attempt_num > 0: break
-                continue
+        # Try to place the current station on frequencies 1 through max_frequencies
+        for current_freq_id_attempt in range(1, max_frequencies + 1):
+            # Get the current allocation maps for the frequency being attempted
+            station_alloc_map = frequency_slot_maps[current_freq_id_attempt]['station_alloc']
+            onboard_alloc_map = frequency_slot_maps[current_freq_id_attempt]['onboard_alloc']
 
+            # 1. Find prospective station slots on this frequency
             prospective_station_slots_indices: list[int] = []
             temp_s_placed_count = 0
             for i in range(max_slots):
-                if temp_s_placed_count < calculated_station_slots:
-                    if station_alloc[i] == 0:
+                if temp_s_placed_count < calculated_station_slots_needed:
+                    if station_alloc_map[i] == 0: # Check if slot is free on this frequency
                         prospective_station_slots_indices.append(i)
                         temp_s_placed_count += 1
-                else: break
+                else:
+                    break
             
-            if temp_s_placed_count < calculated_station_slots:
-                if attempt_num < max_frequencies - 1:
-                    _advance_frequency()
-                    if current_frequency == initial_frequency_for_this_station and attempt_num > 0: break
-                continue
+            # If not enough station slots are available on this frequency, try the next frequency
+            if len(prospective_station_slots_indices) < calculated_station_slots_needed:
+                continue 
 
+            # 2. Plan onboard slots (P1, P2, P3) on this frequency
+            # (This detailed logic is adapted from your original P1, P2, P3 planning)
             planned_onboard_indices_p1: list[int] = []
             planned_onboard_indices_p2: list[int] = []
             planned_onboard_indices_p3: list[int] = []
             
+            # P1 Planning
             onboard_to_place_p1 = requested_onboard_slots
             if onboard_to_place_p1 > 0:
                 idx = 0
                 while len(planned_onboard_indices_p1) < onboard_to_place_p1 and idx < max_slots:
-                    is_slot_free = (onboard_alloc[idx] == 0)
-                    is_not_station_slot_for_this_station = (idx not in prospective_station_slots_indices)
-                    
-                    # MODIFICATION START: Check if the slot is touching any of the prospective station slots
+                    is_slot_free = (onboard_alloc_map[idx] == 0)
+                    is_not_prospective_station_slot = (idx not in prospective_station_slots_indices)
                     is_touching_station_slot = False
-                    if is_not_station_slot_for_this_station: # Only check for touching if it's not a station slot itself
+                    if is_not_prospective_station_slot:
                         if idx > 0 and (idx - 1) in prospective_station_slots_indices:
                             is_touching_station_slot = True
                         if not is_touching_station_slot and idx < max_slots - 1 and (idx + 1) in prospective_station_slots_indices:
                             is_touching_station_slot = True
-                    # MODIFICATION END
-                        
-                    if is_slot_free and is_not_station_slot_for_this_station and not is_touching_station_slot:
+                    
+                    if is_slot_free and is_not_prospective_station_slot and not is_touching_station_slot:
                         planned_onboard_indices_p1.append(idx)
-                        idx += 2 # P1 characteristic: try to leave a gap for the *next* P1 slot
-                    else: idx += 1
+                        idx += 2
+                    else:
+                        idx += 1
             
+            # P2 Planning
             onboard_to_place_p2 = requested_onboard_slots - len(planned_onboard_indices_p1)
             if onboard_to_place_p2 > 0:
                 for i in range(max_slots):
                     if len(planned_onboard_indices_p2) < onboard_to_place_p2:
-                        if onboard_alloc[i] == 0 and \
+                        if onboard_alloc_map[i] == 0 and \
                            i not in prospective_station_slots_indices and \
                            i not in planned_onboard_indices_p1:
                             planned_onboard_indices_p2.append(i)
-                    else: break
+                    else:
+                        break
             
+            # P3 Planning
             onboard_to_place_p3 = requested_onboard_slots - len(planned_onboard_indices_p1) - len(planned_onboard_indices_p2)
             if onboard_to_place_p3 > 0:
-                # In P3, we are looking for slots *within* the station's own prospective slots
-                # that are still free in onboard_alloc and not taken by P1 or P2.
                 for i in range(max_slots - 1, -1, -1):
                     if len(planned_onboard_indices_p3) < onboard_to_place_p3:
-                        if onboard_alloc[i] == 0 and \
+                        if onboard_alloc_map[i] == 0 and \
                            i in prospective_station_slots_indices and \
                            i not in planned_onboard_indices_p1 and \
                            i not in planned_onboard_indices_p2:
                             planned_onboard_indices_p3.append(i)
-                    else: break
-            
+                    else:
+                        break
+
             num_p1 = len(planned_onboard_indices_p1)
             num_p2 = len(planned_onboard_indices_p2)
             num_p3 = len(planned_onboard_indices_p3)
             total_onboard_planned = num_p1 + num_p2 + num_p3
             
             all_onboard_met = (total_onboard_planned >= requested_onboard_slots)
-            onboard_already_used = sum(1 for owner in onboard_alloc if owner != 0)
-            prospective_total_freq_onboard_usage = onboard_already_used + total_onboard_planned
-            is_congested = (prospective_total_freq_onboard_usage > (ONBOARD_CONGESTION_THRESHOLD_RATIO * max_slots))
-            
-            uses_excessive_p3 = False
-            if requested_onboard_slots > 0 and num_p3 > 0:
-                # Original P3 ratio check logic was based on num_p3 / total_onboard_planned.
-                # If MAX_P3_SLOTS_RATIO_OF_REQUESTED implies num_p3 / requested_onboard_slots, that part might need review
-                # based on how P3 is defined and used. Assuming current logic reflects intent.
-                if total_onboard_planned > 0: # Avoid division by zero if no onboard slots planned at all
-                   if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: # Check if P3 slots make up too large a portion of *all planned* onboard slots
-                       uses_excessive_p3 = True
-                elif num_p3 > 0 : # If only P3 slots were planned (e.g. P1/P2 found none)
-                    # This case needs careful definition: is any P3 automatically "excessive" if it's the *only* type found?
-                    # Or should it be num_p3 / requested_onboard_slots > threshold?
-                    # Sticking to minimal change, let's assume the existing logic for uses_excessive_p3 is what you want to keep.
-                    # The original code had:
-                    # if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: uses_excessive_p3 = True
-                    # This implies if total_onboard_planned is 0 and num_p3 > 0 (which is impossible as P3 contributes to total),
-                    # or if total_onboard_planned > 0.
-                    # The corrected 'elif num_p3 > 0' might have been an addition to handle cases where total_onboard_planned was small or zero.
-                    # For now, I'll keep your uses_excessive_p3 logic as it was, interpreting it carefully:
-                    # If any onboard slots are planned, check ratio of P3 to total planned.
-                    # If no onboard slots are planned overall (total_onboard_planned == 0) but somehow num_p3 > 0 (logically inconsistent here), it would be true.
-                    # More likely: if total_onboard_planned is 0, then num_p3 is 0, uses_excessive_p3 remains false.
-                    # If total_onboard_planned > 0 and matches requested, and P3 part is too high: uses_excessive_p3 = True.
-                    # The provided `elif num_p3 > 0 : uses_excessive_p3 = True` when `total_onboard_planned` was implicitly zero for that branch
-                    # would mean any P3 slots (if total_onboard_planned was zero, which means P1/P2 were zero) are excessive.
-                    # This implies P3 slots are only acceptable if P1/P2 also contribute.
-                    # Let's refine the excessive P3 check based on your constants:
-                    # MAX_P3_SLOTS_RATIO_OF_REQUESTED suggests comparing num_p3 to requested_onboard_slots.
-                    # However, your original code compares num_p3 to total_onboard_planned. I will preserve your latest logic.
-                    pass # The existing logic for uses_excessive_p3 seems to have been complex.
-                         # The critical line was: if (num_p3 / total_onboard_planned) > MAX_P3_SLOTS_RATIO_OF_REQUESTED:
-                         # I'll ensure this is what's effectively there, guarding division by zero.
-                if total_onboard_planned > 0: # Check ratio only if some onboard slots are planned
-                    if (num_p3 / float(total_onboard_planned)) > MAX_P3_SLOTS_RATIO_OF_REQUESTED: # Use float for division
-                        uses_excessive_p3 = True
-                # The 'elif num_p3 > 0: uses_excessive_p3 = True' part from your original code:
-                # This would mean if ONLY P3 slots are found (p1 and p2 are zero, so total_onboard_planned == num_p3),
-                # then it simplifies to (num_p3 / num_p3) > RATIO, i.e. 1.0 > RATIO.
-                # If RATIO is 0.5, then this is true. So if all slots are P3, it's excessive.
-                # This seems fine. The `float()` handles the division correctly.
+            # Station slots are met (checked by the 'continue' above for prospective_station_slots_indices)
 
-            current_plan_is_ideal = all_onboard_met and not is_congested and \
-                                    (not uses_excessive_p3 if requested_onboard_slots > 0 else True)
-
-            temp_plan = {
-                "station_name": station_name, "frequency": current_frequency,
-                "calculated_station_slots": calculated_station_slots,
-                "prospective_station_slots_indices": list(prospective_station_slots_indices),
-                "requested_onboard_slots": requested_onboard_slots,
-                "onboard_indices_p1": list(planned_onboard_indices_p1),
-                "onboard_indices_p2": list(planned_onboard_indices_p2),
-                "onboard_indices_p3": list(planned_onboard_indices_p3),
-                "all_onboard_met": all_onboard_met,
-                "is_congested": is_congested, "uses_excessive_p3": uses_excessive_p3,
-                "is_ideal": current_plan_is_ideal,
-            }
-
-            if current_plan_is_ideal:
-                ideal_plan_details = temp_plan
+            # If both station and onboard slots are met, this is a successful plan for this frequency
+            if all_onboard_met: # (and station slots were already confirmed to be met)
+                committed_plan_details_for_station = {
+                    "station_name": station_name, "frequency": current_freq_id_attempt,
+                    "calculated_station_slots": calculated_station_slots_needed,
+                    "prospective_station_slots_indices": list(prospective_station_slots_indices),
+                    "requested_onboard_slots": requested_onboard_slots,
+                    "onboard_indices_p1": list(planned_onboard_indices_p1),
+                    "onboard_indices_p2": list(planned_onboard_indices_p2),
+                    "onboard_indices_p3": list(planned_onboard_indices_p3),
+                    "Static": optimum_static_param,
+                    "StationCode": station_code, "KavachID": skavach_id,
+                    "Lattitude": latitude, "Longitude": longitude
+                }
+                # Found a suitable frequency for this station, break from iterating frequencies
                 break 
-
-            if all_onboard_met: # If not ideal, but still met request, consider for best_suboptimal
-                if best_suboptimal_plan_details is None:
-                    best_suboptimal_plan_details = temp_plan
-                else:
-                    # Prefer less congested
-                    if not temp_plan["is_congested"] and best_suboptimal_plan_details["is_congested"]:
-                        best_suboptimal_plan_details = temp_plan
-                    # If equally (not) congested, prefer less excessive P3
-                    elif temp_plan["is_congested"] == best_suboptimal_plan_details["is_congested"]:
-                        if not temp_plan["uses_excessive_p3"] and best_suboptimal_plan_details["uses_excessive_p3"]:
-                            best_suboptimal_plan_details = temp_plan
-            
-            if attempt_num < max_frequencies - 1:
-                _advance_frequency()
-                if current_frequency == initial_frequency_for_this_station and attempt_num > 0 :
-                    break
-            else: 
-                break # Exhausted attempts for this station
         
-        final_plan_to_commit = None
-        if ideal_plan_details:
-            final_plan_to_commit = ideal_plan_details
-        elif best_suboptimal_plan_details:
-            final_plan_to_commit = best_suboptimal_plan_details
-        
-        if final_plan_to_commit:
-            if current_frequency != final_plan_to_commit["frequency"]:
-                target_freq = final_plan_to_commit["frequency"]
-                # This loop ensures we are on the correct frequency's alloc state
-                while current_frequency != target_freq:
-                    _advance_frequency()
+        # After trying all frequencies for the current station:
+        if committed_plan_details_for_station:
+            chosen_freq = committed_plan_details_for_station["frequency"]
+            s_name_commit = committed_plan_details_for_station["station_name"]
 
-            s_name = final_plan_to_commit["station_name"]
-            s_freq = final_plan_to_commit["frequency"]
-            
+            # Commit stationary slots to the chosen frequency's map
             stat_p_nums_allocated: list[str] = []
-            for slot_idx in final_plan_to_commit["prospective_station_slots_indices"]:
-                if station_alloc[slot_idx] == 0: 
-                    station_alloc[slot_idx] = s_name
+            for slot_idx in committed_plan_details_for_station["prospective_station_slots_indices"]:
+                if frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] == 0: # Should be free
+                    frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] = s_name_commit
                     stat_p_nums_allocated.append(f"P{slot_idx+2}")
+                # else: Error, slot conflict during commit - should not happen if logic is correct
 
+            # Commit onboard slots (P1, P2, P3) to the chosen frequency's map
             onboard_p_nums_overall: list[str] = []
             onboard_p1_allocated_p_nums: list[str] = []
             onboard_p2_allocated_p_nums: list[str] = []
             onboard_p3_allocated_p_nums: list[str] = []
-            
             current_onboard_placed_count = 0
-            
-            # Commit P1 slots
-            for slot_idx in sorted(list(set(final_plan_to_commit["onboard_indices_p1"]))):
-                if current_onboard_placed_count < final_plan_to_commit["requested_onboard_slots"]:
-                    if onboard_alloc[slot_idx] == 0: # Double check, should be planned on free
-                        onboard_alloc[slot_idx] = s_name
+
+            # Commit P1
+            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p1"]))):
+                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
+                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
                         onboard_p1_allocated_p_nums.append(p_num)
                         onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
-            
-            # Commit P2 slots
-            for slot_idx in sorted(list(set(final_plan_to_commit["onboard_indices_p2"]))):
-                if current_onboard_placed_count < final_plan_to_commit["requested_onboard_slots"]:
-                    if onboard_alloc[slot_idx] == 0:
-                        onboard_alloc[slot_idx] = s_name
+            # Commit P2
+            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p2"]))):
+                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
+                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
                         onboard_p2_allocated_p_nums.append(p_num)
                         onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
-
-            # Commit P3 slots
-            for slot_idx in sorted(list(set(final_plan_to_commit["onboard_indices_p3"]))):
-                if current_onboard_placed_count < final_plan_to_commit["requested_onboard_slots"]:
-                    if onboard_alloc[slot_idx] == 0:
-                        onboard_alloc[slot_idx] = s_name
+            # Commit P3
+            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p3"]))):
+                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
+                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
                         onboard_p3_allocated_p_nums.append(p_num)
                         onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
-
-            allocations.append({
-                "Station": s_name, "Frequency": s_freq,
-                "Stationary Kavach ID":skavach_id,
-                "Station Code":station_code,
-                "Latitude":latitude,
-                "Longitude":longitude,
-                "Static": optimum_static_param,
-                "Stationary Kavach Slots Requested": final_plan_to_commit["calculated_station_slots"],
+            
+            allocations_output.append({
+                "Station": s_name_commit, 
+                "Frequency": chosen_freq,
+                "Stationary Kavach ID": committed_plan_details_for_station["KavachID"],
+                "Station Code": committed_plan_details_for_station["StationCode"],
+                "Latitude": committed_plan_details_for_station["Lattitude"],
+                "Longitude": committed_plan_details_for_station["Longitude"],
+                "Static": committed_plan_details_for_station["Static"],
+                "Stationary Kavach Slots Requested": committed_plan_details_for_station["calculated_station_slots"],
                 "Stationary Kavach Slots Allocated": ", ".join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:]))),
                 "Num Stationary Allocated": len(stat_p_nums_allocated),
-                "Onboard Kavach Slots Requested": final_plan_to_commit["requested_onboard_slots"],
+                "Onboard Kavach Slots Requested": committed_plan_details_for_station["requested_onboard_slots"],
                 "Onboard Kavach Slots Allocated": ", ".join(sorted(onboard_p_nums_overall, key=lambda x: int(x[1:]))),
                 "Num Onboard Allocated": len(onboard_p_nums_overall),
                 "Onboard Slots P1 Allocated": ", ".join(sorted(onboard_p1_allocated_p_nums, key=lambda x: int(x[1:]))),
                 "Onboard Slots P2 Allocated": ", ".join(sorted(onboard_p2_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Debug_IsIdeal": final_plan_to_commit["is_ideal"],
-                "Debug_Congested": final_plan_to_commit["is_congested"],
-                "Debug_ExcessiveP3": final_plan_to_commit["uses_excessive_p3"]
+                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_allocated_p_nums, key=lambda x: int(x[1:])))
+                # Removed Debug fields related to congestion/P3 ratio
             })
-        else: # No suitable plan found for this station
-            allocations.append({
+        else:
+            # Station could not be placed on any frequency
+            allocations_output.append({
                 "Station": station_name, "Frequency": "N/A",
-                "Stationary Kavach ID":skavach_id,
-                "Station Code":station_code,
-                "Latitude":latitude,
-                "Longitude":longitude,
+                "Stationary Kavach ID": skavach_id,
+                "Station Code": station_code,
+                "Latitude": latitude,
+                "Longitude": longitude,
                 "Static": optimum_static_param,
-                "Stationary Kavach Slots Requested": calculated_station_slots,
+                "Stationary Kavach Slots Requested": calculated_station_slots_needed,
                 "Stationary Kavach Slots Allocated": "", "Num Stationary Allocated": 0,
                 "Onboard Kavach Slots Requested": requested_onboard_slots,
                 "Onboard Kavach Slots Allocated": "", "Num Onboard Allocated": 0,
                 "Onboard Slots P1 Allocated": "", "Onboard Slots P2 Allocated": "", "Onboard Slots P3 Allocated": "",
                 "Error": "No suitable slot configuration found on any frequency."
             })
-    return allocations
-
+            
+    return allocations_output
 def generate_excel(input_stations_data):
     alloc_results = allocate_slots(input_stations_data)
     print("Generating Excel file with new styling logic...")
@@ -346,7 +262,7 @@ def generate_excel(input_stations_data):
         traceback.print_exc()
         return None
 
-def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
+def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
     if results_df.empty:
         print("Error: Input DataFrame for coloring is empty.")
         return
@@ -416,7 +332,7 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
     legend_col = 1
     legend_start_row = 61
 
-    headers = ["Legend: Onboard Tx Slot Priorities", "Color"]
+    headers = ["Legend: Onboard Tx Slot Priorities", "Example"]
     legend_data = [
         ["Priority 1 Green", "007220"],
         ["Priority 2 Blue Bold", "0000FF"],
@@ -437,9 +353,9 @@ def apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         label_cell.font = Font(bold=bold, color=f"FF{hex_color}")  # Apply bold formatting conditionally
         label_cell.border = border_style
         
-        color_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1)
-        color_cell.fill = PatternFill(start_color=f"FF{hex_color}", end_color=f"FF{hex_color}", fill_type="solid")  # Background color
-        color_cell.border = border_style
+        example_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1, value="P2, P3, P4")
+        example_cell.font = Font(bold=bold, color=f"FF{hex_color}") 
+        example_cell.border = border_style
 
 
     # Adjust column width for better visibility
