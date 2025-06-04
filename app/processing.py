@@ -64,14 +64,9 @@ def allocate_slots(
             if len(prospective_station_slots_indices) < calculated_station_slots_needed:
                 continue 
 
-            # 2. Plan onboard slots (P1, P2, P3) on this frequency
-            # (This detailed logic is adapted from your original P1, P2, P3 planning)
-            planned_onboard_indices_p1: list[int] = []
-            planned_onboard_indices_p2: list[int] = []
-            planned_onboard_indices_p3: list[int] = []
-            
             # P1 Planning
-            onboard_to_place_p1 = requested_onboard_slots
+            planned_onboard_indices_p1: list[int] = []
+            onboard_to_place_p1 = requested_onboard_slots # P1 attempts to fill the total request
             if onboard_to_place_p1 > 0:
                 idx = 0
                 while len(planned_onboard_indices_p1) < onboard_to_place_p1 and idx < max_slots:
@@ -83,15 +78,16 @@ def allocate_slots(
                             is_touching_station_slot = True
                         if not is_touching_station_slot and idx < max_slots - 1 and (idx + 1) in prospective_station_slots_indices:
                             is_touching_station_slot = True
-                    
                     if is_slot_free and is_not_prospective_station_slot and not is_touching_station_slot:
                         planned_onboard_indices_p1.append(idx)
                         idx += 2
                     else:
                         idx += 1
-            
+
             # P2 Planning
-            onboard_to_place_p2 = requested_onboard_slots - len(planned_onboard_indices_p1)
+            planned_onboard_indices_p2: list[int] = []
+            # P2 attempts to fill what P1 couldn't, up to the total request
+            onboard_to_place_p2 = requested_onboard_slots - len(planned_onboard_indices_p1) 
             if onboard_to_place_p2 > 0:
                 for i in range(max_slots):
                     if len(planned_onboard_indices_p2) < onboard_to_place_p2:
@@ -102,29 +98,74 @@ def allocate_slots(
                     else:
                         break
             
-            # P3 Planning
-            onboard_to_place_p3 = requested_onboard_slots - len(planned_onboard_indices_p1) - len(planned_onboard_indices_p2)
-            if onboard_to_place_p3 > 0:
-                for i in range(max_slots - 1, -1, -1):
-                    if len(planned_onboard_indices_p3) < onboard_to_place_p3:
-                        if onboard_alloc_map[i] == 0 and \
-                           i in prospective_station_slots_indices and \
-                           i not in planned_onboard_indices_p1 and \
-                           i not in planned_onboard_indices_p2:
-                            planned_onboard_indices_p3.append(i)
-                    else:
+            planned_onboard_indices_p3: list[int] = [] 
+            planned_onboard_indices_p4: list[int] = []
+
+            # --- CORRECTED P3 and P4 Planning ---
+            # P3 and P4 will fill slots if the grand total (P1+P2+P3+P4) is still less than requested_onboard_slots
+
+            # 1. Identify common candidate indices for P3/P4
+            common_candidate_indices = []
+            # prospective_station_slots_indices is already sorted low-to-high
+            for idx_prosp in prospective_station_slots_indices:
+                if onboard_alloc_map[idx_prosp] == 0 and \
+                   idx_prosp not in planned_onboard_indices_p1 and \
+                   idx_prosp not in planned_onboard_indices_p2: # Ensure P3/P4 candidates are not P1/P2
+                    common_candidate_indices.append(idx_prosp)
+
+            bottom_most_candidate = None      
+            candidates_for_main_passes = [] 
+
+            if len(common_candidate_indices) > 0:
+                bottom_most_candidate = common_candidate_indices[0]
+                candidates_for_main_passes = common_candidate_indices[1:]
+
+            # --- New P3 Planning (Alternating + Skipped Bottom) ---
+            if common_candidate_indices: # Proceed only if there are candidates
+                # P3a: Alternating on candidates_for_main_passes (c2, c4, ...)
+                for i in range(0, len(candidates_for_main_passes), 2): 
+                    current_total_filled = len(planned_onboard_indices_p1) + \
+                                           len(planned_onboard_indices_p2) + \
+                                           len(planned_onboard_indices_p3)
+                    if current_total_filled >= requested_onboard_slots:
                         break
+                    slot_to_add = candidates_for_main_passes[i]
+                    planned_onboard_indices_p3.append(slot_to_add)
+                
+                # P3b: Consider the initially skipped bottom_most_candidate (c1)
+                current_total_filled = len(planned_onboard_indices_p1) + \
+                                       len(planned_onboard_indices_p2) + \
+                                       len(planned_onboard_indices_p3)
+                if current_total_filled < requested_onboard_slots:
+                    if bottom_most_candidate is not None:
+                        if bottom_most_candidate not in planned_onboard_indices_p3: 
+                             planned_onboard_indices_p3.append(bottom_most_candidate)
+            
+            # --- New P4 Planning (Continuous on remaining from candidates_for_main_passes) ---
+            if common_candidate_indices: # Proceed only if there were candidates for P3/P4 stages
+                for slot_to_add in candidates_for_main_passes: 
+                    current_total_filled = len(planned_onboard_indices_p1) + \
+                                           len(planned_onboard_indices_p2) + \
+                                           len(planned_onboard_indices_p3) + \
+                                           len(planned_onboard_indices_p4)
+                    if current_total_filled >= requested_onboard_slots:
+                        break
+                    # Add if not already taken by P3's alternating pass (P3a)
+                    # P3b used bottom_most_candidate, which is not in candidates_for_main_passes.
+                    if slot_to_add not in planned_onboard_indices_p3: 
+                         planned_onboard_indices_p4.append(slot_to_add)
+            
+            # --- End of P3 and P4 Planning ---
 
             num_p1 = len(planned_onboard_indices_p1)
             num_p2 = len(planned_onboard_indices_p2)
-            num_p3 = len(planned_onboard_indices_p3)
-            total_onboard_planned = num_p1 + num_p2 + num_p3
+            num_p3 = len(planned_onboard_indices_p3) 
+            num_p4 = len(planned_onboard_indices_p4) 
+            total_onboard_planned = num_p1 + num_p2 + num_p3 + num_p4
             
             all_onboard_met = (total_onboard_planned >= requested_onboard_slots)
-            # Station slots are met (checked by the 'continue' above for prospective_station_slots_indices)
 
-            # If both station and onboard slots are met, this is a successful plan for this frequency
-            if all_onboard_met: # (and station slots were already confirmed to be met)
+            if all_onboard_met: 
                 committed_plan_details_for_station = {
                     "station_name": station_name, "frequency": current_freq_id_attempt,
                     "calculated_station_slots": calculated_station_slots_needed,
@@ -132,7 +173,8 @@ def allocate_slots(
                     "requested_onboard_slots": requested_onboard_slots,
                     "onboard_indices_p1": list(planned_onboard_indices_p1),
                     "onboard_indices_p2": list(planned_onboard_indices_p2),
-                    "onboard_indices_p3": list(planned_onboard_indices_p3),
+                    "onboard_indices_p3": list(planned_onboard_indices_p3), 
+                    "onboard_indices_p4": list(planned_onboard_indices_p4),
                     "Static": optimum_static_param,
                     "StationCode": station_code, "KavachID": skavach_id,
                     "Lattitude": latitude, "Longitude": longitude
@@ -140,24 +182,22 @@ def allocate_slots(
                 # Found a suitable frequency for this station, break from iterating frequencies
                 break 
         
-        # After trying all frequencies for the current station:
+        # ... (Commit logic and appending to allocations_output remains the same, including P4 fields) ...
         if committed_plan_details_for_station:
             chosen_freq = committed_plan_details_for_station["frequency"]
             s_name_commit = committed_plan_details_for_station["station_name"]
 
-            # Commit stationary slots to the chosen frequency's map
             stat_p_nums_allocated: list[str] = []
             for slot_idx in committed_plan_details_for_station["prospective_station_slots_indices"]:
-                if frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] == 0: # Should be free
+                if frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] == 0:
                     frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] = s_name_commit
                     stat_p_nums_allocated.append(f"P{slot_idx+2}")
-                # else: Error, slot conflict during commit - should not happen if logic is correct
 
-            # Commit onboard slots (P1, P2, P3) to the chosen frequency's map
             onboard_p_nums_overall: list[str] = []
             onboard_p1_allocated_p_nums: list[str] = []
             onboard_p2_allocated_p_nums: list[str] = []
             onboard_p3_allocated_p_nums: list[str] = []
+            onboard_p4_allocated_p_nums: list[str] = [] 
             current_onboard_placed_count = 0
 
             # Commit P1
@@ -166,8 +206,7 @@ def allocate_slots(
                     if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
                         frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
-                        onboard_p1_allocated_p_nums.append(p_num)
-                        onboard_p_nums_overall.append(p_num)
+                        onboard_p1_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
             # Commit P2
@@ -176,8 +215,7 @@ def allocate_slots(
                     if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
                         frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
-                        onboard_p2_allocated_p_nums.append(p_num)
-                        onboard_p_nums_overall.append(p_num)
+                        onboard_p2_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
             # Commit P3
@@ -186,14 +224,21 @@ def allocate_slots(
                     if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
                         frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                         p_num = f"P{slot_idx+2}"
-                        onboard_p3_allocated_p_nums.append(p_num)
-                        onboard_p_nums_overall.append(p_num)
+                        onboard_p3_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
+                        current_onboard_placed_count += 1
+                else: break
+            # Commit P4
+            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p4"]))):
+                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
+                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
+                        p_num = f"P{slot_idx+2}"
+                        onboard_p4_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
                         current_onboard_placed_count += 1
                 else: break
             
             allocations_output.append({
-                "Station": s_name_commit, 
-                "Frequency": chosen_freq,
+                "Station": s_name_commit, "Frequency": chosen_freq,
                 "Stationary Kavach ID": committed_plan_details_for_station["KavachID"],
                 "Station Code": committed_plan_details_for_station["StationCode"],
                 "Latitude": committed_plan_details_for_station["Lattitude"],
@@ -207,27 +252,25 @@ def allocate_slots(
                 "Num Onboard Allocated": len(onboard_p_nums_overall),
                 "Onboard Slots P1 Allocated": ", ".join(sorted(onboard_p1_allocated_p_nums, key=lambda x: int(x[1:]))),
                 "Onboard Slots P2 Allocated": ", ".join(sorted(onboard_p2_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_allocated_p_nums, key=lambda x: int(x[1:])))
-                # Removed Debug fields related to congestion/P3 ratio
+                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_allocated_p_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P4 Allocated": ", ".join(sorted(onboard_p4_allocated_p_nums, key=lambda x: int(x[1:]))),
             })
         else:
-            # Station could not be placed on any frequency
             allocations_output.append({
                 "Station": station_name, "Frequency": "N/A",
-                "Stationary Kavach ID": skavach_id,
-                "Station Code": station_code,
-                "Latitude": latitude,
-                "Longitude": longitude,
-                "Static": optimum_static_param,
+                "Stationary Kavach ID": skavach_id, "Station Code": station_code,
+                "Latitude": latitude, "Longitude": longitude, "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": calculated_station_slots_needed,
                 "Stationary Kavach Slots Allocated": "", "Num Stationary Allocated": 0,
                 "Onboard Kavach Slots Requested": requested_onboard_slots,
                 "Onboard Kavach Slots Allocated": "", "Num Onboard Allocated": 0,
-                "Onboard Slots P1 Allocated": "", "Onboard Slots P2 Allocated": "", "Onboard Slots P3 Allocated": "",
+                "Onboard Slots P1 Allocated": "", "Onboard Slots P2 Allocated": "", 
+                "Onboard Slots P3 Allocated": "", "Onboard Slots P4 Allocated": "",
                 "Error": "No suitable slot configuration found on any frequency."
             })
             
     return allocations_output
+
 def generate_excel(input_stations_data):
     alloc_results = allocate_slots(input_stations_data)
     print("Generating Excel file with new styling logic...")
@@ -274,10 +317,15 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         5: "90918F", 6: "F53B3D", 7: "CC6CE7"
     }
     # Corrected font colors to ARGB format
-    font_color_p1_default = "007220"  # ARGB for "007220"
-    font_color_p2 = "E4080A"  # ARGB for "E4080A"
-    font_style_p3 = Font(bold=True, color="000000") # Bold Black
-    font_color_p1_conditional = "0000FF" # Blue for P1 when adjacent to P2
+    font_color_p1_default = ""  # ARGB for "007220"
+    font_color_p2 = ""  # ARGB for "E4080A"
+    font_color_p1_conditional = "" # Blue for P1 when adjacent to P2
+    FONT_P1_STYLE = Font(color="FF007220")  # Green Bold for P1
+    FONT_P1C_STYLE = Font(bold=True, color="FF0000FF")  # Blue Bold Underlined for P1 Conditional
+    FONT_P2_STYLE = Font(color="FFE4080A")  # Red Bold for P2
+    FONT_P3_STYLE = Font(bold=True, color="FF000000") # Black Bold for P3
+    FONT_P3C_STYLE = Font(bold=True, color="FF000000", underline='single')  # Black Bold Underlined for P3 Conditional
+    FONT_P4_STYLE = Font(color="FFFFFF", bold=True)  # White Bold for P4
 
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                          top=Side(style='thin'), bottom=Side(style='thin'))
@@ -334,10 +382,12 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
 
     headers = ["Legend: Onboard Tx Slot Priorities", "Example"]
     legend_data = [
-        ["Priority 1 Green", "007220"],
-        ["Priority 2 Blue Bold", "0000FF"],
-        ["Priority 3 Red", "E4080A"],
-        ["Prority 4 Black Bold", "000000"]
+        ["Priority 1 Green", "007220", "P2, P4, P6"],
+        ["Priority 2 Blue Bold", "0000FF", "P8, P10, P12"],
+        ["Priority 3 Red", "E4080A", "P9, P11, P13"],
+        ["Prority 4 Black Bold", "000000", "P20, P22, P24"],
+        ["Priority 5 Black Underlined Bold", "000000", "P26, P28, P30"],
+        ["Priority 6 White Bold", "FFFFFF", "P27, P29, P31"]
     ]
     # Define border style
     border_style = Border(left=Side(style="thin"), right=Side(style="thin"), top=Side(style="thin"), bottom=Side(style="thin"))
@@ -346,16 +396,23 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         cell = ws.cell(row=legend_start_row, column=legend_col + i, value=header)
         cell.font = Font(bold=True)
         cell.border = border_style
-    for row_offset, (label, hex_color) in enumerate(legend_data, start=1):
+    for row_offset, (label, hex_color, example) in enumerate(legend_data, start=1):
         bold = label.endswith("Bold")  # Check if the label should be bold
+        underlined = label.endswith("Underlined Bold")  # Check if the label should be underlined
         
         label_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col, value=label)
-        label_cell.font = Font(bold=bold, color=f"FF{hex_color}")  # Apply bold formatting conditionally
-        label_cell.border = border_style
+        label_cell.font = Font(bold=bold, underline='single' if underlined else None, color=f"FF{hex_color}")  # Apply bold formatting conditionally
         
-        example_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1, value="P2, P3, P4")
-        example_cell.font = Font(bold=bold, color=f"FF{hex_color}") 
+        example_cell = ws.cell(row=legend_start_row + row_offset, column=legend_col + 1, value=example)
+        example_cell.font = Font(bold=bold, underline='single' if 'Priority 5' in label else None, color=f"FF{hex_color}")
+
+        # Apply dark grey fill for Priority 4, 5, and 6
+        if int(label.split()[1]) >= 4:
+            example_cell.fill = PatternFill(start_color="A7A7A7", end_color='A7A7A7', fill_type='solid')
+            label_cell.fill = PatternFill(start_color='A7A7A7', end_color='A7A7A7', fill_type='solid')
+        
         example_cell.border = border_style
+        label_cell.border = border_style
 
 
     # Adjust column width for better visibility
@@ -507,16 +564,22 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             o_p1_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P1 Allocated", ""))
             o_p2_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P2 Allocated", ""))
             o_p3_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P3 Allocated", ""))
+            o_p4_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P4 Allocated", ""))
+
 
             set_stationary = {s.strip() for s in s_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p1 = {s.strip() for s in o_p1_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p2 = {s.strip() for s in o_p2_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p3 = {s.strip() for s in o_p3_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_onboard_p4 = {s.strip() for s in o_p4_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+
 
             is_stationary = slot_in_current_row in set_stationary
             is_onboard_p1 = slot_in_current_row in set_onboard_p1
             is_onboard_p2 = slot_in_current_row in set_onboard_p2
             is_onboard_p3 = slot_in_current_row in set_onboard_p3
+            is_onboard_p4 = slot_in_current_row in set_onboard_p4
+
             
             if is_stationary:
                 frequency_val_m = station_data_matrix_row.get("Frequency")
@@ -529,28 +592,50 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             
             if is_onboard_p3:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = font_style_p3 
+
+                prev_slot_p_num = f"P{current_slot_0index + 1}" if current_slot_0index > 0 else None
+                next_slot_p_num = f"P{current_slot_0index + 3}" if current_slot_0index < max_slot_idx_for_adj_check else None
+
+                is_p3_adjacent_to_p4 = False
+                if (prev_slot_p_num and prev_slot_p_num in set_onboard_p4) or \
+                   (next_slot_p_num and next_slot_p_num in set_onboard_p4):
+                    is_p3_adjacent_to_p4 = True
+                if is_p3_adjacent_to_p4:
+                    cell_to_format.font = FONT_P3C_STYLE
+                else:
+                    cell_to_format.font = FONT_P3_STYLE
+
+                if slot_in_current_row == "P2":
+                    cell_to_format.font = FONT_P4_STYLE
+
+            elif is_onboard_p4:
+                cell_to_format.value = slot_in_current_row
+                cell_to_format.font = FONT_P4_STYLE 
             elif slot_in_current_row == "P45" and (is_onboard_p1 or is_onboard_p2):
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2)
+                cell_to_format.font = FONT_P2_STYLE
+
             elif is_onboard_p1:
                 cell_to_format.value = slot_in_current_row
-                actual_p1_font_color = font_color_p1_default
-                
+
                 prev_slot_p_num = f"P{current_slot_0index + 1}" if current_slot_0index > 0 else None
                 next_slot_p_num = f"P{current_slot_0index + 3}" if current_slot_0index < max_slot_idx_for_adj_check else None
                 
+                is_p1_adjacent_to_p2 = False
                 if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
                    (next_slot_p_num and next_slot_p_num in set_onboard_p2):
-                    actual_p1_font_color = font_color_p1_conditional 
-                    cell_to_format.font = Font(bold=True, color=actual_p1_font_color) # Bold if adjacent to P2
+                    is_p1_adjacent_to_p2 = True
+                if is_p1_adjacent_to_p2:
+                    cell_to_format.font = FONT_P1C_STYLE
                 else:
-                    cell_to_format.font = Font(color=actual_p1_font_color)
+                    cell_to_format.font = FONT_P1_STYLE
+                    
             elif is_onboard_p2:
                 cell_to_format.value = slot_in_current_row
-                cell_to_format.font = Font(color=font_color_p2) 
+                cell_to_format.font = FONT_P2_STYLE
             elif is_stationary: 
-                cell_to_format.value = "" 
+                cell_to_format.value = ""
+            
 
     # --- Apply Borders to the Main Content Block ---
     # User's code: for r in range(7, max_excel_row):
@@ -595,19 +680,19 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
 
 if __name__ == '__main__':
     stations = [
-        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10, "StationCode": "LC563", "KavachID": "SK563", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14, "StationCode": "RUND", "KavachID": "SKRUND", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC560", "KavachID": "SK560", "Lattitude": 28.7041, "Longitude": 77.1025},  
-        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16, "StationCode": "SHOL", "KavachID": "SKSHOL", "Lattitude": 28.7041, "Longitude": 77.1025},
-        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC555", "KavachID": "SK555", "Lattitude": 28.7041, "Longitude": 77.1025},  
-        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14, "StationCode": "HODAL", "KavachID": "SKHODAL", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20, "StationCode": "STG", "KavachID": "SKSTG", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station H', 'Static': 7, 'onboardSlots': 22, "StationCode": "STH", "KavachID": "SKSTH", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18, "StationCode": "STI", "KavachID": "SKSTI", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5, "StationCode": "STJ", "KavachID": "SKSTJ", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25, "StationCode": "STK", "KavachID": "SKSTK", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10, "StationCode": "STL", "KavachID": "SKSTL", "Lattitude": 28.7041, "Longitude": 77.1025},
-        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21, "StationCode": "MTHRJ", "KavachID": "SKMTHRJ", "Lattitude": 27.5025, "Longitude": 77.6737},
+        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10, "StationCode": "LC563", "KavachID": "37023", "Lattitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14, "StationCode": "RUND", "KavachID": "37024", "Lattitude": 29.0461, "Longitude": 76.90725}, 
+        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC560", "KavachID": "37025", "Lattitude": 31.7321, "Longitude": 74.4464},  
+        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16, "StationCode": "SHOL", "KavachID": "37026", "Lattitude": 33.7041, "Longitude": 72.1025},
+        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC555", "KavachID": "37027", "Lattitude": 38.7041, "Longitude": 76.1025},  
+        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14, "StationCode": "HODAL", "KavachID": "37028", "Lattitude": 41.3041, "Longitude": 76.6647}, 
+        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20, "StationCode": "STG", "KavachID": "37029", "Lattitude": 42.7055, "Longitude": 73.1025}, 
+        {'name': 'Station H', 'Static': 15, 'onboardSlots': 35, "StationCode": "STH", "KavachID": "37030", "Lattitude": 45.1041, "Longitude": 77.8272}, 
+        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18, "StationCode": "STI", "KavachID": "37031", "Lattitude": 47.7041, "Longitude": 76.5278}, 
+        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5, "StationCode": "STJ", "KavachID": "37032", "Lattitude": 49.4041, "Longitude": 76.8825}, 
+        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25, "StationCode": "STK", "KavachID": "37033", "Lattitude": 51.7041, "Longitude": 77.6153}, 
+        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10, "StationCode": "STL", "KavachID": "37034", "Lattitude": 54.3441, "Longitude": 73.1025},
+        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21, "StationCode": "MTHRJ", "KavachID": "37035", "Lattitude": 57.5325, "Longitude": 73.6737},
     ]
     
     result_path = generate_excel(stations)
