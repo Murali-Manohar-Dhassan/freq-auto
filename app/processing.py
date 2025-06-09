@@ -13,14 +13,24 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_final_layout_v2.xlsx") # Updated output file name
 
-def allocate_slots(
+def allocate_slots( 
     stations: list[dict],
     max_slots: int = 44,
     max_frequencies: int = 7
 ) -> list[dict]:
+    """
+    Allocates stationary and onboard slots using a relational 6-priority system.
+
+    Onboard Priority Definitions:
+    - P1: Alternating non-stationary slots that are NOT adjacent to ANY stationary slot.
+    - P2: Alternating non-stationary slots (from P1's initial pass) that ARE adjacent to a P3 slot.
+    - P3: Continuously filled non-stationary slots, including those adjacent to stationary slots. P45 is always P3.
+    - P4: Special "skip-bottom" alternating stationary slots that are NOT adjacent to a P6 slot.
+    - P5: Special "skip-bottom" alternating stationary slots that ARE adjacent to a P6 slot.
+    - P6: Continuously filled stationary slots.
+    """
     allocations_output: list[dict] = []
     
-    # Store allocation state (station names or 0) for each slot on each frequency
     frequency_slot_maps = {
         f_id: {
             'station_alloc': [0] * max_slots, 
@@ -30,6 +40,7 @@ def allocate_slots(
     }
 
     for station_data in stations:
+        # --- Station Data Initialization ---
         station_name = station_data["name"]
         optimum_static_param = station_data["Static"]
         requested_onboard_slots = station_data["onboardSlots"]
@@ -43,126 +54,120 @@ def allocate_slots(
 
         committed_plan_details_for_station = None
 
-        # Try to place the current station on frequencies 1 through max_frequencies
+        # --- Find a Suitable Frequency ---
         for current_freq_id_attempt in range(1, max_frequencies + 1):
-            # Get the current allocation maps for the frequency being attempted
             station_alloc_map = frequency_slot_maps[current_freq_id_attempt]['station_alloc']
             onboard_alloc_map = frequency_slot_maps[current_freq_id_attempt]['onboard_alloc']
 
-            # 1. Find prospective station slots on this frequency
+            # --- Step 1: Find Prospective Stationary Slots ---
             prospective_station_slots_indices: list[int] = []
-            temp_s_placed_count = 0
             for i in range(max_slots):
-                if temp_s_placed_count < calculated_station_slots_needed:
-                    if station_alloc_map[i] == 0: # Check if slot is free on this frequency
+                if len(prospective_station_slots_indices) < calculated_station_slots_needed:
+                    if station_alloc_map[i] == 0:
                         prospective_station_slots_indices.append(i)
-                        temp_s_placed_count += 1
-                else:
-                    break
+                else: break
             
-            # If not enough station slots are available on this frequency, try the next frequency
             if len(prospective_station_slots_indices) < calculated_station_slots_needed:
                 continue 
 
-            # P1 Planning
-            planned_onboard_indices_p1: list[int] = []
-            onboard_to_place_p1 = requested_onboard_slots # P1 attempts to fill the total request
-            if onboard_to_place_p1 > 0:
+            # --- Step 2: Plan-Then-Reclassify Onboard Slots ---
+            
+            # --- Non-Stationary Planning (Proto-P1 and P3) ---
+            planned_proto_p1: list[int] = []
+            planned_p3: list[int] = []
+            set_prospective_station_slots = set(prospective_station_slots_indices)
+
+            # Plan Proto-P1 (Alternating pass, NON-ADJACENT to stationary)
+            if requested_onboard_slots > 0:
                 idx = 0
-                while len(planned_onboard_indices_p1) < onboard_to_place_p1 and idx < max_slots:
-                    is_slot_free = (onboard_alloc_map[idx] == 0)
-                    is_not_prospective_station_slot = (idx not in prospective_station_slots_indices)
-                    is_touching_station_slot = False
-                    if is_not_prospective_station_slot:
-                        if idx > 0 and (idx - 1) in prospective_station_slots_indices:
-                            is_touching_station_slot = True
-                        if not is_touching_station_slot and idx < max_slots - 1 and (idx + 1) in prospective_station_slots_indices:
-                            is_touching_station_slot = True
-                    if is_slot_free and is_not_prospective_station_slot and not is_touching_station_slot:
-                        planned_onboard_indices_p1.append(idx)
-                        idx += 2
+                while len(planned_proto_p1) < requested_onboard_slots and idx < max_slots:
+                    # Condition: Slot is free AND non-stationary
+                    if (onboard_alloc_map[idx] == 0 and idx not in set_prospective_station_slots):
+                        # NEW Condition: Slot is NOT adjacent to any stationary slot
+                        is_adjacent_to_stationary = (idx > 0 and idx - 1 in set_prospective_station_slots) or \
+                                                    (idx < max_slots - 1 and idx + 1 in set_prospective_station_slots)
+                        
+                        if not is_adjacent_to_stationary:
+                            planned_proto_p1.append(idx)
+                            idx += 2 # Alternate
+                        else:
+                            idx += 1 # Skip slot adjacent to stationary
                     else:
-                        idx += 1
-
-            # P2 Planning
-            planned_onboard_indices_p2: list[int] = []
-            # P2 attempts to fill what P1 couldn't, up to the total request
-            onboard_to_place_p2 = requested_onboard_slots - len(planned_onboard_indices_p1) 
-            if onboard_to_place_p2 > 0:
+                        idx += 1 # Skip stationary or occupied slot
+            
+            # Plan P3 (Continuous pass for ALL other non-stationary gaps)
+            onboard_to_place_p3 = requested_onboard_slots - len(planned_proto_p1)
+            if onboard_to_place_p3 > 0:
                 for i in range(max_slots):
-                    if len(planned_onboard_indices_p2) < onboard_to_place_p2:
-                        if onboard_alloc_map[i] == 0 and \
-                           i not in prospective_station_slots_indices and \
-                           i not in planned_onboard_indices_p1:
-                            planned_onboard_indices_p2.append(i)
-                    else:
-                        break
+                    if len(planned_p3) < onboard_to_place_p3:
+                        if (onboard_alloc_map[i] == 0 and i not in set_prospective_station_slots and i not in planned_proto_p1):
+                            planned_p3.append(i)
+                    else: break
             
-            planned_onboard_indices_p3: list[int] = [] 
-            planned_onboard_indices_p4: list[int] = []
+            # --- Re-classify Proto-P1 into final P1 and P2 ---
+            planned_p1: list[int] = []
+            planned_p2: list[int] = []
+            set_p3 = set(planned_p3)
+            for slot in planned_proto_p1:
+                is_adjacent_to_p3 = (slot - 1 in set_p3) or (slot + 1 in set_p3)
+                if is_adjacent_to_p3:
+                    planned_p2.append(slot)
+                else:
+                    planned_p1.append(slot)
+            
+            # --- On-Stationary Planning (Proto-P4 and P6) ---
+            planned_proto_p4: list[int] = []
+            planned_p6: list[int] = []
+            on_stationary_candidates = [idx for idx in prospective_station_slots_indices if onboard_alloc_map[idx] == 0 and idx not in (planned_p1 + planned_p2 + planned_p3)]
 
-            # --- CORRECTED P3 and P4 Planning ---
-            # P3 and P4 will fill slots if the grand total (P1+P2+P3+P4) is still less than requested_onboard_slots
-
-            # 1. Identify common candidate indices for P3/P4
-            common_candidate_indices = []
-            # prospective_station_slots_indices is already sorted low-to-high
-            for idx_prosp in prospective_station_slots_indices:
-                if onboard_alloc_map[idx_prosp] == 0 and \
-                   idx_prosp not in planned_onboard_indices_p1 and \
-                   idx_prosp not in planned_onboard_indices_p2: # Ensure P3/P4 candidates are not P1/P2
-                    common_candidate_indices.append(idx_prosp)
-
-            bottom_most_candidate = None      
-            candidates_for_main_passes = [] 
-
-            if len(common_candidate_indices) > 0:
-                bottom_most_candidate = common_candidate_indices[0]
-                candidates_for_main_passes = common_candidate_indices[1:]
-
-            # --- New P3 Planning (Alternating + Skipped Bottom) ---
-            if common_candidate_indices: # Proceed only if there are candidates
-                # P3a: Alternating on candidates_for_main_passes (c2, c4, ...)
-                for i in range(0, len(candidates_for_main_passes), 2): 
-                    current_total_filled = len(planned_onboard_indices_p1) + \
-                                           len(planned_onboard_indices_p2) + \
-                                           len(planned_onboard_indices_p3)
-                    if current_total_filled >= requested_onboard_slots:
-                        break
-                    slot_to_add = candidates_for_main_passes[i]
-                    planned_onboard_indices_p3.append(slot_to_add)
+            if on_stationary_candidates:
+                # Plan Proto-P4 ("Skip-Bottom, Alternate, Take-Bottom")
+                bottom_most_candidate = on_stationary_candidates[0]
+                main_p4_candidates = on_stationary_candidates[1:]
                 
-                # P3b: Consider the initially skipped bottom_most_candidate (c1)
-                current_total_filled = len(planned_onboard_indices_p1) + \
-                                       len(planned_onboard_indices_p2) + \
-                                       len(planned_onboard_indices_p3)
-                if current_total_filled < requested_onboard_slots:
-                    if bottom_most_candidate is not None:
-                        if bottom_most_candidate not in planned_onboard_indices_p3: 
-                             planned_onboard_indices_p3.append(bottom_most_candidate)
-            
-            # --- New P4 Planning (Continuous on remaining from candidates_for_main_passes) ---
-            if common_candidate_indices: # Proceed only if there were candidates for P3/P4 stages
-                for slot_to_add in candidates_for_main_passes: 
-                    current_total_filled = len(planned_onboard_indices_p1) + \
-                                           len(planned_onboard_indices_p2) + \
-                                           len(planned_onboard_indices_p3) + \
-                                           len(planned_onboard_indices_p4)
-                    if current_total_filled >= requested_onboard_slots:
-                        break
-                    # Add if not already taken by P3's alternating pass (P3a)
-                    # P3b used bottom_most_candidate, which is not in candidates_for_main_passes.
-                    if slot_to_add not in planned_onboard_indices_p3: 
-                         planned_onboard_indices_p4.append(slot_to_add)
-            
-            # --- End of P3 and P4 Planning ---
+                # P4a: Alternating
+                for i in range(0, len(main_p4_candidates), 2):
+                    if len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_proto_p4) >= requested_onboard_slots: break
+                    planned_proto_p4.append(main_p4_candidates[i])
+                
+                # P4b: Take bottom-most
+                if len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_proto_p4) < requested_onboard_slots:
+                    if bottom_most_candidate not in planned_proto_p4:
+                        planned_proto_p4.append(bottom_most_candidate)
+                
+                # Plan P6 (Continuous fill of on-stationary gaps)
+                p6_candidates = [c for c in on_stationary_candidates if c not in planned_proto_p4]
+                for c in p6_candidates:
+                    if len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_proto_p4) + len(planned_p6) >= requested_onboard_slots: break
+                    planned_p6.append(c)
 
-            num_p1 = len(planned_onboard_indices_p1)
-            num_p2 = len(planned_onboard_indices_p2)
-            num_p3 = len(planned_onboard_indices_p3) 
-            num_p4 = len(planned_onboard_indices_p4) 
-            total_onboard_planned = num_p1 + num_p2 + num_p3 + num_p4
+            # --- Re-classify Proto-P4 into final P4 and P5 ---
+            planned_p4: list[int] = []
+            planned_p5: list[int] = []
+            set_p6 = set(planned_p6)
+            for slot in planned_proto_p4:
+                is_adjacent_to_p6 = (slot - 1 in set_p6) or (slot + 1 in set_p6)
+                if is_adjacent_to_p6:
+                    planned_p5.append(slot)
+                else:
+                    planned_p4.append(slot)
+
+            # --- P45 Override Rule ---
+            slot_p45_idx = 43
+            all_lists = {
+                'p1': planned_p1, 'p2': planned_p2, 'p4': planned_p4, 
+                'p5': planned_p5, 'p6': planned_p6
+            }
+            # Find which list (if any) P45 landed in and move it to P3
+            for key, p_list in all_lists.items():
+                if slot_p45_idx in p_list:
+                    p_list.remove(slot_p45_idx)
+                    if slot_p45_idx not in planned_p3: # Avoid duplicates if P45 was already P3
+                        planned_p3.append(slot_p45_idx)
+                    break
             
+            # --- Finalize Plan for this Frequency ---
+            total_onboard_planned = len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_p4) + len(planned_p5) + len(planned_p6)
             all_onboard_met = (total_onboard_planned >= requested_onboard_slots)
 
             if all_onboard_met: 
@@ -171,71 +176,47 @@ def allocate_slots(
                     "calculated_station_slots": calculated_station_slots_needed,
                     "prospective_station_slots_indices": list(prospective_station_slots_indices),
                     "requested_onboard_slots": requested_onboard_slots,
-                    "onboard_indices_p1": list(planned_onboard_indices_p1),
-                    "onboard_indices_p2": list(planned_onboard_indices_p2),
-                    "onboard_indices_p3": list(planned_onboard_indices_p3), 
-                    "onboard_indices_p4": list(planned_onboard_indices_p4),
-                    "Static": optimum_static_param,
-                    "StationCode": station_code, "KavachID": skavach_id,
-                    "Lattitude": latitude, "Longitude": longitude
+                    "onboard_indices_p1": list(planned_p1), "onboard_indices_p2": list(planned_p2),
+                    "onboard_indices_p3": list(planned_p3), "onboard_indices_p4": list(planned_p4),
+                    "onboard_indices_p5": list(planned_p5), "onboard_indices_p6": list(planned_p6),
+                    "Static": optimum_static_param, "StationCode": station_code, 
+                    "KavachID": skavach_id, "Lattitude": latitude, "Longitude": longitude
                 }
-                # Found a suitable frequency for this station, break from iterating frequencies
-                break 
+                break
         
-        # ... (Commit logic and appending to allocations_output remains the same, including P4 fields) ...
+        # --- Step 4: Commit the Chosen Plan ---
         if committed_plan_details_for_station:
             chosen_freq = committed_plan_details_for_station["frequency"]
             s_name_commit = committed_plan_details_for_station["station_name"]
 
             stat_p_nums_allocated: list[str] = []
             for slot_idx in committed_plan_details_for_station["prospective_station_slots_indices"]:
-                if frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] == 0:
-                    frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] = s_name_commit
-                    stat_p_nums_allocated.append(f"P{slot_idx+2}")
+                frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] = s_name_commit
+                stat_p_nums_allocated.append(f"P{slot_idx+2}")
 
             onboard_p_nums_overall: list[str] = []
-            onboard_p1_allocated_p_nums: list[str] = []
-            onboard_p2_allocated_p_nums: list[str] = []
-            onboard_p3_allocated_p_nums: list[str] = []
-            onboard_p4_allocated_p_nums: list[str] = [] 
-            current_onboard_placed_count = 0
+            onboard_p1_nums, onboard_p2_nums, onboard_p3_nums, onboard_p4_nums, onboard_p5_nums, onboard_p6_nums = [], [], [], [], [], []
+            
+            all_planned_indices = [
+                (onboard_p1_nums, committed_plan_details_for_station["onboard_indices_p1"]),
+                (onboard_p2_nums, committed_plan_details_for_station["onboard_indices_p2"]),
+                (onboard_p3_nums, committed_plan_details_for_station["onboard_indices_p3"]),
+                (onboard_p4_nums, committed_plan_details_for_station["onboard_indices_p4"]),
+                (onboard_p5_nums, committed_plan_details_for_station["onboard_indices_p5"]),
+                (onboard_p6_nums, committed_plan_details_for_station["onboard_indices_p6"])
+            ]
 
-            # Commit P1
-            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p1"]))):
-                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
-                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
-                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
-                        p_num = f"P{slot_idx+2}"
-                        onboard_p1_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
-                        current_onboard_placed_count += 1
-                else: break
-            # Commit P2
-            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p2"]))):
-                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
-                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
-                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
-                        p_num = f"P{slot_idx+2}"
-                        onboard_p2_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
-                        current_onboard_placed_count += 1
-                else: break
-            # Commit P3
-            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p3"]))):
-                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
-                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
-                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
-                        p_num = f"P{slot_idx+2}"
-                        onboard_p3_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
-                        current_onboard_placed_count += 1
-                else: break
-            # Commit P4
-            for slot_idx in sorted(list(set(committed_plan_details_for_station["onboard_indices_p4"]))):
-                if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
-                    if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
-                        frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
-                        p_num = f"P{slot_idx+2}"
-                        onboard_p4_allocated_p_nums.append(p_num); onboard_p_nums_overall.append(p_num)
-                        current_onboard_placed_count += 1
-                else: break
+            current_onboard_placed_count = 0
+            for p_num_list, p_indices_list in all_planned_indices:
+                for slot_idx in sorted(list(set(p_indices_list))):
+                    if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
+                        if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                            frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
+                            p_num = f"P{slot_idx+2}"
+                            p_num_list.append(p_num)
+                            onboard_p_nums_overall.append(p_num)
+                            current_onboard_placed_count += 1
+                    else: break
             
             allocations_output.append({
                 "Station": s_name_commit, "Frequency": chosen_freq,
@@ -243,17 +224,19 @@ def allocate_slots(
                 "Station Code": committed_plan_details_for_station["StationCode"],
                 "Latitude": committed_plan_details_for_station["Lattitude"],
                 "Longitude": committed_plan_details_for_station["Longitude"],
-                "Static": committed_plan_details_for_station["Static"],
+                "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": committed_plan_details_for_station["calculated_station_slots"],
                 "Stationary Kavach Slots Allocated": ", ".join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:]))),
                 "Num Stationary Allocated": len(stat_p_nums_allocated),
                 "Onboard Kavach Slots Requested": committed_plan_details_for_station["requested_onboard_slots"],
                 "Onboard Kavach Slots Allocated": ", ".join(sorted(onboard_p_nums_overall, key=lambda x: int(x[1:]))),
                 "Num Onboard Allocated": len(onboard_p_nums_overall),
-                "Onboard Slots P1 Allocated": ", ".join(sorted(onboard_p1_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Onboard Slots P2 Allocated": ", ".join(sorted(onboard_p2_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_allocated_p_nums, key=lambda x: int(x[1:]))),
-                "Onboard Slots P4 Allocated": ", ".join(sorted(onboard_p4_allocated_p_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P1 Allocated": ", ".join(sorted(onboard_p1_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P2 Allocated": ", ".join(sorted(onboard_p2_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P3 Allocated": ", ".join(sorted(onboard_p3_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P4 Allocated": ", ".join(sorted(onboard_p4_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P5 Allocated": ", ".join(sorted(onboard_p5_nums, key=lambda x: int(x[1:]))),
+                "Onboard Slots P6 Allocated": ", ".join(sorted(onboard_p6_nums, key=lambda x: int(x[1:]))),
             })
         else:
             allocations_output.append({
@@ -266,6 +249,7 @@ def allocate_slots(
                 "Onboard Kavach Slots Allocated": "", "Num Onboard Allocated": 0,
                 "Onboard Slots P1 Allocated": "", "Onboard Slots P2 Allocated": "", 
                 "Onboard Slots P3 Allocated": "", "Onboard Slots P4 Allocated": "",
+                "Onboard Slots P5 Allocated": "", "Onboard Slots P6 Allocated": "",
                 "Error": "No suitable slot configuration found on any frequency."
             })
             
@@ -317,15 +301,12 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         5: "90918F", 6: "F53B3D", 7: "CC6CE7"
     }
     # Corrected font colors to ARGB format
-    font_color_p1_default = ""  # ARGB for "007220"
-    font_color_p2 = ""  # ARGB for "E4080A"
-    font_color_p1_conditional = "" # Blue for P1 when adjacent to P2
-    FONT_P1_STYLE = Font(color="FF007220")  # Green Bold for P1
-    FONT_P1C_STYLE = Font(bold=True, color="FF0000FF")  # Blue Bold Underlined for P1 Conditional
-    FONT_P2_STYLE = Font(color="FFE4080A")  # Red Bold for P2
-    FONT_P3_STYLE = Font(bold=True, color="FF000000") # Black Bold for P3
-    FONT_P3C_STYLE = Font(bold=True, color="FF000000", underline='single')  # Black Bold Underlined for P3 Conditional
-    FONT_P4_STYLE = Font(color="FFFFFF", bold=True)  # White Bold for P4
+    FONT_P1_STYLE = Font(color="FF007220")  # Green
+    FONT_P2_STYLE = Font(bold=True, color="FF0000FF")  # Blue Bold
+    FONT_P3_STYLE = Font(color="FFE4080A")  # Red
+    FONT_P4_STYLE = Font(bold=True, color="FF000000") # Black Bold
+    FONT_P5_STYLE = Font(bold=True, color="FF000000", underline='single')  # Black Bold Underlined
+    FONT_P6_STYLE = Font(color="FFFFFF", bold=True)  # White Bold
 
     thin_border = Border(left=Side(style='thin'), right=Side(style='thin'), 
                          top=Side(style='thin'), bottom=Side(style='thin'))
@@ -414,12 +395,9 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         example_cell.border = border_style
         label_cell.border = border_style
 
-
     # Adjust column width for better visibility
     ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col).column_letter].width = 36
     ws.column_dimensions[ws.cell(row=legend_start_row, column=legend_col + 1).column_letter].width = 10
-
-
 
     # --- Write Static Labels in Column A ---
     static_labels_col1 = {
@@ -442,7 +420,6 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             cell.alignment = center_align_v_center
         else:
             cell.alignment = center_align_v_center
-
 
     # --- Populate Data for Specific Rows (Columns B onwards) ---
     for c_idx_df, station_name in enumerate(all_stations):
@@ -565,6 +542,8 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             o_p2_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P2 Allocated", ""))
             o_p3_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P3 Allocated", ""))
             o_p4_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P4 Allocated", ""))
+            o_p5_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P5 Allocated", ""))
+            o_p6_slots_str_m = str(station_data_matrix_row.get("Onboard Slots P6 Allocated", ""))
 
 
             set_stationary = {s.strip() for s in s_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
@@ -572,6 +551,9 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             set_onboard_p2 = {s.strip() for s in o_p2_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p3 = {s.strip() for s in o_p3_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
             set_onboard_p4 = {s.strip() for s in o_p4_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_onboard_p5 = {s.strip() for s in o_p5_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+            set_onboard_p6 = {s.strip() for s in o_p6_slots_str_m.split(',') if s.strip() and s.strip().lower() != 'nan'}
+
 
 
             is_stationary = slot_in_current_row in set_stationary
@@ -579,6 +561,8 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
             is_onboard_p2 = slot_in_current_row in set_onboard_p2
             is_onboard_p3 = slot_in_current_row in set_onboard_p3
             is_onboard_p4 = slot_in_current_row in set_onboard_p4
+            is_onboard_p5 = slot_in_current_row in set_onboard_p5
+            is_onboard_p6 = slot_in_current_row in set_onboard_p6
 
             
             if is_stationary:
@@ -590,49 +574,31 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
                         cell_to_format.fill = PatternFill(start_color=bg_color_code_m, end_color=bg_color_code_m, fill_type="solid")
                     except ValueError: pass 
             
-            if is_onboard_p3:
+            if is_onboard_p1:
+                cell_to_format.font = FONT_P1_STYLE
                 cell_to_format.value = slot_in_current_row
 
-                prev_slot_p_num = f"P{current_slot_0index + 1}" if current_slot_0index > 0 else None
-                next_slot_p_num = f"P{current_slot_0index + 3}" if current_slot_0index < max_slot_idx_for_adj_check else None
-
-                is_p3_adjacent_to_p4 = False
-                if (prev_slot_p_num and prev_slot_p_num in set_onboard_p4) or \
-                   (next_slot_p_num and next_slot_p_num in set_onboard_p4):
-                    is_p3_adjacent_to_p4 = True
-                if is_p3_adjacent_to_p4:
-                    cell_to_format.font = FONT_P3C_STYLE
-                else:
-                    cell_to_format.font = FONT_P3_STYLE
-
-                if slot_in_current_row == "P2":
-                    cell_to_format.font = FONT_P4_STYLE
-
-            elif is_onboard_p4:
-                cell_to_format.value = slot_in_current_row
-                cell_to_format.font = FONT_P4_STYLE 
-            elif slot_in_current_row == "P45" and (is_onboard_p1 or is_onboard_p2):
-                cell_to_format.value = slot_in_current_row
-                cell_to_format.font = FONT_P2_STYLE
-
-            elif is_onboard_p1:
-                cell_to_format.value = slot_in_current_row
-
-                prev_slot_p_num = f"P{current_slot_0index + 1}" if current_slot_0index > 0 else None
-                next_slot_p_num = f"P{current_slot_0index + 3}" if current_slot_0index < max_slot_idx_for_adj_check else None
-                
-                is_p1_adjacent_to_p2 = False
-                if (prev_slot_p_num and prev_slot_p_num in set_onboard_p2) or \
-                   (next_slot_p_num and next_slot_p_num in set_onboard_p2):
-                    is_p1_adjacent_to_p2 = True
-                if is_p1_adjacent_to_p2:
-                    cell_to_format.font = FONT_P1C_STYLE
-                else:
-                    cell_to_format.font = FONT_P1_STYLE
-                    
             elif is_onboard_p2:
-                cell_to_format.value = slot_in_current_row
                 cell_to_format.font = FONT_P2_STYLE
+                cell_to_format.value = slot_in_current_row
+
+            elif is_onboard_p3:
+                cell_to_format.font = FONT_P3_STYLE
+                cell_to_format.value = slot_in_current_row
+   
+            elif is_onboard_p4:
+                cell_to_format.font = FONT_P4_STYLE
+                cell_to_format.value = slot_in_current_row
+  
+            elif is_onboard_p5:
+                cell_to_format.font = FONT_P5_STYLE
+                cell_to_format.value = slot_in_current_row
+  
+            elif is_onboard_p6:
+                cell_to_format.font = FONT_P6_STYLE
+                cell_to_format.value = slot_in_current_row
+   
+
             elif is_stationary: 
                 cell_to_format.value = ""
             
