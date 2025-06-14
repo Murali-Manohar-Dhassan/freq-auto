@@ -55,14 +55,6 @@ function showManual() {
     updateStationNumbers();
 }
 
-function showUpload() {
-    $('#uploadSection').show();
-    $('#manualSection').hide();
-    $('#stationContainer').empty().show();
-    $('#submitContainer').hide();
-    $('#uploadBtn').show();
-    updateStationNumbers();
-}
 
 // --- New Station Addition Workflow ---
 function initiateAddStationSequence() {
@@ -160,10 +152,10 @@ function _proceedToAddActualStationField() {
                     <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" placeholder="Auto-filled or manual entry" required>
 
                     <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required>
+                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667">
 
                     <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required>
+                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667">
 
                     <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
                     <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" required>
@@ -177,6 +169,33 @@ function _proceedToAddActualStationField() {
     container.appendChild(cardWrapper);
     setupKavachIdListener(cardWrapper, stationIdSuffix);
 
+    // Add coordinate change listeners for map updates
+    const latInput = cardWrapper.querySelector('.latitude-input');
+    const lonInput = cardWrapper.querySelector('.longitude-input');
+    const radiusInput = cardWrapper.querySelector('.optimum-static-input');
+
+
+    if (latInput && lonInput) {
+        console.log("Latitude and Longitude inputs found for new card.");
+        [latInput, lonInput, radiusInput].filter(Boolean).forEach(input => {
+            input.addEventListener('input', function() {
+                console.log('Input event fired on:', this.placeholder, 'Value:', this.value);
+                console.log('Current Lat value:', latInput.value, 'Current Lon value:', lonInput.value);
+                if (latInput.value && lonInput.value) {
+                    console.log("Both Latitude and Longitude have values. Calling updateMapWithStation.");
+                    updateMapWithStation({
+                        latitude: latInput.value,
+                        longitude: lonInput.value,
+                        radius: radiusInput?.value || 25.0
+                    });
+                } else {
+                console.log("Waiting for both Latitude and Longitude values.");
+                }
+            });
+        });
+    }  else {
+    console.log("Latitude or Longitude input not found for new card.");
+    }
     updateStationNumbers();
     cardWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
     $(`#KavachID${stationIdSuffix}`).focus(); // Focus on the Kavach ID of the new card
@@ -201,6 +220,8 @@ function removeStationCard(cardId) {
             }
         }
         card.remove();
+        // Refresh map after station removal
+        refreshMapWithAllStations();
         updateStationNumbers(); // Renumber stations
         if ($('#stationContainer .station-card').length === 0) {
             $('#finishManualInputBtn').hide();
@@ -373,7 +394,7 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     const kavachIdInput = cardElement.querySelector(`#KavachID${stationIdSuffix}`);
     const stationCodeEl = cardElement.querySelector(`#StationCode${stationIdSuffix}`);
     const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
-    const latEl = cardElement.querySelector(`#Lattitude${stationIdSuffix}`);
+    const latEl = cardElement.querySelector(`#Latitude${stationIdSuffix}`);
     const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
     const feedbackEl = $(kavachIdInput).closest('.card-body').find('.kavach-id-feedback');
     const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationIdSuffix}`);
@@ -607,6 +628,101 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     });
 }
 
+// --- Map Integration Functions ---
+function updateMapWithStation(stationData) {
+    if (!stationData.latitude || !stationData.longitude) {
+        return;
+    }
+
+    const mapData = {
+        lat: parseFloat(stationData.latitude),
+        lon: parseFloat(stationData.longitude),
+        rad: parseFloat(stationData.radius) || 25.0 // Use station's radius or default
+    };
+
+    fetch('/api/update_map', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mapData)
+    })
+    .then(response => response.text())
+    .then(mapHtml => {
+        const mapContainer = document.getElementById('mapContainer');
+        mapContainer.innerHTML = `<iframe srcdoc="${mapHtml.replace(/"/g, '&quot;')}" style="width: 100%; height: 100%; border: none;"></iframe>`;
+        // Check for coverage conflicts with existing approved stations
+        checkCoverageConflicts(mapData);
+    })
+    .catch(error => {
+        console.error('Error loading map:', error);
+        document.getElementById('mapContainer').innerHTML = `
+            <div class="map-placeholder">
+                <p class="text-danger">Error loading map</p>
+                <small>${error.message}</small>
+            </div>`;
+    });
+}
+
+function refreshMapWithAllStations() {
+    const stationCards = document.querySelectorAll('.station-card');
+    let lastValidStation = null;
+    
+    stationCards.forEach(card => {
+        const latInput = card.querySelector('input[placeholder*="Latitude"]');
+        const lonInput = card.querySelector('input[placeholder*="Longitude"]');
+        const radiusInput = card.querySelector('input[placeholder*="Radius"]') || card.querySelector('input[placeholder*="Coverage"]');
+        
+        if (latInput?.value && lonInput?.value) {
+            lastValidStation = {
+                latitude: latInput.value,
+                longitude: lonInput.value,
+                radius: radiusInput?.value || 25.0
+            };
+        }
+    });
+    
+    if (lastValidStation) {
+        updateMapWithStation(lastValidStation);
+    }
+}
+
+function checkCoverageConflicts(newStationData) {
+    // Since your backend shows both approved (blue) and new (red) stations,
+    // you can implement visual conflict detection here
+    // For now, check if the red circle overlaps with any blue circles visually
+    
+    // This could be enhanced to make an API call to check actual conflicts
+    fetch('/api/check_conflicts', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newStationData)
+    })
+    .then(response => response.json())
+    .then(result => {
+        const warningDiv = document.getElementById('conflictWarning');
+        if (result.hasConflict) {
+            warningDiv.style.display = 'block';
+            warningDiv.innerHTML = `
+                <strong>⚠️ Coverage Conflict Detected!</strong>
+                <p class="mb-0">New station overlaps with: ${result.conflictingStations.join(', ')}</p>
+            `;
+        } else {
+            warningDiv.style.display = 'none';
+        }
+    })
+    .catch(() => {
+        // If conflict check fails, hide warning
+        document.getElementById('conflictWarning').style.display = 'none';
+    });
+}
+
+function refreshMap() {
+    refreshMapWithAllStations();
+}
+
 function submitData() {
     if (!validateAllStationCards()) { // Validate before submitting
         return;
@@ -634,12 +750,13 @@ function submitData() {
             KavachID: card.find(`#KavachID${stationIdSuffixFromCard}`).val(),
             StationCode: card.find(`#StationCode${stationIdSuffixFromCard}`).val(),
             name: card.find(`#stationName${stationIdSuffixFromCard}`).val(),
-            Lattitude: getFloatValue(`#Lattitude${stationIdSuffixFromCard}`), // Convert to float
+            Latitude: getFloatValue(`#Latitude${stationIdSuffixFromCard}`), // Convert to float
             Longitude: getFloatValue(`#Longtitude${stationIdSuffixFromCard}`), // Convert to float
             onboardSlots: getIntValue(`#onboardSlots${stationIdSuffixFromCard}`), // Convert to integer
             Static: getIntValue(`#OptimumStatic${stationIdSuffixFromCard}`)     // Convert to integer
             // isAdjacentSkav: false, // This flag is likely not needed if backend is simplified
         };
+        refreshMapWithAllStations();
         stationsData.push(station);
     });
 
@@ -824,7 +941,7 @@ function populateFieldsFromExcel(stationDataArray) {
         const sKavachID = String(station["Stationary Kavach ID"] || station["KavachID"] || station["kavachid"] || '');
         const sName = String(station["Station Name"] || station["station name"] || station["StationName"] || station["name"] || '');
         const sCode = String(station["Station Code"] || station["station code"] || station["StationCode"] || '');
-        const sLat = String(station["Stationary Unit Tower Latitude"] || station["Lattitude"] || station["latitude"] || ''); // Typo Lattitude might be in excel
+        const sLat = String(station["Stationary Unit Tower Latitude"] || station["Latitude"] || station["latitude"] || ''); 
         const sLon = String(station["Stationary Unit Tower Longitude"] || station["Longitude"] || station["longitude"] || '');
         const sStatic = String(station["Static"] || station["Optimum no. of Simultaneous Exclusive Static Profile Transfer"] || '0');
         const sOnboard = String(station["Onboard Slots"] || station["onboardSlots"] || station["onboardslots"] || '0');
@@ -857,10 +974,10 @@ function populateFieldsFromExcel(stationDataArray) {
                         <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${sName}" placeholder="Excel Value" required>
 
                         <label class="form-label">Stationary Unit Tower Latitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Lattitude${stationIdSuffix}" value="${sLat}" placeholder="Excel Value" required>
+                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationIdSuffix}" value="${sLat}" placeholder="Excel Value" required max="37.100" min="8.06666667">
 
                         <label class="form-label">Stationary Unit Tower Longitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${sLon}" placeholder="Excel Value" required>
+                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${sLon}" placeholder="Excel Value" required max="92.100" min="68.06666667">
 
                         <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
                         <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${sStatic}" required>
@@ -882,7 +999,7 @@ function populateFieldsFromExcel(stationDataArray) {
         const kavachIdEl = cardWrapper.querySelector(`#KavachID${stationIdSuffix}`);
         const stationCodeElPop = cardWrapper.querySelector(`#StationCode${stationIdSuffix}`);
         const nameElPop = cardWrapper.querySelector(`#stationName${stationIdSuffix}`);
-        const latElPop = cardWrapper.querySelector(`#Lattitude${stationIdSuffix}`);
+        const latElPop = cardWrapper.querySelector(`#Latitude${stationIdSuffix}`);
         const lonElPop = cardWrapper.querySelector(`#Longtitude${stationIdSuffix}`);
 
         // We assume values from Excel are definitive, like an auto-fill.

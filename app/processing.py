@@ -1,5 +1,5 @@
 import os
-import math
+from math import ceil, radians, cos, sin, asin, sqrt
 from datetime import datetime
 now = datetime.now()
 import pandas as pd
@@ -12,6 +12,16 @@ BASE_DIR = os.getcwd()
 UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_final_layout_v2.xlsx") # Updated output file name
+
+def haversine(lon1, lat1, lon2, lat2):
+    """Calculate distance between two points on Earth in kilometers."""
+    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
+    dlon = lon2 - lon1 
+    dlat = lat2 - lat1 
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a)) 
+    r = 6371 # Radius of earth in kilometers.
+    return c * r
 
 def allocate_slots( 
     stations: list[dict],
@@ -46,11 +56,11 @@ def allocate_slots(
         requested_onboard_slots = station_data["onboardSlots"]
         station_code = station_data["StationCode"]
         skavach_id = station_data["KavachID"]
-        latitude = station_data["Lattitude"]
+        latitude = station_data["Latitude"]
         longitude = station_data["Longitude"]
         
         val_for_roundup = ((optimum_static_param * 120) + (requested_onboard_slots - optimum_static_param) * 40 + 100) / 66
-        calculated_station_slots_needed = math.ceil(val_for_roundup)
+        calculated_station_slots_needed = ceil(val_for_roundup)
 
         committed_plan_details_for_station = None
 
@@ -180,7 +190,7 @@ def allocate_slots(
                     "onboard_indices_p3": list(planned_p3), "onboard_indices_p4": list(planned_p4),
                     "onboard_indices_p5": list(planned_p5), "onboard_indices_p6": list(planned_p6),
                     "Static": optimum_static_param, "StationCode": station_code, 
-                    "KavachID": skavach_id, "Lattitude": latitude, "Longitude": longitude
+                    "KavachID": skavach_id, "Latitude": latitude, "Longitude": longitude
                 }
                 break
         
@@ -222,7 +232,7 @@ def allocate_slots(
                 "Station": s_name_commit, "Frequency": chosen_freq,
                 "Stationary Kavach ID": committed_plan_details_for_station["KavachID"],
                 "Station Code": committed_plan_details_for_station["StationCode"],
-                "Latitude": committed_plan_details_for_station["Lattitude"],
+                "Latitude": committed_plan_details_for_station["Latitude"],
                 "Longitude": committed_plan_details_for_station["Longitude"],
                 "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": committed_plan_details_for_station["calculated_station_slots"],
@@ -265,7 +275,8 @@ def generate_excel(input_stations_data):
             "Station", "Static", "Frequency",
             "Stationary Kavach Slots Requested", "Stationary Kavach Slots Allocated", "Num Stationary Allocated",
             "Onboard Kavach Slots Requested", "Onboard Kavach Slots Allocated", "Num Onboard Allocated",
-            "Onboard Slots P1 Allocated", "Onboard Slots P2 Allocated", "Onboard Slots P3 Allocated",
+            "Onboard Slots P1 Allocated", "Onboard Slots P2 Allocated", "Onboard Slots P3 Allocated", "Onboard Slots P4 Allocated", 
+            "Onboard Slots P5 Allocated", "Onboard Slots P6 Allocated",
             "Debug_IsIdeal", "Debug_Congested", "Debug_ExcessiveP3", "Error"
         ]
         for col in expected_cols:
@@ -404,7 +415,7 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
         label_stationary_kavach_id_row: "Stationary Kavach ID",
         header_excel_row: "Station Name", 
         label_station_code_row: "Station code",
-        label_lat_row: "Stationary Unit Tower Lattitude",
+        label_lat_row: "Stationary Unit Tower Latitude",
         label_long_row: "Stationary Unit Tower Longitude",
         data_optimum_static_row: "Optimum no. of Simultaneous Exclusive Static Profile Transfer",
         label_freq_pair_row: "Proposed Frequency Pair",
@@ -646,19 +657,19 @@ def  apply_color_scheme(results_df: pd.DataFrame): # Using user's function name
 
 if __name__ == '__main__':
     stations = [
-        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10, "StationCode": "LC563", "KavachID": "37023", "Lattitude": 28.7041, "Longitude": 77.1025}, 
-        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14, "StationCode": "RUND", "KavachID": "37024", "Lattitude": 29.0461, "Longitude": 76.90725}, 
-        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC560", "KavachID": "37025", "Lattitude": 31.7321, "Longitude": 74.4464},  
-        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16, "StationCode": "SHOL", "KavachID": "37026", "Lattitude": 33.7041, "Longitude": 72.1025},
-        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC555", "KavachID": "37027", "Lattitude": 38.7041, "Longitude": 76.1025},  
-        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14, "StationCode": "HODAL", "KavachID": "37028", "Lattitude": 41.3041, "Longitude": 76.6647}, 
-        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20, "StationCode": "STG", "KavachID": "37029", "Lattitude": 42.7055, "Longitude": 73.1025}, 
-        {'name': 'Station H', 'Static': 15, 'onboardSlots': 35, "StationCode": "STH", "KavachID": "37030", "Lattitude": 45.1041, "Longitude": 77.8272}, 
-        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18, "StationCode": "STI", "KavachID": "37031", "Lattitude": 47.7041, "Longitude": 76.5278}, 
-        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5, "StationCode": "STJ", "KavachID": "37032", "Lattitude": 49.4041, "Longitude": 76.8825}, 
-        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25, "StationCode": "STK", "KavachID": "37033", "Lattitude": 51.7041, "Longitude": 77.6153}, 
-        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10, "StationCode": "STL", "KavachID": "37034", "Lattitude": 54.3441, "Longitude": 73.1025},
-        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21, "StationCode": "MTHRJ", "KavachID": "37035", "Lattitude": 57.5325, "Longitude": 73.6737},
+        {'name': 'LC.563', 'Static': 4, 'onboardSlots': 10, "StationCode": "LC563", "KavachID": "37023", "Latitude": 28.7041, "Longitude": 77.1025}, 
+        {'name': 'Rundhi', 'Static': 4, 'onboardSlots': 14, "StationCode": "RUND", "KavachID": "37024", "Latitude": 29.0461, "Longitude": 76.90725}, 
+        {'name': 'LC.560', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC560", "KavachID": "37025", "Latitude": 31.7321, "Longitude": 74.4464},  
+        {'name': 'Sholanka', 'Static': 4, 'onboardSlots': 16, "StationCode": "SHOL", "KavachID": "37026", "Latitude": 33.7041, "Longitude": 72.1025},
+        {'name': 'LC.555', 'Static': 4, 'onboardSlots': 9, "StationCode": "LC555", "KavachID": "37027", "Latitude": 38.7041, "Longitude": 76.1025},  
+        {'name': 'Hodal', 'Static': 4, 'onboardSlots': 14, "StationCode": "HODAL", "KavachID": "37028", "Latitude": 41.3041, "Longitude": 76.6647}, 
+        {'name': 'Station G', 'Static': 6, 'onboardSlots': 20, "StationCode": "STG", "KavachID": "37029", "Latitude": 42.7055, "Longitude": 73.1025}, 
+        {'name': 'Station H', 'Static': 15, 'onboardSlots': 35, "StationCode": "STH", "KavachID": "37030", "Latitude": 45.1041, "Longitude": 77.8272}, 
+        {'name': 'Station I', 'Static': 5, 'onboardSlots': 18, "StationCode": "STI", "KavachID": "37031", "Latitude": 47.7041, "Longitude": 76.5278}, 
+        {'name': 'Station J', 'Static': 8, 'onboardSlots': 5, "StationCode": "STJ", "KavachID": "37032", "Latitude": 49.4041, "Longitude": 76.8825}, 
+        {'name': 'Station K', 'Static': 2, 'onboardSlots': 25, "StationCode": "STK", "KavachID": "37033", "Latitude": 51.7041, "Longitude": 77.6153}, 
+        {'name': 'Station L', 'Static': 10, 'onboardSlots': 10, "StationCode": "STL", "KavachID": "37034", "Latitude": 54.3441, "Longitude": 73.1025},
+        {'name': 'Mathura Jn', 'Static': 6, 'onboardSlots': 21, "StationCode": "MTHRJ", "KavachID": "37035", "Latitude": 57.5325, "Longitude": 73.6737},
     ]
     
     result_path = generate_excel(stations)
