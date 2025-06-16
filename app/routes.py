@@ -1,6 +1,7 @@
 from flask import Flask, render_template, request, jsonify, send_file, session
 import os
 import io
+import re
 import threading
 import pandas as pd
 import folium
@@ -351,167 +352,152 @@ def admin_page():
     """Renders the admin panel page."""
     return render_template("admin.html")
 
+def validate_timeslot(timeslot_str):
+    """Validates the timeslot format (e.g., '2-14') and range (2-45)."""
+    if not isinstance(timeslot_str, str):
+        return False, "Timeslot must be a string."
+    
+    # Regex to ensure format is number-number
+    if not re.match(r'^\d+-\d+$', timeslot_str):
+        return False, "Invalid format. Use 'start-end', e.g., '2-14'."
+        
+    start, end = map(int, timeslot_str.split('-'))
+    
+    if not (2 <= start <= 45 and 2 <= end <= 45):
+        return False, "Timeslot values must be between 2 and 45."
+        
+    if start >= end:
+        return False, "Start of timeslot must be less than the end."
+        
+    return True, "Valid"
+
 @app.route('/api/add_station', methods=['POST'])
 def add_station():
-    """API endpoint to add a new station to the database."""
-    print("\n--- Received request to /api/add_station ---") # DEBUG
     try:
         data = request.get_json()
         if not data:
-            print("[ERROR] Request body is not JSON or is empty.")
             return jsonify(success=False, message="Request body must be JSON."), 400
-        
-        print(f"[INFO] Received data: {data}") # DEBUG
 
-        # --- Validate required fields ---
-        required_fields = ['name', 'latitude', 'longitude', 'safe_radius_km', 'status']
+        required_fields = ['name', 'Station_Code', 'SKac_ID', 'latitude', 'longitude', 'safe_radius_km', 'status', 'timeslot', 'Area_type']
         if not all(k in data and data[k] not in [None, ''] for k in required_fields):
-            print(f"[ERROR] Missing or empty required fields. Received: {data}")
             return jsonify(success=False, message="All fields are required and cannot be empty."), 400
         
-        # --- Type conversion and validation ---
+        # --- (FIX) ADDED TIMESLOT VALIDATION FOR ADDING STATIONS ---
+        timeslot = data.get('timeslot')
+        is_valid, message = validate_timeslot(timeslot)
+        if not is_valid:
+            return jsonify(success=False, message=f"Timeslot Error: {message}"), 400
+
+        # --- Type conversion ---
         try:
             name = data['name']
+            station_code = data['Station_Code']
+            skac_id = data['SKac_ID']
             lat = float(data['latitude'])
             lon = float(data['longitude'])
             radius = float(data['safe_radius_km'])
             status = data['status']
-            # .get() is safer for optional fields. Provide a default of None.
-            freq = data.get('allocated_frequency') 
-            if freq is not None and freq != '':
-                freq = int(freq)
-            else:
-                freq = None # Ensure it's None if empty
-        except (ValueError, TypeError) as e:
-            print(f"[ERROR] Invalid data type for one of the fields: {e}")
-            return jsonify(success=False, message=f"Invalid data format. Check that coordinates and radius are numbers. Error: {e}"), 400
+            area_type = data['Area_type']
+            freq = data.get('allocated_frequency')
+            freq = int(freq) if freq else None
 
-        # --- Database insertion ---
-        print("[INFO] Data validated. Connecting to database...")
+        except (ValueError, TypeError) as e:
+            return jsonify(success=False, message=f"Invalid data format. Error: {e}"), 400
+
         conn = get_db_connection()
         conn.execute(
-            "INSERT INTO stations (name, latitude, longitude, safe_radius_km, status, allocated_frequency) VALUES (?, ?, ?, ?, ?, ?)",
-            (name, lat, lon, radius, status, freq)
+            """INSERT INTO stations (name, Station_Code, SKac_ID, latitude, longitude, safe_radius_km, status, allocated_frequency, timeslot, Area_type) 
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (name, station_code, skac_id, lat, lon, radius, status, freq, timeslot, area_type)
         )
         conn.commit()
         conn.close()
-        print(f"[SUCCESS] Station '{name}' added to the database.")
         return jsonify(success=True, message="Station added successfully!")
 
     except sqlite3.IntegrityError:
-        print(f"[ERROR] IntegrityError: Station with name '{data.get('name')}' likely already exists.")
         return jsonify(success=False, message="A station with this name already exists."), 409
     except Exception as e:
-        # This will catch any other unexpected errors
-        print(f"[CRITICAL] An unexpected error occurred in /api/add_station:")
-        traceback.print_exc() # This prints the full error stack to the console
+        traceback.print_exc()
         return jsonify(success=False, message=f"An internal server error occurred: {e}"), 500
 
 @app.route('/api/get_stations', methods=['GET'])
 def get_stations():
-    """API endpoint to get all stations from the database."""
-    print("\n[INFO] Request received to fetch all stations from /api/get_stations")
     conn = get_db_connection()
     stations_cursor = conn.execute("SELECT * FROM stations ORDER BY id").fetchall()
     conn.close()
-    
-    # Convert sqlite3.Row objects to a list of dictionaries so they can be sent as JSON
     stations = [dict(row) for row in stations_cursor]
-    
-    print(f"[INFO] Found {len(stations)} stations. Sending them to the frontend.")
     return jsonify(stations=stations)
 
 @app.route('/api/update_station', methods=['POST'])
 def update_station():
-    """API endpoint to update an existing station."""
-    print("\n[INFO] Received request to update a station.")
+    """
+    API endpoint to update an existing station. Includes validation for the timeslot field.
+    """
     try:
         data = request.get_json()
         if not data or 'id' not in data:
-            print("[ERROR] Invalid request data or missing 'id'.")
-            return jsonify(success=False, message="Invalid request data."), 400
+            return jsonify(success=False, message="Invalid request data, missing 'id'."), 400
         
-        station_id = int(data['id'])
-        print(f"[INFO] Updating station with ID: {station_id}")
+        # --- Timeslot validation for updates ---
+        if 'timeslot' in data and data['timeslot']:
+            is_valid, message = validate_timeslot(data['timeslot'])
+            if not is_valid:
+                return jsonify(success=False, message=f"Timeslot Error: {message}"), 400
 
-        # Connect to the database
+        station_id = int(data['id'])
+        
         conn = get_db_connection()
         
-        # Check if the station exists
-        existing_station = conn.execute("SELECT * FROM stations WHERE id = ?", (station_id,)).fetchone()
-        if not existing_station:
-            print(f"[ERROR] No station found with ID: {station_id}")
-            return jsonify(success=False, message="Station not found."), 404
-        
-        # Prepare the update query
+        allowed_columns = [
+            'name', 'latitude', 'longitude', 'safe_radius_km', 'status', 
+            'allocated_frequency', 'timeslot', 'Area_type', 'SKac_ID', 'Station_Code'
+        ]
+
         update_fields = []
         update_values = []
         
         for key, value in data.items():
-            if key != 'id' and value is not None:  # Skip 'id' and None values
-                update_fields.append(f"{key} = ?")
-                update_values.append(value)
+            if key in allowed_columns and value not in [None, '']:
+                    update_fields.append(f"{key} = ?")
+                    update_values.append(value)
         
         if not update_fields:
-            print("[ERROR] No valid fields provided for update.")
-            return jsonify(success=False, message="No valid fields to update."), 400
+            return jsonify(success=False, message="No valid fields provided for update."), 400
         
-        # Add the station ID to the end of the values list
         update_values.append(station_id)
         
-        # Execute the update query
         query = f"UPDATE stations SET {', '.join(update_fields)} WHERE id = ?"
+
         conn.execute(query, tuple(update_values))
         conn.commit()
         conn.close()
         
-        print(f"[SUCCESS] Station with ID {station_id} updated successfully.")
         return jsonify(success=True, message="Station updated successfully!")
     
-    except sqlite3.Error as e:
-        print(f"[ERROR] Database error during station update: {e}")
-        return jsonify(success=False, message=f"Database error: {e}"), 500
-    except Exception as e:
-        print(f"[CRITICAL] An unexpected error occurred in /api/update_station:")
+    except sqlite3.Error as db_error:
         traceback.print_exc()
+        return jsonify(success=False, message=f"Database error: {db_error}"), 500
+    except Exception as e:
+        traceback.print_exc()
+        return jsonify(success=False, message=f"An internal server error occurred: {e}"), 500
+
 
 @app.route('/api/delete_station', methods=['POST'])
 def delete_station():
-    """API endpoint to delete a station."""
-    print("\n[INFO] Received request to delete a station.")
     try:
         data = request.get_json()
-        if not data or 'id' not in data:
-            print("[ERROR] Invalid request data or missing 'id'.")
-            return jsonify(success=False, message="Invalid request data."), 400
-        
         station_id = int(data['id'])
-        print(f"[INFO] Deleting station with ID: {station_id}")
 
-        # Connect to the database
         conn = get_db_connection()
-        
-        # Check if the station exists
-        existing_station = conn.execute("SELECT * FROM stations WHERE id = ?", (station_id,)).fetchone()
-        if not existing_station:
-            print(f"[ERROR] No station found with ID: {station_id}")
-            return jsonify(success=False, message="Station not found."), 404
-        
-        # Execute the delete query
         conn.execute("DELETE FROM stations WHERE id = ?", (station_id,))
         conn.commit()
         conn.close()
         
-        print(f"[SUCCESS] Station with ID {station_id} deleted successfully.")
         return jsonify(success=True, message="Station deleted successfully!")
     
-    except sqlite3.Error as e:
-        print(f"[ERROR] Database error during station deletion: {e}")
-        return jsonify(success=False, message=f"Database error: {e}"), 500
     except Exception as e:
-        print(f"[CRITICAL] An unexpected error occurred in /api/delete_station:")
         traceback.print_exc()
-
+        return jsonify(success=False, message=f"An internal server error: {e}"), 500
 @app.route("/allocate_slots_endpoint", methods=["POST"])
 def allocate_slots_endpoint():
     try:

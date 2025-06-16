@@ -20,6 +20,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             <td>${station.id}</td>
                             <td>${station.name}</td>
                             <td>${station.Station_Code || 'N/A'}</td>
+                            <td>${station.SKac_ID || 'N/A'}</td>
                             <td>${station.latitude.toFixed(4)},<br>${station.longitude.toFixed(4)}</td>
                             <td>${station.safe_radius_km}</td>
                             <td>${station.allocated_frequency || 'N/A'}</td>
@@ -31,6 +32,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     data-id="${station.id}" 
                                     data-name="${station.name}"
                                     data-station_code="${station.Station_Code || ''}"
+                                    data-skac_id="${station.SKac_ID || ''}"
                                     data-latitude="${station.latitude}" 
                                     data-longitude="${station.longitude}" 
                                     data-safe_radius_km="${station.safe_radius_km}"
@@ -61,6 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('updateStationId').value = button.dataset.id;
         document.getElementById('updateName').value = button.dataset.name;
         document.getElementById('updateStationCode').value = button.dataset.station_code;
+        document.getElementById('updateSKacID').value = button.dataset.skac_id;
         document.getElementById('updateLatitude').value = button.dataset.latitude;
         document.getElementById('updateLongitude').value = button.dataset.longitude;
         document.getElementById('updateSafeRadiusKm').value = button.dataset.safe_radius_km;

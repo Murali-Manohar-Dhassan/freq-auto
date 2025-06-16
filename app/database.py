@@ -9,29 +9,86 @@ def db_init():
     conn = sqlite3.connect(DATABASE_FILE, check_same_thread=False)
     c = conn.cursor()
 
-    # --- Schema Migration ---
-    # Use PRAGMA to get table info, which is a robust way to check for columns
+    # --- Schema Migration Logic ---
     c.execute("PRAGMA table_info(stations)")
-    existing_columns = [row[1] for row in c.fetchall()]
+    existing_columns = {row[1]: row[2] for row in c.fetchall()} # Store as name:type dict
 
-    # Add columns if they don't exist
-    if 'timeslot' not in existing_columns:
-        print("Adding 'timeslot' column...")
-        c.execute("ALTER TABLE stations ADD COLUMN timeslot TEXT")
-    if 'Area_type' not in existing_columns:
-        print("Adding 'Area_type' column...")
-        c.execute("ALTER TABLE stations ADD COLUMN Area_type TEXT")
-    if 'SKac_ID' not in existing_columns:
-        print("Adding 'SKac_ID' column...")
-        c.execute("ALTER TABLE stations ADD COLUMN SKac_ID TEXT")
-    if 'Station_Code' not in existing_columns:
-        print("Adding 'Station_Code' column...")
-        c.execute("ALTER TABLE stations ADD COLUMN Station_Code TEXT")
+    # Define the target schema
+    target_schema = {
+        'id': 'INTEGER', 'name': 'TEXT', 'latitude': 'REAL', 'longitude': 'REAL',
+        'safe_radius_km': 'REAL', 'status': 'TEXT', 'allocated_frequency': 'INTEGER',
+        'static_slots_req': 'INTEGER', 'onboard_slots_req': 'INTEGER',
+        'allocated_p1': 'TEXT', 'allocated_p2': 'TEXT', 'allocated_p3': 'TEXT',
+        'allocated_p4': 'TEXT', 'allocated_p5': 'TEXT', 'allocated_p6': 'TEXT',
+        'timeslot': 'TEXT', # << CHANGED to TEXT
+        'Area_type': 'TEXT', 'SKac_ID': 'TEXT', 'Station_Code': 'TEXT'
+    }
+
+    # Check if migration is needed (table exists but schema is outdated)
+    if 'stations' in [row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]:
+        if existing_columns.get('timeslot') != 'TEXT':
+            print("Timeslot column type is not TEXT. Rebuilding table...")
+            # 1. Rename old table
+            c.execute("ALTER TABLE stations RENAME TO stations_old")
+
+            # 2. Create the new table with the correct schema
+            create_new_table(c)
+
+            # 3. Copy data from old to new. We only copy columns that exist in both tables.
+            c.execute("PRAGMA table_info(stations_old)")
+            old_cols = [row[1] for row in c.fetchall()]
+            
+            common_cols = [col for col in target_schema if col in old_cols]
+
+            # Special handling for timeslot: convert integer to a default string range
+            select_cols_str = ', '.join([f"CAST({col} AS TEXT) || '-45'" if col == 'timeslot' else col for col in common_cols])
+
+            try:
+                c.execute(f"""
+                    INSERT INTO stations ({', '.join(common_cols)}) 
+                    SELECT {select_cols_str}
+                    FROM stations_old
+                """)
+                print("Data migrated to new schema. Old integer timeslots converted to a default range.")
+            except sqlite3.Error as e:
+                 print(f"Could not migrate all data: {e}")
+
+            # 4. Drop the old table
+            c.execute("DROP TABLE stations_old")
+    else:
+        # Table doesn't exist, create it fresh
+        create_new_table(c)
 
 
-    # Expanded schema to hold all necessary data
-    c.execute('''
-        CREATE TABLE IF NOT EXISTS stations (
+    # Add dummy data if the table is empty
+    c.execute("SELECT count(*) FROM stations")
+    if c.fetchone()[0] == 0:
+        print("Database is empty. Populating with initial test data...")
+        try:
+            # Note: timeslot is now a TEXT field representing a range
+            stations_to_add = [
+                ('SECUNDERABAD_TWR', 17.44, 78.50, 50.0, 'approved', 1, '2-14', 'Urban', 'SK001', 'SC-TWR'),
+                ('HYDERABAD_TWR', 17.23, 78.43, 60.0, 'approved', 2, '15-28', 'Suburban', 'SK002', 'HYD-TWR')
+            ]
+            c.executemany("""
+                INSERT INTO stations 
+                (name, latitude, longitude, safe_radius_km, status, allocated_frequency, timeslot, Area_type, SKac_ID, Station_Code) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, stations_to_add)
+            
+            print(f"✅ Successfully added {len(stations_to_add)} initial stations.")
+        except sqlite3.IntegrityError:
+            print("Could not add initial stations, they might already exist.")
+            pass
+            
+    conn.commit()
+    conn.close()
+    print("✅ Database initialized successfully.")
+
+def create_new_table(cursor):
+    """Creates the stations table with the latest schema."""
+    cursor.execute('''
+        CREATE TABLE stations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
             latitude REAL NOT NULL,
@@ -49,30 +106,8 @@ def db_init():
             Station_Code TEXT
         )
     ''')
-    
-    # Add a few dummy approved stations for testing, if the table is empty
-    c.execute("SELECT count(*) FROM stations")
-    if c.fetchone()[0] == 0:
-        print("Database is empty. Populating with initial test data...")
-        try:
-            stations_to_add = [
-                ('SECUNDERABAD_TWR', 17.44, 78.50, 50.0, 'approved', 1, 'Day', 'Urban', 'SK001', 'SC-TWR'),
-                ('HYDERABAD_TWR', 17.23, 78.43, 60.0, 'approved', 2, 'Night', 'Suburban', 'SK002', 'HYD-TWR')
-            ]
-            c.executemany("""
-                INSERT INTO stations 
-                (name, latitude, longitude, safe_radius_km, status, allocated_frequency, timeslot, Area_type, SKac_ID, Station_Code) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, stations_to_add)
-            
-            print(f"✅ Successfully added {len(stations_to_add)} initial stations.")
-        except sqlite3.IntegrityError:
-            print("Could not add initial stations, they might already exist.")
-            pass # Ignore if they somehow get created in a race condition
-            
-    conn.commit()
-    conn.close()
-    print("✅ Database initialized successfully.")
+    print("Table 'stations' created with the new TEXT timeslot schema.")
+
 
 def get_db_connection():
     """Helper to get a database connection that returns dict-like rows."""

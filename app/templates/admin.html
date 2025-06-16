@@ -60,6 +60,10 @@
                                 <label for="Station_Code" class="form-label">Station Code</label>
                                 <input type="text" class="form-control" id="Station_Code" name="Station_Code" required>
                             </div>
+                            <div class="mb-2">
+                                <label for="SKac_ID" class="form-label">Kavach ID</label>
+                                <input type="text" class="form-control" id="SKac_ID" name="SKac_ID" required>
+                            </div>
                             <div class="row">
                                 <div class="col-md-6 mb-2">
                                     <label for="latitude" class="form-label">Latitude</label>
@@ -72,16 +76,16 @@
                             </div>
                             <div class="mb-2">
                                 <label for="safe_radius_km" class="form-label">Radius (km)</label>
-                                <input type="number" step="any" class="form-control" id="safe_radius_km" name="safe_radius_km" required>
+                                <input type="number" step="any" class="form-control" id="safe_radius_km" name="safe_radius_km" required min="15" max="40">
                             </div>
                              <div class="mb-2">
                                 <label for="allocated_frequency" class="form-label">Frequency</label>
-                                <input type="number" class="form-control" id="allocated_frequency" name="allocated_frequency" required>
+                                <input type="number" class="form-control" id="allocated_frequency" name="allocated_frequency" required min="1" max="7">
                             </div>
                              <div class="row">
                                 <div class="col-md-6 mb-2">
-                                    <label for="timeslot" class="form-label">Timeslot</label>
-                                    <input type="number" class="form-control" id="timeslot" name="timeslot" required min="2" max="45">
+                                    <label for="timeslot" class="form-label">Timeslot (e.g., 2-14)</label>
+                                    <input type="text" class="form-control" id="timeslot" name="timeslot" required pattern="\d+-\d+" title="Please enter a range like '2-14'.">
                                 </div>
                                  <div class="col-md-6 mb-2">
                                     <label for="Area_type" class="form-label">Area Type</label>
@@ -122,6 +126,7 @@
                                         <th>ID</th>
                                         <th>Name</th>
                                         <th>Code</th>
+                                        <th>Kavach ID</th>
                                         <th>Lat/Lon</th>
                                         <th>Radius</th>
                                         <th>Freq</th>
@@ -161,6 +166,10 @@
                             <label for="updateStationCode" class="form-label">Station Code</label>
                             <input type="text" class="form-control" id="updateStationCode" name="Station_Code" required>
                         </div>
+                        <div class="mb-3">
+                            <label for="updateSKacID" class="form-label">Kavach ID</label>
+                            <input type="text" class="form-control" id="updateSKacID" name="SKac_ID" required>
+                        </div>
                         <div class="row">
                              <div class="col-md-6 mb-3">
                                 <label for="updateLatitude" class="form-label">Latitude</label>
@@ -173,16 +182,16 @@
                         </div>
                         <div class="mb-3">
                             <label for="updateSafeRadiusKm" class="form-label">Safe Radius (km)</label>
-                            <input type="number" step="any" class="form-control" id="updateSafeRadiusKm" name="safe_radius_km" required>
+                            <input type="number" step="any" class="form-control" id="updateSafeRadiusKm" name="safe_radius_km" required min="15" max="40">
                         </div>
                          <div class="mb-3">
                             <label for="updateAllocatedFrequency" class="form-label">Allocated Frequency</label>
-                            <input type="number" class="form-control" id="updateAllocatedFrequency" name="allocated_frequency" required>
+                            <input type="number" class="form-control" id="updateAllocatedFrequency" name="allocated_frequency" required min="1" max="7">
                         </div>
                         <div class="row">
                             <div class="col-md-6 mb-3">
-                                <label for="updateTimeslot" class="form-label">Timeslot</label>
-                                <input type="number" class="form-control" id="updateTimeslot" name="timeslot" required min="2" max="45">
+                                <label for="updateTimeslot" class="form-label">Timeslot (e.g., 2-14)</label>
+                                <input type="text" class="form-control" id="updateTimeslot" name="timeslot" required pattern="\d+-\d+" title="Please enter a range like '2-14'.">
                             </div>
                              <div class="col-md-6 mb-3">
                                 <label for="updateAreaType" class="form-label">Area Type</label>
