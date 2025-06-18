@@ -32,33 +32,29 @@ def home():
 @app.route('/api/update_map', methods=['POST'])
 def update_map():
     data = request.json
+
+    session['planning_stations'] = []
     
-    new_lat = float(data.get('lat', 17.44))
-    new_lon = float(data.get('lon', 78.50))
-    new_rad = float(data.get('rad', 25.0))
-    new_name = data.get('name', 'New Station')
-    new_freq = data.get('frequency', 'TBD')
+    if 'planning_stations' in data:
+        for station_data in data['planning_stations']:
+            planning_station = {
+                'lat': float(station_data.get('lat')),
+                'lon': float(station_data.get('lon')),
+                'radius': float(station_data.get('rad', 15.0)),
+                'name': station_data.get('name', 'New Station'),
+                'frequency': station_data.get('frequency', 'TBD'),
+                'timestamp': datetime.now().isoformat()
+            }
+            session['planning_stations'].append(planning_station)
     
-    if 'planning_stations' not in session:
-        session['planning_stations'] = []
-    
-    planning_station = {
-        'lat': new_lat,
-        'lon': new_lon,
-        'radius': new_rad,
-        'name': new_name,
-        'frequency': new_freq,
-        'timestamp': datetime.now().isoformat()
-    }
-    session['planning_stations'].append(planning_station)
-    
-    if len(session['planning_stations']) > 1:
+    if session.get('planning_stations'):
         avg_lat = sum(s['lat'] for s in session['planning_stations']) / len(session['planning_stations'])
         avg_lon = sum(s['lon'] for s in session['planning_stations']) / len(session['planning_stations'])
         center_location = [avg_lat, avg_lon]
         zoom_level = 7
     else:
-        center_location = [new_lat, new_lon]
+        # Default location if no stations are planned
+        center_location = [17.44, 78.50]
         zoom_level = 8
     
     m = folium.Map(location=center_location, zoom_start=zoom_level)
@@ -327,7 +323,7 @@ def check_conflicts():
     data = request.json
     new_lat = float(data.get('lat'))
     new_lon = float(data.get('lon'))
-    new_rad = float(data.get('rad', 25.0))
+    new_rad = float(data.get('rad', 15.0))
     
     conn = get_db_connection()
     approved_stations = conn.execute("SELECT * FROM stations WHERE status = 'approved'").fetchall()
@@ -349,7 +345,6 @@ def check_conflicts():
 
 @app.route("/admin")
 def admin_page():
-    """Renders the admin panel page."""
     return render_template("admin.html")
 
 def validate_timeslot(timeslot_str):
@@ -481,7 +476,6 @@ def update_station():
         traceback.print_exc()
         return jsonify(success=False, message=f"An internal server error occurred: {e}"), 500
 
-
 @app.route('/api/delete_station', methods=['POST'])
 def delete_station():
     try:
@@ -498,6 +492,7 @@ def delete_station():
     except Exception as e:
         traceback.print_exc()
         return jsonify(success=False, message=f"An internal server error: {e}"), 500
+    
 @app.route("/allocate_slots_endpoint", methods=["POST"])
 def allocate_slots_endpoint():
     try:

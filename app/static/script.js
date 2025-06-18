@@ -23,7 +23,7 @@ function loadSkavIdLookup(callback) {
 }
 
 // --- DOM Ready / Initialization ---
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', refreshMap, function () {
     loadSkavIdLookup(() => {
         console.log("S-Kavach ID lookup loaded. Initializing UI.");
         showManual(); // Set initial view
@@ -55,71 +55,88 @@ function showManual() {
     updateStationNumbers();
 }
 
+function generateUniqueStationId() {
+    return `manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+}
 
 // --- New Station Addition Workflow ---
 function initiateAddStationSequence() {
-    // Validate the current last station card IF it exists
     if (manualStationCount > 0) {
-        const prevStationCardSuffix = `manual_${manualStationCount}`;
-        const prevStationCardId = `stationCard_${prevStationCardSuffix}`;
-        const prevStationCard = $(`#${prevStationCardId}`);
-
-        if (prevStationCard.length) {
-            let cardIsValid = true;
-            let firstInvalidElementInCard = null;
+        // Validate the current last station card IF it exists
+        const prevStationId = stationsData[stationsData.length - 1]?.id;
+        if (prevStationId) {
+            const prevStationCard = $(`#stationCard_${prevStationId}`);
+            if (prevStationCard.length) {
+                let cardIsValid = true;
+                let firstInvalidElementInCard = null;
             // Find all required inputs within this specific card
-            prevStationCard.find('input[required]').each(function() {
-                const input = $(this);
-                input.removeClass('is-invalid'); // Clear previous validation styling
-
-                if (!input.val().trim()) {
-                    cardIsValid = false;
-                    input.addClass('is-invalid');
-                    if (!firstInvalidElementInCard) {
-                        firstInvalidElementInCard = input;
+                prevStationCard.find('input[required]').each(function() {
+                    const input = $(this);
+                    input.removeClass('is-invalid');
+                    if (!input.val().trim()) {
+                        cardIsValid = false;
+                        input.addClass('is-invalid');
+                        if (!firstInvalidElementInCard) {
+                            firstInvalidElementInCard = input;
+                        }
                     }
-                    // console.warn for debugging if needed
-                }
-            });
+                });
 
-            if (!cardIsValid) {
-                alert(`Please fill in all required fields for ${prevStationCard.find('.station-title-text').text()} before adding a new station. The first empty required field has been focused.`);
-                
-                const collapseElement = prevStationCard.find('.collapse');
-                if (collapseElement.length && !collapseElement.hasClass('show')) {
+                if (!cardIsValid) {
+                    alert(`Please fill in all required fields for ${prevStationCard.find('.station-title-text').text()} before adding a new station. The first empty required field has been focused.`);
+                    const collapseElement = prevStationCard.find('.collapse');
+                    if (collapseElement.length && !collapseElement.hasClass('show')) {
                     // Use Bootstrap's static method to get or create instance to prevent issues
-                    bootstrap.Collapse.getOrCreateInstance(collapseElement[0]).show();
-                    const headerId = collapseElement.attr('aria-labelledby');
-                    if(headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
+                        bootstrap.Collapse.getOrCreateInstance(collapseElement[0]).show();
+                        const headerId = collapseElement.attr('aria-labelledby');
+                        if (headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
+                    }
+                    if (firstInvalidElementInCard) {
+                        firstInvalidElementInCard.focus();
+                    }
+                    return;
                 }
-                if (firstInvalidElementInCard) {
-                    firstInvalidElementInCard.focus();
-                }
-                return; // Stop the sequence
             }
         }
 
-        // Collapse the previously added card's body if it exists and is expanded (original logic)
-        const prevCollapseElement = document.getElementById(`collapse_${prevStationCardSuffix}`);
-        const prevHeaderElement = $(`#headerFor_${prevStationCardSuffix}`);
-
-        if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
-            // Use Bootstrap's static method
-            bootstrap.Collapse.getOrCreateInstance(prevCollapseElement).hide();
-        }
-        if (prevHeaderElement) {
-            prevHeaderElement.attr('aria-expanded', 'false');
+        // Collapse the previously added card's body
+        const prevStationIdToCollapse = stationsData[stationsData.length - 1]?.id;
+        if (prevStationIdToCollapse) {
+            const prevCollapseElement = document.getElementById(`collapse_${prevStationIdToCollapse}`);
+            const prevHeaderElement = $(`#headerFor_${prevStationIdToCollapse}`);
+            if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
+                bootstrap.Collapse.getOrCreateInstance(prevCollapseElement).hide();
+            }
+            if (prevHeaderElement) {
+                prevHeaderElement.attr('aria-expanded', 'false');
+            }
         }
     }
-    _proceedToAddActualStationField(); // Proceed if current card is valid or no cards yet
+    _proceedToAddActualStationField();
 }
 
 function _proceedToAddActualStationField() {
-    manualStationCount++;
-    const container = document.getElementById("stationContainer");
-    const stationIdSuffix = `manual_${manualStationCount}`;
-    const cardWrapperId = `stationCard_${stationIdSuffix}`;
+    manualStationCount++; // This is now just for numbering the title, not as a unique ID.
+    const stationId = generateUniqueStationId(); // Generate a unique ID for the new station
+    const cardWrapperId = `stationCard_${stationId}`;
 
+    // Initialize new station data
+    const newStation = {
+        id: stationId,
+        station_number: manualStationCount, // For display purposes
+        KavachID: '',
+        StationCode: '',
+        stationName: '',
+        latitude: '',
+        longitude: '',
+        optimum_static_profile_transfer: 0,
+        onboard_slots: 0,
+        safe_radius_km: 12.0, // Default value from your HTML
+        allocated_frequency: 4, // Default value from your HTML
+    };
+    stationsData.push(newStation); // Add the new station to the global array
+
+    const container = document.getElementById("stationContainer");
     const cardWrapper = document.createElement("div");
     cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
     cardWrapper.id = cardWrapperId;
@@ -127,78 +144,77 @@ function _proceedToAddActualStationField() {
     cardWrapper.innerHTML = `
         <div class="card shadow p-0 h-100">
             <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
-                 id="headerFor_${stationIdSuffix}"
+                 id="headerFor_${stationId}"
                  data-bs-toggle="collapse"
-                 data-bs-target="#collapse_${stationIdSuffix}"
+                 data-bs-target="#collapse_${stationId}"
                  aria-expanded="true"
-                 aria-controls="collapse_${stationIdSuffix}"
+                 aria-controls="collapse_${stationId}"
                  style="cursor: pointer;">
                 <span class="station-title-text">Station ${manualStationCount}</span>
-                <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}')"></button>
+                <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}', '${stationId}')"></button>
             </div>
-            <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
+            <div class="collapse show" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}">
                 <div class="card-body">
                     <label class="form-label">Stationary Kavach ID:</label>
                     <div class="input-wrapper">
-                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="10" autocomplete="off">
-                        <div class="suggestions-box list-group" id="suggestions_kavach_${stationIdSuffix}"></div>
+                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off">
+                        <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
                     </div>
                     <div class="form-text kavach-id-feedback mb-2"></div>
 
                     <label class="form-label">Station Code:</label>
-                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Enter Station Code" required>
+                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationId}" placeholder="Enter Station Code" required oninput="updateStationData('${stationId}', 'StationCode', this.value)">
 
                     <label class="form-label">Station Name:</label>
-                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" placeholder="Auto-filled or manual entry" required>
+                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationId}" placeholder="Auto-filled or manual entry" required oninput="updateStationData('${stationId}', 'stationName', this.value)">
 
                     <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667">
+                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="updateStationData('${stationId}', 'latitude', this.value)">
 
                     <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667">
+                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="updateStationData('${stationId}', 'longitude', this.value)">
 
                     <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" required>
+                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationId}" min="0" required oninput="updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
 
                     <label class="form-label">Onboard Slots:</label>
-                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" required>
+                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationId}" min="0" required oninput="updateStationData('${stationId}', 'onboard_slots', this.value)">
+                    
+                    <div class="col-6">
+                        <label class="form-label">Safe Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
+                        <input type="range"
+                            class="form-range mb-2"
+                            id="radiusSlider_${stationId}"
+                            min="7"
+                            max="25"
+                            step="1"
+                            value="${newStation.safe_radius_km}"
+                            oninput="document.getElementById('radius-value-${stationId}').textContent = this.value; updateStationData('${stationId}', 'safe_radius_km', this.value)">
+                    </div>
+
+                    <div class="col-6">
+                        <label class="form-label">Frequency: <span id="frequency-value-${stationId}">${newStation.allocated_frequency}</span></label>
+                        <input type="range"
+                            class="form-range mb-2"
+                            id="frequencySlider_${stationId}"
+                            min="1"
+                            max="7"
+                            step="1"
+                            value="${newStation.allocated_frequency}"
+                            oninput="document.getElementById('frequency-value-${stationId}').textContent = this.value; updateStationData('${stationId}', 'allocated_frequency', this.value)">
+                    </div>
                 </div>
             </div>
         </div>
     `;
     container.appendChild(cardWrapper);
-    setupKavachIdListener(cardWrapper, stationIdSuffix);
+    setupKavachIdListener(cardWrapper, stationId); // Keep this if it's setting up other Kavach ID specific logic
 
-    // Add coordinate change listeners for map updates
-    const latInput = cardWrapper.querySelector('.latitude-input');
-    const lonInput = cardWrapper.querySelector('.longitude-input');
-    const radiusInput = cardWrapper.querySelector('.optimum-static-input');
+    // NO direct map updates here. All map updates will be triggered by updateStationData calling refreshMap().
 
-
-    if (latInput && lonInput) {
-        console.log("Latitude and Longitude inputs found for new card.");
-        [latInput, lonInput, radiusInput].filter(Boolean).forEach(input => {
-            input.addEventListener('input', function() {
-                console.log('Input event fired on:', this.placeholder, 'Value:', this.value);
-                console.log('Current Lat value:', latInput.value, 'Current Lon value:', lonInput.value);
-                if (latInput.value && lonInput.value) {
-                    console.log("Both Latitude and Longitude have values. Calling updateMapWithStation.");
-                    updateMapWithStation({
-                        latitude: latInput.value,
-                        longitude: lonInput.value,
-                        radius: radiusInput?.value || 25.0
-                    });
-                } else {
-                console.log("Waiting for both Latitude and Longitude values.");
-                }
-            });
-        });
-    }  else {
-    console.log("Latitude or Longitude input not found for new card.");
-    }
-    updateStationNumbers();
+    updateStationNumbers(); // Re-index displayed station numbers if needed
     cardWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    $(`#KavachID${stationIdSuffix}`).focus(); // Focus on the Kavach ID of the new card
+    $(`#KavachID${stationId}`).focus();
 
     if ($('#stationContainer .station-card').length > 0) {
         $('#finishManualInputBtn').show();
@@ -206,45 +222,78 @@ function _proceedToAddActualStationField() {
     $('#submitContainer').hide();
 }
 
-function removeStationCard(cardId) {
-    const card = document.getElementById(cardId);
-    if (card) {
-        const collapseId = card.querySelector('.collapse')?.id;
-        if (collapseId) {
-            const collapseElement = document.getElementById(collapseId);
-            if (collapseElement) {
-                const collapseInstance = bootstrap.Collapse.getInstance(collapseElement);
-                if (collapseInstance) {
-                    collapseInstance.dispose();
-                }
-            }
+// Function to remove a station card and update stationsData
+function removeStationCard(cardWrapperId, stationId) {
+    
+    // below code is needed?
+    const cardId = `stationCard_${stationId}`;
+    // Find the card element by its ID
+    if (!cardWrapperId || !stationId) {
+        console.error("Invalid parameters for removeStationCard:", { cardWrapperId, stationId });
+        return;
+    }  
+    if (!document.getElementById(cardWrapperId)) {
+        console.warn(`Card with ID ${cardWrapperId} not found. Cannot remove.`);
+        return;
+    }
+    // If the card exists, dispose of its collapse instance if it has one
+    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
+    if (!document.getElementById(cardId)) {
+        console.warn(`Card with ID ${cardId} not found. Cannot dispose collapse instance.`);
+        return;
+    }
+    // Find the collapse element within the card and dispose of its instance
+    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
+    // Note: This assumes the collapse element has an ID that matches the pattern 'collapse_<stationId>'
+    // If the card exists, dispose of its collapse instance if it has one
+    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
+    const collapseElement = document.getElementById(`collapse_${stationId}`);
+    if (collapseElement) {
+        const collapseInstance = bootstrap.Collapse.getInstance(collapseElement);
+        if (collapseInstance) {
+            collapseInstance.dispose(); // Dispose the instance to clean up
         }
-        card.remove();
-        // Refresh map after station removal
-        refreshMapWithAllStations();
-        updateStationNumbers(); // Renumber stations
-        if ($('#stationContainer .station-card').length === 0) {
-            $('#finishManualInputBtn').hide();
-            $('#submitContainer').hide();
-            manualStationCount = 0;
+    } else {
+        console.warn(`Collapse element with ID collapse_${stationId} not found. Cannot dispose collapse instance.`);
+    }
+    // Remove the card from the DOM
+    // This will remove the card from the stationContainer
+    // and also update the stationsData array to remove the corresponding station
+    $(`#${cardWrapperId}`).remove();
+    stationsData = stationsData.filter(s => s.id !== stationId);
+    updateStationNumbers(); // Update displayed numbers
+    refreshMap(); // Refresh map after removal
+    if (stationsData.length === 0) {
+        $('#finishManualInputBtn').hide();
+    }
+}
+
+// This function updates our central 'stationsData' array whenever an input changes
+function updateStationData(stationId, field, value) {
+    const stationIndex = stationsData.findIndex(s => s.id === stationId);
+    if (stationIndex !== -1) {
+        // Ensure numerical values are parsed correctly
+        if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(field)) {
+            stationsData[stationIndex][field] = parseFloat(value) || 0; // Default to 0 if parsing fails
+        } else {
+            stationsData[stationIndex][field] = value;
+        }
+
+        // When coordinates or radius change, refresh the map and check for conflicts
+        if (field === 'latitude' || field === 'longitude' || field === 'safe_radius_km') {
+            refreshMap();
+            // Call checkSingleStationConflicts for the updated station
+            checkSingleStationConflicts(stationsData[stationIndex]);
         }
     }
 }
 
-function updateStationNumbers() {
-    let visibleStationIndex = 0;
-    $('#stationContainer .station-card').each(function() {
-        visibleStationIndex++;
-        $(this).find('.station-title-text').text(`Station ${visibleStationIndex}`);
-    });
      // If all cards are removed, reset manualStationCount.
     // The re-indexing handles dynamic numbering, but manualStationCount tracks additions.
     // It's reset in showManual() and removeStationCard if count is 0.
     // For accurate suffix generation, manualStationCount should reflect highest suffix number used.
     // However, re-indexing on remove might make manualStationCount less reliable for new card suffixes if we allow arbitrary deletes and re-indexing to set it.
     // Current model: manualStationCount only increments. Suffixes are stable. Card titles re-index visually.
-}
-
 
 function validateAllStationCards() {
     let allValid = true;
@@ -363,7 +412,6 @@ function validateAllStationCards() {
     }
     return allValid;
 }
-
 
 function finishManualInput() {
     if (!validateAllStationCards()) {
@@ -629,76 +677,121 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
 }
 
 // --- Map Integration Functions ---
-function updateMapWithStation(stationData) {
-    if (!stationData.latitude || !stationData.longitude) {
-        return;
-    }
 
-    const mapData = {
-        lat: parseFloat(stationData.latitude),
-        lon: parseFloat(stationData.longitude),
-        rad: parseFloat(stationData.radius) || 25.0 // Use station's radius or default
-    };
+// Global variable to hold the state of all stations being planned
+let stationsData = []; 
+
+// This function should be called whenever you add a new station card to the UI
+function addStation() {
+    // A unique ID based on timestamp for the new station
+    const stationId = Date.now(); 
+    
+    // Add a new station object to our state array
+    stationsData.push({
+        id: stationId,
+        Latitude: '',
+        Longitude: '',
+        safe_radius_km: 15.0, // Default radius is 15
+        name: `Station #${stationsData.length + 1}`
+    });
+
+    // Create the new station card in the HTML
+    const container = document.getElementById('stationContainer');
+    const newCard = document.createElement('div');
+    newCard.className = 'station-card'; // Make sure you have CSS for this class
+    newCard.setAttribute('data-id', stationId);
+
+    // Add your input fields to the card. Link them to the update functions.
+    newCard.innerHTML = `
+        <div class="card shadow-sm mb-3">
+            <div class="card-body">
+                <h5 class="card-title">${stationsData[stationsData.length - 1].name}</h5>
+                <div class="row">
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Latitude" oninput="updateStationData(${stationId}, 'Latitude', this.value)">
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Longitude" oninput="updateStationData(${stationId}, 'Longitude', this.value)">
+                    </div>
+                    <div class="col-md-4">
+                        <input type="text" class="form-control" placeholder="Coverage Radius (km)" value="15" oninput="updateStationData(${stationId}, 'safe_radius_km', this.value)">
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    container.appendChild(newCard);
+}
+
+// This function updates our central 'stationsData' array whenever an input changes
+function updateStationData(stationId, field, value) {
+    const station = stationsData.find(s => s.id === stationId);
+    if (station) {
+        station[field] = value;
+        
+        // When coordinates change, refresh the map and check for conflicts
+        if (field === 'Latitude' || field === 'Longitude' || field === 'safe_radius_km') {
+            refreshMap();
+            checkSingleStationConflicts(station);
+        }
+    }
+}
+
+// The new and improved function to update the map with ALL planning stations
+function refreshMap() {
+    const mapContainer = document.getElementById('mapContainer');
+    mapContainer.innerHTML = '<div class="map-placeholder"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div></div>';
+
+    // Filter out stations that don't have coordinates yet
+    const planningStationsPayload = stationsData
+        .map(s => ({
+            lat: parseFloat(s.latitude),
+            lon: parseFloat(s.longitude),
+            rad: parseFloat(s.safe_radius_km) || 12.0, // Default to 12 as per your HTML
+            name: s.stationName || `Station ${s.station_number}` // Use stationName or number for map label
+        }))
+        .filter(s => !isNaN(s.lat) && !isNaN(s.lon)); // Only send valid coordinates
 
     fetch('/api/update_map', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(mapData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ planning_stations: planningStationsPayload })
     })
-    .then(response => response.text())
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        return response.text();
+    })
     .then(mapHtml => {
-        const mapContainer = document.getElementById('mapContainer');
+        // Double-check if this escaping is actually needed or causing issues.
+        // If the backend is returning a full HTML document for srcdoc,
+        // it might not need additional escaping here. Test both ways.
         mapContainer.innerHTML = `<iframe srcdoc="${mapHtml.replace(/"/g, '&quot;')}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-        // Check for coverage conflicts with existing approved stations
-        checkCoverageConflicts(mapData);
     })
     .catch(error => {
         console.error('Error loading map:', error);
-        document.getElementById('mapContainer').innerHTML = `
-            <div class="map-placeholder">
-                <p class="text-danger">Error loading map</p>
-                <small>${error.message}</small>
-            </div>`;
+        mapContainer.innerHTML = '<div class="map-placeholder"><p class="text-danger">Error loading map</p></div>';
     });
 }
 
-function refreshMapWithAllStations() {
-    const stationCards = document.querySelectorAll('.station-card');
-    let lastValidStation = null;
-    
-    stationCards.forEach(card => {
-        const latInput = card.querySelector('input[placeholder*="Latitude"]');
-        const lonInput = card.querySelector('input[placeholder*="Longitude"]');
-        const radiusInput = card.querySelector('input[placeholder*="Radius"]') || card.querySelector('input[placeholder*="Coverage"]');
-        
-        if (latInput?.value && lonInput?.value) {
-            lastValidStation = {
-                latitude: latInput.value,
-                longitude: lonInput.value,
-                radius: radiusInput?.value || 25.0
-            };
-        }
-    });
-    
-    if (lastValidStation) {
-        updateMapWithStation(lastValidStation);
+// Function to check conflicts for a SINGLE station. This is more efficient.
+function checkSingleStationConflicts(stationData) {
+    if (!stationData.latitude || !stationData.longitude) {
+        document.getElementById('conflictWarning').style.display = 'none';
+        return;
     }
-}
 
-function checkCoverageConflicts(newStationData) {
-    // Since your backend shows both approved (blue) and new (red) stations,
-    // you can implement visual conflict detection here
-    // For now, check if the red circle overlaps with any blue circles visually
-    
-    // This could be enhanced to make an API call to check actual conflicts
+    const payload = {
+        lat: parseFloat(stationData.latitude),
+        lon: parseFloat(stationData.longitude),
+        rad: parseFloat(stationData.safe_radius_km) || 12.0 // Default to 12
+    };
+
     fetch('/api/check_conflicts', {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newStationData)
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
     })
     .then(response => response.json())
     .then(result => {
@@ -706,22 +799,26 @@ function checkCoverageConflicts(newStationData) {
         if (result.hasConflict) {
             warningDiv.style.display = 'block';
             warningDiv.innerHTML = `
-                <strong>⚠️ Coverage Conflict Detected!</strong>
-                <p class="mb-0">New station overlaps with: ${result.conflictingStations.join(', ')}</p>
+                <strong>⚠️ Coverage Conflict!</strong>
+                <p class="mb-0">This station's coverage overlaps with approved station(s): ${result.conflictingStations.join(', ')}</p>
             `;
         } else {
             warningDiv.style.display = 'none';
         }
     })
-    .catch(() => {
-        // If conflict check fails, hide warning
+    .catch(error => {
+        console.error('Error checking conflicts:', error);
         document.getElementById('conflictWarning').style.display = 'none';
     });
 }
 
-function refreshMap() {
-    refreshMapWithAllStations();
+// Function to update the displayed station numbers after add/remove
+function updateStationNumbers() {
+    $('#stationContainer .station-card').each(function(index) {
+        $(this).find('.station-title-text').text(`Station ${index + 1}`);
+    });
 }
+
 
 function submitData() {
     if (!validateAllStationCards()) { // Validate before submitting
@@ -865,7 +962,6 @@ function showUpload() {
     }
     // updateStationNumbers(); // Not needed here as container is empty
 }
-
 
 function uploadExcel() {
     $('#loadingSpinner').show();

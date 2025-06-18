@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Home - Configuration Parameters Generation Tool</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <style>
@@ -13,6 +14,7 @@
             background-color: #f8f9fa;
             font-family: 'Inter', sans-serif;
         }
+
         #floatingBrand {
             position: fixed;
             top: 100px;
@@ -23,74 +25,71 @@
             border-radius: 0 8px 8px 0;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
             transition: left 0.5s ease-in-out;
-            /*font-size: 1.1rem; 
-            font-weight: 600; 
-            font-family: 'Inter', sans-serif;  
-            letter-spacing: 0.5px;
-            writing-mode: vertical-rl; 
-            text-orientation: mixed; */
-            /* Horizontal, Largr, Bold, Inter */
             font-size: 1.8rem;
             font-weight: 800;
             font-family: 'Roboto Slab', serif;
             writing-mode: horizontal-tb;
-            /* Vertical, Thin,
-            font-size: 1rem;
-            font-weight: 400;
-            letter-spacing: 2px;
-            writing-mode: vertical-rl;
-            text-orientation: mixed;
-            */
-            /* ✅ Use your preferred font eg, ['Roboto Slab', serif;], ['Orbitron', sans-serif;] futruistic, ['Inter', sans-serif] */
         }
+
         #floatingBrand.show {
-            left: 0; /* slide into view */
+            left: 0;
+            /* slide into view */
         }
+
         .card {
             transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
             border-radius: 0.5rem;
         }
+
         .card:hover {
             transform: scale(1.02);
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
+
         .loader-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-        background-color: rgba(255, 255, 255, 0.75); /* Semi-transparent white background */
-        display: flex; /* Used to center the content */
+            background-color: rgba(255, 255, 255, 0.75);
+            display: flex;
             justify-content: center;
             align-items: center;
-        z-index: 1060; /* Ensures it's above other content (Bootstrap modals are ~1050-1055) */
+            z-index: 1060;
         }
-        .loader-content { /* Optional: if you want a distinct box for the spinner */
+
+        .loader-content {
             text-align: center;
             padding: 25px;
             background-color: #ffffff;
             border-radius: 0.5rem;
-            box-shadow: 0 0.5rem 1rem rgba(0,0,0,.15);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
+
         .skav-input-pending {
             background-color: #fff3cd;
             border-color: #ffeeba;
         }
+
         .btn {
             border-radius: 0.375rem;
         }
+
         #stationContainer {
             display: flex;
             flex-wrap: wrap;
             gap: 1rem;
         }
+
         .station-card {
             min-width: 300px;
         }
+
         .input-wrapper {
             position: relative;
         }
+
         .suggestions-box {
             display: none;
             position: absolute;
@@ -105,30 +104,30 @@
             border-radius: 0 0 0.375rem 0.375rem;
             box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .15);
         }
+
         .suggestions-box .list-group-item.active {
             background-color: #0d6efd;
             color: white;
         }
-        
-        /* NEW: Map Integration Styles */
+
         .main-content {
             display: flex;
             gap: 2rem;
             align-items: flex-start;
         }
-        
+
         .input-section {
             flex: 1;
             min-width: 500px;
         }
-        
+
         .map-section {
             flex: 1;
             position: sticky;
             top: 2rem;
             height: fit-content;
         }
-        
+
         .map-container {
             height: 500px;
             border: 2px solid #dee2e6;
@@ -140,22 +139,18 @@
             justify-content: center;
             color: #6c757d;
         }
-        
+
         .map-container iframe {
             width: 100%;
             height: 100%;
             border: none;
         }
-        
+
         .map-placeholder {
             text-align: center;
             padding: 2rem;
         }
-        
-        .map-controls {
-            margin-bottom: 1rem;
-        }
-        
+
         .conflict-warning {
             background-color: #f8d7da;
             border: 1px solid #f5c6cb;
@@ -164,11 +159,12 @@
             border-radius: 0.375rem;
             margin-bottom: 1rem;
         }
-        
+
         @media (max-width: 1200px) {
             .main-content {
                 flex-direction: column;
             }
+
             .map-section {
                 position: relative;
                 width: 100%;
@@ -184,20 +180,17 @@
         <h2 class="text-secondary">for</h2>
         <h1 class="text-primary">Radio Communication Backbone (mComm) of Railway Kavach</h1>
         <h3 class="text-secondary">Center of Excellence for Railway Kavach Technology</h3>
-        <h5 class="text-secondary">Version 2.0</h5>
+        <h5 class="text-secondary">Version 2.1</h5>
     </header>
     <div id="floatingBrand" class="text-primary fw-bold" style="width: 430px;">
         <span>🚆 Center of Excellence for Railway Kavach Technology</span>
     </div>
 
-    <!-- NEW: Main Content Layout -->
     <div class="main-content">
-        <!-- Input Section (Your existing content) -->
         <div class="input-section">
             <div class="row justify-content-center mb-4">
-        <div class="col-md-8 col-lg-6 d-flex justify-content-center gap-2">
-            <!--<button class="btn btn-outline-primary flex-grow-1" onclick="showManual()">Manual Input</button>
-            <button class="btn btn-outline-secondary flex-grow-1" onclick="showUpload()">Excel Upload</button> -->
+                <div class="col-md-8 col-lg-6 text-center">
+                    <button class="btn btn-primary flex-grow-1 shadow-sm" id="addStationBtn" onclick="initiateAddStationSequence()">Add Station</button>
                 </div>
             </div>
 
@@ -217,8 +210,8 @@
 
             <div id="stationContainer" class="row mt-4 justify-content-center"></div>
 
-            <div id="manualInputActions" class="row mt-3 justify-content-center" style="display: none;">
-        <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2"> <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn" onclick="initiateAddStationSequence()">Add Station</button>
+            <div id="manualInputActions" class="row mt-3 justify-content-center">
+                <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2">
                     <button class="btn btn-info flex-grow-1 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
                 </div>
             </div>
@@ -233,7 +226,6 @@
             </div>
         </div>
 
-        <!-- NEW: Map Section -->
         <div class="map-section">
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
@@ -241,33 +233,29 @@
                     <button class="btn btn-sm btn-outline-primary" onclick="refreshMap()">🔄 Refresh</button>
                 </div>
                 <div class="card-body p-0">
-                    <!-- Conflict Warning (hidden by default) -->
                     <div id="conflictWarning" class="conflict-warning" style="display: none; margin: 1rem;">
                         <strong>⚠️ Coverage Conflict Detected!</strong>
                         <p class="mb-0">New station overlaps with existing approved coverage areas.</p>
                     </div>
                     
-                    <!-- Map Container -->
                     <div class="map-container" id="mapContainer">
                         <div class="map-placeholder">
                             <div class="text-muted">
-                                <i class="bi bi-map" style="font-size: 3rem;"></i>
                                 <h6 class="mt-2">Geographic Coverage Map</h6>
-                                <p class="small">Add station coordinates to view coverage areas</p>
+                                <p class="small">Add station coordinates to view coverage areas.</p>
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="card-footer">
                     <small class="text-muted">
-                        🔵 Blue circles: Approved stations | 🔴 Red circles: New stations
+                        🟢 Approved Stations | 🔴 Planning Stations
                     </small>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Existing Loading Overlay -->
     <div class="loader-overlay" id="loadingSpinnerOverlay" style="display: none;">
         <div class="loader-content">
             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
@@ -277,95 +265,15 @@
         </div>
     </div>
 
-    <script>
-        window.addEventListener("scroll", () => {
-            const headerHeight = document.querySelector("header").offsetHeight;
-            const brand = document.getElementById("floatingBrand");
-
-            if (window.scrollY > headerHeight) {
-                brand.classList.add("show");
-            } else {
-                brand.classList.remove("show");
-            }
-        });
-
-        // NEW: Map functionality
-        function showManual() {
-            document.getElementById('manualInputActions').style.display = 'block';
-            document.getElementById('uploadSection').style.display = 'none';
-        }
-
-        function showUpload() {
-            document.getElementById('uploadSection').style.display = 'block';  
-            document.getElementById('manualInputActions').style.display = 'none';
-        }
-
-        // NEW: Update map when station data changes
-        function updateMapWithStation(stationData) {
-            if (!stationData.latitude || !stationData.longitude) {
-                return;
-            }
-
-            const mapData = {
-                lat: parseFloat(stationData.latitude),
-                lon: parseFloat(stationData.longitude),
-                rad: 25.0 // Default radius, you can make this dynamic
-            };
-
-            fetch('/api/update_map', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(mapData)
-            })
-            .then(response => response.text())
-            .then(mapHtml => {
-                // Create an iframe to display the map
-                const mapContainer = document.getElementById('mapContainer');
-                mapContainer.innerHTML = `<iframe srcdoc="${mapHtml.replace(/"/g, '&quot;')}" style="width: 100%; height: 100%; border: none;"></iframe>`;
-                
-                // Check for conflicts (you can implement this logic)
-                checkCoverageConflicts(mapData);
-            })
-            .catch(error => {
-                console.error('Error loading map:', error);
-                document.getElementById('mapContainer').innerHTML = '<div class="map-placeholder"><p class="text-danger">Error loading map</p></div>';
-            });
-        }
-
-        // NEW: Check for coverage conflicts
-        function checkCoverageConflicts(newStationData) {
-            // This is a placeholder - you can implement actual conflict detection
-            // For now, just hide the warning
-            document.getElementById('conflictWarning').style.display = 'none';
-        }
-
-        // NEW: Refresh map
-        function refreshMap() {
-            // Get current station data and refresh map
-            const stationCards = document.querySelectorAll('.station-card');
-            if (stationCards.length > 0) {
-                const lastCard = stationCards[stationCards.length - 1];
-                const latInput = lastCard.querySelector('input[placeholder*="Latitude"]');
-                const lonInput = lastCard.querySelector('input[placeholder*="Longitude"]');
-                
-                if (latInput && lonInput && latInput.value && lonInput.value) {
-                    updateMapWithStation({
-                        latitude: latInput.value,
-                        longitude: lonInput.value
-                    });
-                }
-            }
-        }
-
-        // NEW: Hook into your existing station creation logic
-        // You'll need to call updateMapWithStation() when station coordinates are entered
-        function onStationCoordinatesChange(stationData) {
-            updateMapWithStation(stationData);
-        }
-    </script>
-
+    
     <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script>
+        // Ensure manual input section is shown on page load if you removed the toggle buttons
+        document.addEventListener('DOMContentLoaded', function() {
+            // No explicit showManual() call needed if the relevant sections are visible by default
+            // However, if your original showManual() did other setup, you might need parts of it.
+            // For now, let's assume the sections are visible and addStationBtn is the main entry.
+        });
+    </script>
 </body>
 </html>
