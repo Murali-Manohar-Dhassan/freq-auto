@@ -1,8 +1,8 @@
 // --- Global State ---
-let manualStationCount = 0;
+let stationCounter = 0; // Renamed from manualStationCount
 let skavIdLookup = {};
+let stationsData = []; // Global array to hold all planning station data
 
-// --- JSON Loading ---
 function loadSkavIdLookup(callback) {
     fetch('/static/skavidLookup.json') // Verify this filename
         .then(response => {
@@ -21,55 +21,21 @@ function loadSkavIdLookup(callback) {
             alert("CRITICAL ERROR: Failed to load 'skavIdLookup.json'. Please ensure the file exists in the 'static' folder and is valid JSON. The application cannot proceed without it. Details: " + err.message);
         });
 }
-
-// --- DOM Ready / Initialization ---
-document.addEventListener('DOMContentLoaded', function () {
-    refreshMap;
-    loadSkavIdLookup(() => {
-        console.log("S-Kavach ID lookup loaded. Initializing UI.");
-        showManual(); // Set initial view
-    });
-
-    // Example: If you have other general modals like 'skavModal' (not for station type)
-    // const skavModalElement = document.getElementById('skavModal');
-    // if (skavModalElement) {
-    //     // skavModalInstance = new bootstrap.Modal(skavModalElement); // Define skavModalInstance globally if needed
-    //     // $('#skavModalIsSkavBtn').on('click', _handleModalConfirmSkav);
-    //     // ... other listeners for this general modal
-    // }
-});
-
-// --- UI Control Functions ---
-function showManual() {
-    // $('#manualSection').show(); // This line is no longer needed if the div is removed
-    $('#uploadSection').hide();
-    $('#stationContainer').empty().show();
-
-    $('#manualInputActions').show(); // Show the new container for action buttons
-    $('#addStationBtn').show();      // This button is inside #manualInputActions
-    $('#finishManualInputBtn').text('Finish & Preview Stations').hide();
-
-    $('#submitContainer').hide();
-    $('#submitArrowGuide').hide(); // Ensure arrow is hidden initially
-    manualStationCount = 0;
-    updateStationNumbers();
-}
-
+// Utility to generate unique IDs for stations
 function generateUniqueStationId() {
-    return `manual_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+    return `station_${Date.now()}_${Math.floor(Math.random() * 1000)}`; // Changed prefix
 }
 
-// --- New Station Addition Workflow ---
-function initiateAddStationSequence() {
-    if (manualStationCount > 0) {
+// Renamed from initiateAddStationSequence
+function addNewStation() {
+    if (stationCounter > 0) { // Using stationCounter for validation
         // Validate the current last station card IF it exists
         const prevStationId = stationsData[stationsData.length - 1]?.id;
         if (prevStationId) {
-            const prevStationCard = $(`#stationCard_${prevStationId}`);
+            const prevStationCard = $(`#card_${prevStationId}`); // Updated ID prefix
             if (prevStationCard.length) {
                 let cardIsValid = true;
                 let firstInvalidElementInCard = null;
-            // Find all required inputs within this specific card
                 prevStationCard.find('input[required]').each(function() {
                     const input = $(this);
                     input.removeClass('is-invalid');
@@ -86,7 +52,6 @@ function initiateAddStationSequence() {
                     alert(`Please fill in all required fields for ${prevStationCard.find('.station-title-text').text()} before adding a new station. The first empty required field has been focused.`);
                     const collapseElement = prevStationCard.find('.collapse');
                     if (collapseElement.length && !collapseElement.hasClass('show')) {
-                    // Use Bootstrap's static method to get or create instance to prevent issues
                         bootstrap.Collapse.getOrCreateInstance(collapseElement[0]).show();
                         const headerId = collapseElement.attr('aria-labelledby');
                         if (headerId) $(`#${headerId}`).attr('aria-expanded', 'true');
@@ -102,8 +67,8 @@ function initiateAddStationSequence() {
         // Collapse the previously added card's body
         const prevStationIdToCollapse = stationsData[stationsData.length - 1]?.id;
         if (prevStationIdToCollapse) {
-            const prevCollapseElement = document.getElementById(`collapse_${prevStationIdToCollapse}`);
-            const prevHeaderElement = $(`#headerFor_${prevStationIdToCollapse}`);
+            const prevCollapseElement = document.getElementById(`collapse_${prevStationIdToCollapse}`); // Updated ID prefix
+            const prevHeaderElement = $(`#headerFor_${prevStationIdToCollapse}`); // Updated ID prefix
             if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
                 bootstrap.Collapse.getOrCreateInstance(prevCollapseElement).hide();
             }
@@ -112,18 +77,18 @@ function initiateAddStationSequence() {
             }
         }
     }
-    _proceedToAddActualStationField();
+    createStationCard(); 
 }
 
-function _proceedToAddActualStationField() {
-    manualStationCount++; // This is now just for numbering the title, not as a unique ID.
+function createStationCard() {
+    stationCounter++; // Renamed from manualStationCount
     const stationId = generateUniqueStationId(); // Generate a unique ID for the new station
-    const cardWrapperId = `stationCard_${stationId}`;
+    const cardWrapperId = `card_${stationId}`; // Generic prefix for card wrapper ID
 
     // Initialize new station data
     const newStation = {
         id: stationId,
-        station_number: manualStationCount, // For display purposes
+        station_number: stationCounter, // For display purposes
         KavachID: '',
         StationCode: '',
         stationName: '',
@@ -150,35 +115,35 @@ function _proceedToAddActualStationField() {
                  aria-expanded="true"
                  aria-controls="collapse_${stationId}"
                  style="cursor: pointer;">
-                <span class="station-title-text">Station ${manualStationCount}</span>
+                <span class="station-title-text">Station ${stationCounter}</span>
                 <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}', '${stationId}')"></button>
             </div>
             <div class="collapse show" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}">
                 <div class="card-body">
                     <label class="form-label">Stationary Kavach ID:</label>
                     <div class="input-wrapper">
-                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off">
+                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off">
                         <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
                     </div>
                     <div class="form-text kavach-id-feedback mb-2"></div>
 
                     <label class="form-label">Station Code:</label>
-                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationId}" placeholder="Enter Station Code" required oninput="updateStationData('${stationId}', 'StationCode', this.value)">
+                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode_${stationId}" placeholder="Enter Station Code" required oninput="updateStationData('${stationId}', 'StationCode', this.value)">
 
                     <label class="form-label">Station Name:</label>
-                    <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationId}" placeholder="Auto-filled or manual entry" required oninput="updateStationData('${stationId}', 'stationName', this.value)">
+                    <input type="text" class="form-control mb-2 station-name-input" id="stationName_${stationId}" placeholder="Auto-filled or manual entry" required oninput="updateStationData('${stationId}', 'stationName', this.value)">
 
                     <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="updateStationData('${stationId}', 'latitude', this.value)">
+                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude_${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="updateStationData('${stationId}', 'latitude', this.value)">
 
                     <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="updateStationData('${stationId}', 'longitude', this.value)">
+                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="updateStationData('${stationId}', 'longitude', this.value)">
 
                     <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationId}" min="0" required oninput="updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
+                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
 
                     <label class="form-label">Onboard Slots:</label>
-                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationId}" min="0" required oninput="updateStationData('${stationId}', 'onboard_slots', this.value)">
+                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="updateStationData('${stationId}', 'onboard_slots', this.value)">
                     
                     <div class="col-6">
                         <label class="form-label">Safe Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
@@ -210,11 +175,9 @@ function _proceedToAddActualStationField() {
     container.appendChild(cardWrapper);
     setupKavachIdListener(cardWrapper, stationId); // Keep this if it's setting up other Kavach ID specific logic
 
-    // NO direct map updates here. All map updates will be triggered by updateStationData calling refreshMap().
-
     updateStationNumbers(); // Re-index displayed station numbers if needed
     cardWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    $(`#KavachID${stationId}`).focus();
+    $(`#KavachID_${stationId}`).focus(); // Updated ID prefix
 
     if ($('#stationContainer .station-card').length > 0) {
         $('#finishManualInputBtn').show();
@@ -222,33 +185,39 @@ function _proceedToAddActualStationField() {
     $('#submitContainer').hide();
 }
 
-// Function to remove a station card and update stationsData
-function removeStationCard(cardWrapperId, stationId) {
-    const cardId = `stationCard_${stationId}`;
-    // Find the card element by its ID
-    if (!cardWrapperId || !stationId) {
-        console.error("Invalid parameters for removeStationCard:", { cardWrapperId, stationId });
-        return;
-    }  
-    if (!document.getElementById(cardWrapperId)) {
-        console.warn(`Card with ID ${cardWrapperId} not found. Cannot remove.`);
-        return;
-    }
-    // This is to ensure we clean up any Bootstrap collapse instance associated with the card. Note: This assumes the collapse element has an ID that matches the pattern 'collapse_<stationId>'
-    if (!document.getElementById(cardId)) {
-        console.warn(`Card with ID ${cardId} not found. Cannot dispose collapse instance.`);
-        return;
-    }
-    const collapseElement = document.getElementById(`collapse_${stationId}`);
-    if (collapseElement) {
-        const collapseInstance = bootstrap.Collapse.getInstance(collapseElement);
-        if (collapseInstance) {
-            collapseInstance.dispose(); // Dispose the instance to clean up
+function updateStationData(stationId, field, value) {
+    console.log(`[updateStationData] Called for ID: ${stationId}, Field: ${field}, Value: ${value}`);
+    const stationIndex = stationsData.findIndex(s => s.id === stationId);
+    if (stationIndex !== -1) {
+        // Handle fields that should be strings
+        if (['KavachID', 'StationCode', 'stationName'].includes(field)) {
+            stationsData[stationIndex][field] = value; // Assign directly as a string
+        }
+        // Handle fields that should be numbers (float or integer)
+        else if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(field)) {
+            // Use parseFloat for all numerical fields; it handles integers fine too
+            stationsData[stationIndex][field] = parseFloat(value) || 0; // Default to 0 if parsing fails
+        }
+        // Fallback for any other fields, though current design expects known fields
+        else {
+            stationsData[stationIndex][field] = value;
+        }
+
+        console.log(`[updateStationData] Updated station data for ${stationId}:`, stationsData[stationIndex]);
+
+        // When coordinates or radius change, refresh the map and check for conflicts
+        if (field === 'latitude' || field === 'longitude' || field === 'safe_radius_km') {
+            refreshMap();
+            // Call checkSingleStationConflicts for the updated station
+            checkSingleStationConflicts(stationsData[stationIndex]);
         }
     } else {
-        console.warn(`Collapse element with ID collapse_${stationId} not found. Cannot dispose collapse instance.`);
+        console.warn(`[updateStationData] Station with ID ${stationId} not found in stationsData array.`);
     }
-    // Remove the card from the DOM. This will remove the card from the stationContainer and also update the stationsData array to remove the corresponding station
+}
+
+// Function to remove a station card and update stationsData
+function removeStationCard(cardWrapperId, stationId) {
     $(`#${cardWrapperId}`).remove();
     stationsData = stationsData.filter(s => s.id !== stationId);
     updateStationNumbers(); // Update displayed numbers
@@ -275,25 +244,21 @@ function validateAllStationCards() {
         const card = $(this);
         const cardId = card.attr('id'); // Get card ID
         const stationNumberText = card.find('.station-title-text').text();
-        let cardHasErrorForThisIteration  = false; // Tracks errors found in this specific validation pass for THIS card
+        let cardHasErrorForThisIteration = false; // Tracks errors found in this specific validation pass for THIS card
 
         // --- Kavach ID Uniqueness and Validity Check ---
         const kavachIdInput = card.find('.kavach-id-input');
-        const kavachIdValue  = kavachIdInput.val().trim();
+        const kavachIdValue = kavachIdInput.val().trim();
         const kavachFeedbackEl = card.find('.kavach-id-feedback');
 
-        // Clear previous 'is-invalid' from this function's pass for Kavach ID, but respect live validation's state if possible
-        // For simplicity, let's ensure it's re-evaluated for emptiness and duplication here.
         kavachIdInput.removeClass('is-invalid'); // Reset for this validation pass
-        // Do not clear text-danger from feedbackEl if it was set by live validation for duplicates/not found
-        // kavachFeedbackEl.text('').hide().removeClass('text-danger text-warning text-success');
 
         if (!kavachIdValue && kavachIdInput.prop('required')) { // Check if empty AND required
             allValid = false;
             cardHasErrorForThisIteration = true;
             kavachIdInput.addClass('is-invalid');
             if (!kavachFeedbackEl.hasClass('text-danger')) { // Don't overwrite more specific errors
-                 kavachFeedbackEl.text('Kavach ID is required.').addClass('text-danger').show();
+                kavachFeedbackEl.text('Kavach ID is required.').addClass('text-danger').show();
             }
             if (!firstInvalidElement) firstInvalidElement = kavachIdInput;
         } else if (kavachIdValue) {
@@ -325,8 +290,8 @@ function validateAllStationCards() {
                     }
                     if (!firstInvalidElement) firstInvalidElement = kavachIdInput;
                 } else {
-                     // It's unique and found in lookup - mark valid if no other issues
-                     // kavachIdInput.addClass('is-valid'); // Bootstrap's 'is-valid' can be used
+                    // It's unique and found in lookup - mark valid if no other issues
+                    // kavachIdInput.addClass('is-valid'); // Bootstrap's 'is-valid' can be used
                 }
             }
         }
@@ -349,7 +314,7 @@ function validateAllStationCards() {
             }
         });
 
-        if (cardHasErrorForThisIteration  && cardId) {
+        if (cardHasErrorForThisIteration && cardId) {
             cardsWithErrors.add(cardId);
         }
     });
@@ -408,35 +373,41 @@ function finishManualInput() {
     }
 }
 
-function setupKavachIdListener(cardElement, stationIdSuffix) {
-    const kavachIdInput = cardElement.querySelector(`#KavachID${stationIdSuffix}`);
-    const stationCodeEl = cardElement.querySelector(`#StationCode${stationIdSuffix}`);
-    const nameEl = cardElement.querySelector(`#stationName${stationIdSuffix}`);
-    const latEl = cardElement.querySelector(`#Latitude${stationIdSuffix}`);
-    const lonEl = cardElement.querySelector(`#Longtitude${stationIdSuffix}`);
+function setupKavachIdListener(cardElement, stationId) {
+    const kavachIdInput = cardElement.querySelector(`#KavachID_${stationId}`);
+    const stationCodeEl = cardElement.querySelector(`#StationCode_${stationId}`);
+    const nameEl = cardElement.querySelector(`#stationName_${stationId}`);
+    const latEl = cardElement.querySelector(`#Latitude_${stationId}`);
+    const lonEl = cardElement.querySelector(`#Longtitude_${stationId}`);
+    // Using jQuery for feedbackEl based on your provided code; ensure it's correctly finding the element.
     const feedbackEl = $(kavachIdInput).closest('.card-body').find('.kavach-id-feedback');
-    const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationIdSuffix}`);
+    const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationId}`);
 
-    // console.log({kavachIdInput, stationCodeEl, nameEl, latEl, lonEl, feedbackEl, suggestionsEl, stationIdSuffix});
+    // This log confirms elements are found
+    console.log({kavachIdInput, stationCodeEl, nameEl, latEl, lonEl, feedbackEl, suggestionsEl, stationId});
 
     if (!kavachIdInput || !suggestionsEl) {
-        console.error(`Kavach ID Input or suggestions element not found for suffix: ${stationIdSuffix}`);
+        console.error(`Kavach ID Input or suggestions element not found for ID: ${stationId}`);
         return;
     }
 
+    // Array of elements that can be auto-filled, used for iterating
     const autoFilledFields = [nameEl, latEl, lonEl, stationCodeEl];
 
+    // Helper function to hide suggestions
     const hideSuggestions = () => {
         suggestionsEl.innerHTML = '';
         $(suggestionsEl).hide();
     };
 
-    const handleKavachIdValidation = (isSelectionEvent = false) => { // Renamed isBlurEvent for clarity
-        const currentKavachIdValue  = kavachIdInput.value.trim();
-        const lookupData  = skavIdLookup[currentKavachIdValue ];
-        console.log(`handleKavachIdValidation for ID "${kavachId}", Lookup found:`, lookup);
+    // Main validation and autofill logic, now an inner function
+    const handleKavachIdValidation = (isSelectionEvent = false) => {
+        const currentKavachIdValue = kavachIdInput.value.trim();
+        const lookupData = skavIdLookup[currentKavachIdValue];
+        console.log(`handleKavachIdValidation for ID "${currentKavachIdValue}", Lookup found:`, lookupData);
 
-        autoFilledFields.forEach(el => { if(el) el.dataset.autoFilled = "false"; }); // Reset auto-filled state
+        // Reset autoFilled status for all relevant fields at the start of validation
+        autoFilledFields.forEach(el => { if(el) el.dataset.autoFilled = "false"; });
         kavachIdInput.classList.remove('is-invalid', 'is-valid');
         if (feedbackEl && feedbackEl.length) {
             feedbackEl.text('').hide().removeClass('text-success text-warning text-danger');
@@ -464,79 +435,119 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
         } else if (lookupData) {
             // 2. Valid Kavach ID Found (and not a duplicate) - Auto-fill
             kavachIdInput.classList.add('is-valid');
+
+            // --- CRITICAL ADDITIONS: Assign values, call updateStationData, and log autofill ---
+            // Always update KavachID in the array when it's confirmed valid
+            updateStationData(stationId, 'KavachID', currentKavachIdValue);
+
             if (stationCodeEl) {
-                stationCodeEl.value = lookupData.code || ''; // Uses specific stationCode from JSON
-                stationCodeEl.dataset.originalValue = stationCodeEl.value;
+                stationCodeEl.value = lookupData.code || '';
+                stationCodeEl.dataset.originalValue = stationCodeEl.value; // Store for change detection
                 stationCodeEl.dataset.autoFilled = "true";
+                updateStationData(stationId, 'StationCode', stationCodeEl.value); // <--- ADDED: Update the data array
+                console.log(`[handleKavachIdValidation] Autofilled StationCode: ${stationCodeEl.value}`); // <--- ADDED: Confirm log
             }
             if (nameEl) {
                 nameEl.value = lookupData.name || '';
                 nameEl.dataset.originalValue = nameEl.value;
                 nameEl.dataset.autoFilled = "true";
+                updateStationData(stationId, 'stationName', nameEl.value); // <--- ADDED: Update the data array
+                console.log(`[handleKavachIdValidation] Autofilled StationName: ${nameEl.value}`); // <--- ADDED: Confirm log
             }
             if (latEl) {
                 latEl.value = lookupData.latitude || '';
                 latEl.dataset.originalValue = latEl.value;
                 latEl.dataset.autoFilled = "true";
+                updateStationData(stationId, 'latitude', latEl.value); // <--- ADDED: Update the data array
+                console.log(`[handleKavachIdValidation] Autofilled Latitude: ${latEl.value}`); // <--- ADDED: Confirm log
             }
             if (lonEl) {
                 lonEl.value = lookupData.longitude || '';
                 lonEl.dataset.originalValue = lonEl.value;
                 lonEl.dataset.autoFilled = "true";
+                updateStationData(stationId, 'longitude', lonEl.value); // <--- ADDED: Update the data array
+                console.log(`[handleKavachIdValidation] Autofilled Longitude: ${lonEl.value}`); // <--- ADDED: Confirm log
             }
+
+            console.log(`[handleKavachIdValidation] Done with autofill attempts. Map refresh will be triggered by updateStationData for lat/lon.`);
 
             if (feedbackEl && feedbackEl.length) {
                 feedbackEl.text('Kavach ID found. Fields auto-filled.').removeClass('text-danger text-warning').addClass('text-success').show();
                 setTimeout(() => { if (feedbackEl.hasClass('text-success')) feedbackEl.fadeOut();}, 3000);
             }
-        } else if (currentKavachIdValue && isSelectionEvent) {
+        } else if (currentKavachIdValue && isSelectionEvent) { // No lookup found, but it's a selection event (e.g. blur after typing a full ID)
             // 3. Kavach ID entered but not found in lookup (and not duplicate, and it's a blur/selection event)
             kavachIdInput.classList.add('is-invalid');
             if (feedbackEl && feedbackEl.length) {
                 feedbackEl.text('Kavach ID not found. Please verify or enter details manually.').addClass('text-danger').show();
             }
-        } else if (currentKavachIdValue && isSelectionEvent) { // No lookup found
-            // 4. Kavach ID is required, empty, and blurred (let global validation handle exact message for empty required)
-            // Clear fields ONLY IF they were previously auto-filled AND the Kavach ID input is now empty OR it's a blur/selection event
-            kavachIdInput.classList.add('is-invalid');
-             if (feedbackEl && feedbackEl.length) { // Optional: specific feedback for empty required Kavach ID
-                 feedbackEl.text('Kavach ID is required.').addClass('text-danger').show();
-             }
-        } else if (!currentKavachIdValue) {
-            // 5. Kavach ID input is empty (and not a required blur event) - clear feedback
+            // Clear autofilled fields if the ID is invalid
+            if (stationCodeEl) { stationCodeEl.value = ''; updateStationData(stationId, 'StationCode', ''); }
+            if (nameEl) { nameEl.value = ''; updateStationData(stationId, 'stationName', ''); }
+            if (latEl) { latEl.value = ''; updateStationData(stationId, 'latitude', ''); }
+            if (lonEl) { lonEl.value = ''; updateStationData(stationId, 'longitude', ''); }
+
+        } else if (!currentKavachIdValue) { // Input is empty
+            // 4. Kavach ID input is empty on blur or input (initial state or cleared)
             if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('').hide();
+                 feedbackEl.text('').hide(); // Clear feedback if not an active error
             }
+            // Clear autofilled fields if the ID is cleared
+            if (stationCodeEl) { stationCodeEl.value = ''; updateStationData(stationId, 'StationCode', ''); }
+            if (nameEl) { nameEl.value = ''; updateStationData(stationId, 'stationName', ''); }
+            if (latEl) { latEl.value = ''; updateStationData(stationId, 'latitude', ''); }
+            if (lonEl) { lonEl.value = ''; updateStationData(stationId, 'longitude', ''); }
         }
     };
-    
-    // Add change listeners for confirmation on auto-filled fields (original logic is good)
+
+    // Add change listeners for confirmation on auto-filled fields
     autoFilledFields.forEach(el => {
         if (!el) return;
         el.addEventListener('blur', function(event) {
             const targetEl = event.target;
+            // Only prompt if it was auto-filled AND value changed from its original auto-filled value
             if (targetEl.dataset.autoFilled === "true" && targetEl.value !== targetEl.dataset.originalValue) {
                 const labelText = $(targetEl).prev('label').text() || 'This field';
                 if (!confirm(`${labelText} was auto-filled. Are you sure you want to change it to "${targetEl.value}"?`)) {
                     targetEl.value = targetEl.dataset.originalValue;
                 } else {
                     targetEl.dataset.originalValue = targetEl.value; // User confirmed the change
-                    // targetEl.dataset.autoFilled = "false"; // Optional: mark as manually confirmed
+                    // targetEl.dataset.autoFilled = "false"; // Optional: mark as manually confirmed if user overrides
                 }
             }
+            // IMPORTANT: Update the stationsData array when a user manually blurs an autofilled field.
+            // This ensures manual changes are committed to the data model.
+            // Dynamically determine the field name from element ID
+            const fieldNameFromId = targetEl.id.split('_')[0]; // e.g., "StationCode", "Latitude"
+            // Convert to the exact field name used in stationsData if necessary (e.g., "Latitude" -> "latitude")
+            // Assuming your updateStationData can handle these directly or you have a mapping.
+            const dataFieldName = {
+                'KavachID': 'KavachID', // If KavachID is also in autoFilledFields, but it's usually handled separately
+                'StationCode': 'StationCode',
+                'stationName': 'stationName',
+                'Latitude': 'latitude',
+                'Longtitude': 'longitude', // Note: your HTML ID is 'Longtitude', but data field is 'longitude'
+                'safeRadiusKm': 'safe_radius_km', // Example for other fields if they were in autoFilledFields
+                'OptimumStatic': 'optimum_static_profile_transfer',
+                'onboardSlots': 'onboard_slots',
+                'allocatedFrequency': 'allocated_frequency'
+            }[fieldNameFromId] || fieldNameFromId.toLowerCase(); // Fallback to lowercase for common cases
+
+            updateStationData(stationId, dataFieldName, targetEl.value);
         });
     });
 
+    // Event listener for input changes on Kavach ID field (for suggestions and initial validation)
     kavachIdInput.addEventListener('input', () => {
         const idValue = kavachIdInput.value.trim();
-        suggestionsEl.innerHTML = ''; // Clear previous suggestions
+        hideSuggestions(); // Clear previous suggestions
         kavachIdInput.classList.remove('is-valid'); // Remove valid status while typing
 
         if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) { // Clear non-error feedback on new input
-             feedbackEl.text('').hide(); // Clear non-error feedback on new input
+            feedbackEl.text('').hide();
         }
 
-        // Get Kavach IDs currently used in OTHER cards
+        // Get Kavach IDs currently used in OTHER cards to avoid suggesting duplicates
         const currentlyUsedIdsInOtherCards = new Set();
         $('#stationContainer .station-card').each(function() {
             const otherCardInput = $(this).find('.kavach-id-input')[0];
@@ -547,68 +558,86 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
                 }
             }
         });
+
         if (idValue.length > 0) {
-            const potentialMatches  = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
+            const potentialMatches = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
+            // Only suggest IDs that are not currently used by other stations
             const availableMatches = potentialMatches.filter(match => !currentlyUsedIdsInOtherCards.has(match) || match === idValue); // Allow current value if it's being edited
+
             if (availableMatches.length > 0) {
-                availableMatches.slice(0, 10).forEach(match => {
+                availableMatches.slice(0, 10).forEach(match => { // Limit to 10 suggestions
                     const suggestionItem = document.createElement('a');
                     suggestionItem.href = '#';
                     suggestionItem.classList.add('list-group-item', 'list-group-item-action', 'py-1', 'px-2');
                     suggestionItem.textContent = `${match} (${skavIdLookup[match].name || 'N/A'})`;
                     suggestionItem.addEventListener('click', (e) => {
                         e.preventDefault();
-                        kavachIdInput.value = match;
-                        hideSuggestions();
-                        handleKavachIdValidation(true); // Treat as a selection/confirmation event
-                        kavachIdInput.focus(); // TRY COMMENTING THIS OUT if clicks don't register fields
+                        kavachIdInput.value = match; // Set the input value to the selected suggestion
+                        hideSuggestions(); // Hide suggestions after selection
+                        handleKavachIdValidation(true); // Treat as a selection/confirmation event to trigger autofill
+                        // kavachIdInput.focus(); // Removed: This can sometimes cause unexpected blur/focus loops
                     });
                     suggestionsEl.appendChild(suggestionItem);
                 });
-                $(suggestionsEl).show();
+                $(suggestionsEl).show(); // Show the suggestions box
             } else {
-                hideSuggestions();
+                hideSuggestions(); // No matches, hide suggestions
             }
         } else { // Input is empty
             hideSuggestions();
-            handleKavachIdValidation(false); // Kavach ID is cleared, update state (e.g. clear feedback)
+            handleKavachIdValidation(false); // Kavach ID is cleared, update state (e.g., clear feedback)
         }
 
-        // Light, continuous feedback (optional, handleKavachIdValidation on blur is more definitive)
-        if (idValue.length === parseInt(kavachIdInput.maxLength, 10) && !skavIdLookup[idValue] && !currentlyUsedIdsInOtherCards.has(idValue)) {
-             if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) { // Only show warning if not already an error
-                 feedbackEl.text('Kavach ID may not exist in master list.').addClass('text-warning').removeClass('text-success text-danger').show();
-             }
-        } else if (skavIdLookup[idValue]) {
-             if (feedbackEl && feedbackEl.length) { // ID is valid and found
-                if (!feedbackEl.hasClass('text-success')) { // Avoid flickering if already success
-                    feedbackEl.text('Kavach ID found.').addClass('text-success').removeClass('text-warning text-danger').show();
-                    setTimeout(() => { if(feedbackEl.hasClass('text-success')) feedbackEl.fadeOut(); }, 2000);
+        // Optional: Light, continuous feedback while typing
+        if (idValue.length > 0) { // Only show feedback if something is typed
+            if (skavIdLookup[idValue]) {
+                if (feedbackEl && feedbackEl.length) {
+                    if (!feedbackEl.hasClass('text-success')) { // Avoid flickering if already success
+                        feedbackEl.text('Kavach ID found.').addClass('text-success').removeClass('text-warning text-danger').show();
+                        setTimeout(() => { if(feedbackEl.hasClass('text-success')) feedbackEl.fadeOut(); }, 2000);
+                    }
                 }
+            } else if (idValue.length === parseInt(kavachIdInput.maxLength, 10)) { // If max length reached and not found
+                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
+                    feedbackEl.text('Kavach ID may not exist in master list.').addClass('text-warning').removeClass('text-success text-danger').show();
+                }
+            } else if (currentlyUsedIdsInOtherCards.has(idValue)) { // If it's a duplicate
+                 if (feedbackEl && feedbackEl.length) {
+                     feedbackEl.text('This Kavach ID is already used.').addClass('text-danger').removeClass('text-warning text-success').show();
+                 }
+            } else { // Clear feedback if valid partial input or not found yet
+                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
+                    feedbackEl.text('').hide();
+                }
+            }
+        } else { // If input is empty
+             if (feedbackEl && feedbackEl.length) {
+                feedbackEl.text('').hide();
              }
         }
-        // No "else hide" here for warning, it should persist until blur or correction
     });
 
+
+    // Event listener for Kavach ID input blur (final validation)
     kavachIdInput.addEventListener('blur', () => {
-        setTimeout(() => {
-            hideSuggestions(); // Always hide suggestions on blur after a delay
-            // Perform full validation/feedback only if input is not empty or was not just cleared.
+        setTimeout(() => { // Small delay to allow click on suggestion to register before hiding
+            hideSuggestions(); // Always hide suggestions on blur
+            // Perform full validation/feedback only if input is not empty
             if (kavachIdInput.value.trim() !== "") {
-                 handleKavachIdValidation(true); // Final validation on blur
+                handleKavachIdValidation(true); // Final validation on blur, treating as a selection event
             } else {
-                 // If input is empty on blur, ensure feedback is cleared if not an error
-                 if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
-                     feedbackEl.text('').hide();
-                 }
+                // If input is empty on blur, ensure feedback is cleared if not an active error
+                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
+                    feedbackEl.text('').hide();
+                }
             }
         }, 150); // 150ms delay allows click on suggestion to register
     });
 
-    // Keyboard navigation (original logic is good)
+    // Keyboard navigation for suggestions
     kavachIdInput.addEventListener('keydown', (e) => {
         const items = suggestionsEl.querySelectorAll('.list-group-item-action');
-        if (!$(suggestionsEl).is(":visible") || items.length === 0) return; // Check if suggestions are visible
+        if (!$(suggestionsEl).is(":visible") || items.length === 0) return; // Only if suggestions are visible
 
         let currentFocus = -1;
         items.forEach((item, index) => {
@@ -616,92 +645,61 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
         });
 
         if (e.key === 'ArrowDown') {
-            e.preventDefault();
+            e.preventDefault(); // Prevent cursor movement in input
             items[currentFocus]?.classList.remove('active');
             currentFocus = (currentFocus + 1) % items.length;
             items[currentFocus]?.classList.add('active');
-            items[currentFocus]?.scrollIntoView({ block: 'nearest' });
+            items[currentFocus]?.scrollIntoView({ block: 'nearest' }); // Scroll to focused item
         } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
+            e.preventDefault(); // Prevent cursor movement in input
             items[currentFocus]?.classList.remove('active');
             currentFocus = (currentFocus - 1 + items.length) % items.length;
             items[currentFocus]?.classList.add('active');
             items[currentFocus]?.scrollIntoView({ block: 'nearest' });
         } else if (e.key === 'Enter' && currentFocus > -1) {
             e.preventDefault();
-            items[currentFocus]?.click(); // Simulate click on active suggestion
+            items[currentFocus]?.click(); // Simulate click on the active suggestion
         } else if (e.key === 'Escape') {
-            e.preventDefault(); // Prevent other escape key actions
-            hideSuggestions();
+            e.preventDefault();
+            hideSuggestions(); // Hide suggestions on Escape
         }
     });
 
-    // Hide suggestions if clicked outside (original logic is good)
+    // Hide suggestions if clicked outside the input or suggestions box
     document.addEventListener('click', (e) => {
         if (!kavachIdInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
             hideSuggestions();
         }
     });
-}
 
-// --- Map Integration Functions ---
+    // Attach event listeners to other fields to update stationsData (for manual inputs)
+    const fieldsToUpdateOnInput = [
+        { selector: `#StationCode_${stationId}`, fieldName: 'StationCode' },
+        { selector: `#stationName_${stationId}`, fieldName: 'stationName' },
+        { selector: `#Latitude_${stationId}`, fieldName: 'latitude' },
+        { selector: `#Longtitude_${stationId}`, fieldName: 'longitude' },
+        { selector: `#safeRadiusKm_${stationId}`, fieldName: 'safe_radius_km' },
+        { selector: `#OptimumStatic_${stationId}`, fieldName: 'optimum_static_profile_transfer' },
+        { selector: `#onboardSlots_${stationId}`, fieldName: 'onboard_slots' },
+        { selector: `#allocatedFrequency_${stationId}`, fieldName: 'allocated_frequency' }
+    ];
 
-// Global variable to hold the state of all stations being planned
-let stationsData = []; 
-
-// This function should be called whenever you add a new station card to the UI
-function addStation() {
-    // A unique ID based on timestamp for the new station
-    const stationId = Date.now(); 
-    
-    // Add a new station object to our state array
-    stationsData.push({
-        id: stationId,
-        Latitude: '',
-        Longitude: '',
-        safe_radius_km: 15.0, // Default radius is 15
-        name: `Station #${stationsData.length + 1}`
+    fieldsToUpdateOnInput.forEach(field => {
+        const element = cardElement.querySelector(field.selector);
+        if (element) {
+            element.addEventListener('input', () => {
+                // This updates the stationsData array as the user types manually
+                updateStationData(stationId, field.fieldName, element.value);
+            });
+        }
     });
 
-    // Create the new station card in the HTML
-    const container = document.getElementById('stationContainer');
-    const newCard = document.createElement('div');
-    newCard.className = 'station-card'; // Make sure you have CSS for this class
-    newCard.setAttribute('data-id', stationId);
-
-    // Add your input fields to the card. Link them to the update functions.
-    newCard.innerHTML = `
-        <div class="card shadow-sm mb-3">
-            <div class="card-body">
-                <h5 class="card-title">${stationsData[stationsData.length - 1].name}</h5>
-                <div class="row">
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" placeholder="Latitude" oninput="updateStationData(${stationId}, 'Latitude', this.value)">
-                    </div>
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" placeholder="Longitude" oninput="updateStationData(${stationId}, 'Longitude', this.value)">
-                    </div>
-                    <div class="col-md-4">
-                        <input type="text" class="form-control" placeholder="Coverage Radius (km)" value="15" oninput="updateStationData(${stationId}, 'safe_radius_km', this.value)">
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-    container.appendChild(newCard);
-}
-
-// This function updates our central 'stationsData' array whenever an input changes
-function updateStationData(stationId, field, value) {
-    const station = stationsData.find(s => s.id === stationId);
-    if (station) {
-        station[field] = value;
-        
-        // When coordinates change, refresh the map and check for conflicts
-        if (field === 'Latitude' || field === 'Longitude' || field === 'safe_radius_km') {
-            refreshMap();
-            checkSingleStationConflicts(station);
-        }
+    // Special handling for the stationType dropdown
+    const stationTypeEl = cardElement.querySelector(`#stationType_${stationId}`);
+    if (stationTypeEl) {
+        stationTypeEl.addEventListener('change', () => {
+            updateStationData(stationId, 'station_type', stationTypeEl.value);
+        });
     }
 }
 
@@ -732,9 +730,6 @@ function refreshMap() {
         return response.text();
     })
     .then(mapHtml => {
-        // Double-check if this escaping is actually needed or causing issues.
-        // If the backend is returning a full HTML document for srcdoc,
-        // it might not need additional escaping here. Test both ways.
         mapContainer.innerHTML = `<iframe srcdoc="${mapHtml.replace(/"/g, '&quot;')}" style="width: 100%; height: 100%; border: none;"></iframe>`;
     })
     .catch(error => {
@@ -781,61 +776,46 @@ function checkSingleStationConflicts(stationData) {
 }
 
 function submitData() {
-    if (!validateAllStationCards()) { // Validate before submitting
+    console.log("[submitData] Starting submission process.");
+    if (!validateAllStationCards()) {
+        console.log("[submitData] Validation failed. Aborting submission.");
         return;
     }
 
-    const stationsData = [];
-    $('#stationContainer .station-card').each(function() {
-        const card = $(this);
-        const cardId = card.attr('id');
-        const stationIdSuffixFromCard = cardId.replace('stationCard_', ''); // e.g. "manual_1"
+    // Use the global stationsData array directly, as it's kept up-to-date
+    // The structure needs to match the backend expectation
+    const payloadStations = stationsData.map(s => ({
+        KavachID: s.KavachID,
+        StationCode: s.StationCode,
+        name: s.stationName,
+        Latitude: parseFloat(s.latitude) || 0.0, // Ensure float conversion
+        Longitude: parseFloat(s.longitude) || 0.0, // Ensure float conversion
+        onboardSlots: parseInt(s.onboard_slots, 10) || 0, // Ensure integer conversion
+        Static: parseInt(s.optimum_static_profile_transfer, 10) || 0, // Ensure integer conversion
+        safe_radius_km: parseFloat(s.safe_radius_km) || 12.0, // Include this if needed by backend
+        allocated_frequency: parseInt(s.allocated_frequency, 10) || 4 // Include this if needed by backend
+    }));
 
-        // Helper function to get numerical value, defaulting to 0 if parsing fails or empty
-        const getIntValue = (selector) => {
-            const val = card.find(selector).val();
-            const parsed = parseInt(val, 10);
-            return isNaN(parsed) ? 0 : parsed; // Return 0 if empty or not a number
-        };
-        const getFloatValue = (selector) => {
-            const val = card.find(selector).val();
-            const parsed = parseFloat(val);
-            return isNaN(parsed) ? 0.0 : parsed; // Return 0.0 if empty or not a number
-        };
-
-        const station = {
-            KavachID: card.find(`#KavachID${stationIdSuffixFromCard}`).val(),
-            StationCode: card.find(`#StationCode${stationIdSuffixFromCard}`).val(),
-            name: card.find(`#stationName${stationIdSuffixFromCard}`).val(),
-            Latitude: getFloatValue(`#Latitude${stationIdSuffixFromCard}`), // Convert to float
-            Longitude: getFloatValue(`#Longtitude${stationIdSuffixFromCard}`), // Convert to float
-            onboardSlots: getIntValue(`#onboardSlots${stationIdSuffixFromCard}`), // Convert to integer
-            Static: getIntValue(`#OptimumStatic${stationIdSuffixFromCard}`)     // Convert to integer
-            // isAdjacentSkav: false, // This flag is likely not needed if backend is simplified
-        };
-        refreshMapWithAllStations();
-        stationsData.push(station);
-    });
-
-    if (stationsData.length === 0) {
+    if (payloadStations.length === 0) {
         alert("No stations to submit.");
+        console.warn("[submitData] No stations in payload. Aborting.");
         return;
     }
 
-    console.log("Submitting Data (with numbers):", stationsData);
+    console.log("[submitData] Submitting Data (payloadStations):", payloadStations);
     $('#loadingMessage').text('Submitting data to server...');
-    $('#loadingSpinnerOverlay').show(); // THEN show the overlay
+    $('#loadingSpinnerOverlay').show();
 
     fetch("/allocate_slots_endpoint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(stationsData)
+        body: JSON.stringify(payloadStations) // Submit the processed global data
     })
     .then(response => {
-        if (!response.ok) { // Check for non-2xx responses
-            return response.json().then(errData => { // Try to parse error response
+        if (!response.ok) {
+            return response.json().then(errData => {
                 throw new Error(errData.error || errData.message || `Server error: ${response.status}`);
-            }).catch(() => { // If parsing error response fails
+            }).catch(() => {
                 throw new Error(`Server error: ${response.status} - Unable to parse error response.`);
             });
         }
@@ -843,25 +823,16 @@ function submitData() {
     })
     .then(data => {
         if (data.fileUrl) {
-            // Assuming checkFileReady will handle further UI updates,
-            // including potentially updating #loadingMessage and eventually hiding the spinner.
-            // If checkFileReady is quick and just triggers a download, you might hide the spinner here
-            // or just before window.location.href in checkFileReady.
-            $('#loadingMessage').text('Preparing your download...'); // Update message
-            checkFileReady(data.fileUrl);
-            // IMPORTANT: Your checkFileReady function should hide #loadingSpinnerOverlay
-            // once the file is ready/downloaded or if an error occurs during that stage.
-            // Example: if checkFileReady directly triggers download:
-            window.location.href = data.fileUrl;
-            setTimeout(() => $('#loadingSpinnerOverlay').hide(), 2000); // Hide after a short delay
+            $('#loadingMessage').text('Preparing your download...');
+            checkFileReady(data.fileUrl); 
         } else {
             alert(data.message || data.error || "Unknown response from server after submission.");
-            $('#loadingSpinnerOverlay').hide(); // Hide on error or unexpected response
+            $('#loadingSpinnerOverlay').hide();
         }
     })
     .catch(err => {
         alert("Submission Error: " + err.message);
-        $('#loadingSpinnerOverlay').hide(); // Hide on network error or exception
+        $('#loadingSpinnerOverlay').hide();
     });
 }
 
@@ -878,8 +849,8 @@ function checkFileReady(fileUrl) {
                 if (response.ok && response.status === 200) {
                     $('#loadingMessage').text('File ready! Starting download...');
                     setTimeout(() => {
-                        //window.location.href = fileUrl; // Trigger download
-                        $('#loadingSpinner').hide();
+                        window.location.href = fileUrl; // Trigger download
+                        $('#loadingSpinnerOverlay').hide(); // Hide the overlay here
                         $('#stationContainer').empty();
                         $('#submitContainer').hide();
                         showManual(); // Reset to initial view
@@ -887,7 +858,7 @@ function checkFileReady(fileUrl) {
                 } else if (response.status === 404 || attempts >= maxAttempts) {
                     let message = response.status === 404 ? "File not found or not yet available." : "File processing timed out.";
                     alert(message + " Please check the server or try again later.");
-                    $('#loadingSpinner').hide();
+                    $('#loadingSpinnerOverlay').hide(); // Hide the overlay on error
                 } else {
                     attempts++;
                     $('#loadingMessage').text(`Processing... Attempt ${attempts} of ${maxAttempts}. Status: ${response.status}`);
@@ -896,9 +867,33 @@ function checkFileReady(fileUrl) {
             })
             .catch(err => {
                 alert("Error checking file readiness: " + err.message);
-                $('#loadingSpinner').hide();
+                $('#loadingSpinnerOverlay').hide(); // Hide the overlay on network error
             });
     }
     poll();
 }
 
+
+// This function is still called 'showManual' but it now just represents showing the main input UI. It can be renamed to something like 'initializeInputUI' if desired, but for now, we'll keep it as is.
+function showManual() {
+    $('#uploadSection').hide();
+    $('#stationContainer').empty().show();
+
+    $('#manualInputActions').show();
+    $('#addStationBtn').show();
+    $('#finishManualInputBtn').text('Finish & Preview Stations').hide();
+
+    $('#submitContainer').hide();
+    $('#submitArrowGuide').hide();
+    stationCounter = 0; // Reset stationCounter
+    updateStationNumbers();
+}
+
+// --- DOM Ready / Initialization ---
+document.addEventListener('DOMContentLoaded', function () {
+    refreshMap(); // Call refreshMap with no stations initially
+    loadSkavIdLookup(() => {
+        console.log("S-Kavach ID lookup loaded. Initializing UI.");
+        showManual(); // Set initial view
+    });
+});
