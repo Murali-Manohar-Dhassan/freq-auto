@@ -23,7 +23,8 @@ function loadSkavIdLookup(callback) {
 }
 
 // --- DOM Ready / Initialization ---
-document.addEventListener('DOMContentLoaded', refreshMap, function () {
+document.addEventListener('DOMContentLoaded', function () {
+    refreshMap;
     loadSkavIdLookup(() => {
         console.log("S-Kavach ID lookup loaded. Initializing UI.");
         showManual(); // Set initial view
@@ -37,7 +38,6 @@ document.addEventListener('DOMContentLoaded', refreshMap, function () {
     //     // ... other listeners for this general modal
     // }
 });
-
 
 // --- UI Control Functions ---
 function showManual() {
@@ -224,8 +224,6 @@ function _proceedToAddActualStationField() {
 
 // Function to remove a station card and update stationsData
 function removeStationCard(cardWrapperId, stationId) {
-    
-    // below code is needed?
     const cardId = `stationCard_${stationId}`;
     // Find the card element by its ID
     if (!cardWrapperId || !stationId) {
@@ -236,17 +234,11 @@ function removeStationCard(cardWrapperId, stationId) {
         console.warn(`Card with ID ${cardWrapperId} not found. Cannot remove.`);
         return;
     }
-    // If the card exists, dispose of its collapse instance if it has one
-    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
+    // This is to ensure we clean up any Bootstrap collapse instance associated with the card. Note: This assumes the collapse element has an ID that matches the pattern 'collapse_<stationId>'
     if (!document.getElementById(cardId)) {
         console.warn(`Card with ID ${cardId} not found. Cannot dispose collapse instance.`);
         return;
     }
-    // Find the collapse element within the card and dispose of its instance
-    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
-    // Note: This assumes the collapse element has an ID that matches the pattern 'collapse_<stationId>'
-    // If the card exists, dispose of its collapse instance if it has one
-    // This is to ensure we clean up any Bootstrap collapse instance associated with the card
     const collapseElement = document.getElementById(`collapse_${stationId}`);
     if (collapseElement) {
         const collapseInstance = bootstrap.Collapse.getInstance(collapseElement);
@@ -256,9 +248,7 @@ function removeStationCard(cardWrapperId, stationId) {
     } else {
         console.warn(`Collapse element with ID collapse_${stationId} not found. Cannot dispose collapse instance.`);
     }
-    // Remove the card from the DOM
-    // This will remove the card from the stationContainer
-    // and also update the stationsData array to remove the corresponding station
+    // Remove the card from the DOM. This will remove the card from the stationContainer and also update the stationsData array to remove the corresponding station
     $(`#${cardWrapperId}`).remove();
     stationsData = stationsData.filter(s => s.id !== stationId);
     updateStationNumbers(); // Update displayed numbers
@@ -268,32 +258,12 @@ function removeStationCard(cardWrapperId, stationId) {
     }
 }
 
-// This function updates our central 'stationsData' array whenever an input changes
-function updateStationData(stationId, field, value) {
-    const stationIndex = stationsData.findIndex(s => s.id === stationId);
-    if (stationIndex !== -1) {
-        // Ensure numerical values are parsed correctly
-        if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(field)) {
-            stationsData[stationIndex][field] = parseFloat(value) || 0; // Default to 0 if parsing fails
-        } else {
-            stationsData[stationIndex][field] = value;
-        }
-
-        // When coordinates or radius change, refresh the map and check for conflicts
-        if (field === 'latitude' || field === 'longitude' || field === 'safe_radius_km') {
-            refreshMap();
-            // Call checkSingleStationConflicts for the updated station
-            checkSingleStationConflicts(stationsData[stationIndex]);
-        }
-    }
+// Function to update the displayed station numbers after add/remove
+function updateStationNumbers() {
+    $('#stationContainer .station-card').each(function(index) {
+        $(this).find('.station-title-text').text(`Station ${index + 1}`);
+    });
 }
-
-     // If all cards are removed, reset manualStationCount.
-    // The re-indexing handles dynamic numbering, but manualStationCount tracks additions.
-    // It's reset in showManual() and removeStationCard if count is 0.
-    // For accurate suffix generation, manualStationCount should reflect highest suffix number used.
-    // However, re-indexing on remove might make manualStationCount less reliable for new card suffixes if we allow arbitrary deletes and re-indexing to set it.
-    // Current model: manualStationCount only increments. Suffixes are stable. Card titles re-index visually.
 
 function validateAllStationCards() {
     let allValid = true;
@@ -447,7 +417,6 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     const feedbackEl = $(kavachIdInput).closest('.card-body').find('.kavach-id-feedback');
     const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationIdSuffix}`);
 
-    // For debugging, ensure elements are found:
     // console.log({kavachIdInput, stationCodeEl, nameEl, latEl, lonEl, feedbackEl, suggestionsEl, stationIdSuffix});
 
     if (!kavachIdInput || !suggestionsEl) {
@@ -465,8 +434,7 @@ function setupKavachIdListener(cardElement, stationIdSuffix) {
     const handleKavachIdValidation = (isSelectionEvent = false) => { // Renamed isBlurEvent for clarity
         const currentKavachIdValue  = kavachIdInput.value.trim();
         const lookupData  = skavIdLookup[currentKavachIdValue ];
-        // For debugging:
-        // console.log(`handleKavachIdValidation for ID "${kavachId}", Lookup found:`, lookup);
+        console.log(`handleKavachIdValidation for ID "${kavachId}", Lookup found:`, lookup);
 
         autoFilledFields.forEach(el => { if(el) el.dataset.autoFilled = "false"; }); // Reset auto-filled state
         kavachIdInput.classList.remove('is-invalid', 'is-valid');
@@ -812,14 +780,6 @@ function checkSingleStationConflicts(stationData) {
     });
 }
 
-// Function to update the displayed station numbers after add/remove
-function updateStationNumbers() {
-    $('#stationContainer .station-card').each(function(index) {
-        $(this).find('.station-title-text').text(`Station ${index + 1}`);
-    });
-}
-
-
 function submitData() {
     if (!validateAllStationCards()) { // Validate before submitting
         return;
@@ -942,175 +902,3 @@ function checkFileReady(fileUrl) {
     poll();
 }
 
-// --- (Keep your existing Global State, JSON Loading, DOM Ready, UI Control,
-// ---  initiateAddStationSequence, _proceedToAddActualStationField, removeStationCard,
-// ---  updateStationNumbers, validateAllStationCards, finishManualInput,
-// ---  setupKavachIdListener, submitData, checkFileReady functions as previously refined) ---
-
-// Ensure showUpload is defined if you have a button for it
-function showUpload() {
-    $('#uploadSection').show();
-    $('#manualSection').hide();
-    $('#stationContainer').empty().hide(); // Hide container initially for upload view
-    $('#submitContainer').hide();
-    $('#finishManualInputBtn').hide(); // Hide finish button from manual mode
-    $('#addStationBtn').hide(); // Hide add station button from manual mode
-    // Clear file input if needed
-    const fileInput = document.getElementById("excelFile");
-    if (fileInput) {
-        fileInput.value = ""; // Reset file input
-    }
-    // updateStationNumbers(); // Not needed here as container is empty
-}
-
-function uploadExcel() {
-    $('#loadingSpinner').show();
-    $('#loadingMessage').text('Uploading and processing Excel file...');
-    const fileInput = document.getElementById("excelFile");
-    const file = fileInput.files[0];
-
-    if (!file) {
-        alert("Please select an Excel file.");
-        $('#loadingSpinner').hide();
-        return;
-    }
-
-    const formData = new FormData();
-    formData.append("file", file);
-
-    fetch("/upload_excel", { // Ensure this is your correct Flask endpoint for Excel upload
-        method: "POST",
-        body: formData
-    })
-    .then(response => {
-        if (!response.ok) {
-            // Try to get error message from JSON response, then fall back to status text
-            return response.json()
-                .catch(() => null) // If response is not JSON or empty
-                .then(errData => {
-                    const errorMessage = errData ? (errData.error || errData.message) : response.statusText;
-                    throw new Error(errorMessage || `Server error: ${response.status}`);
-                });
-        }
-        return response.json();
-    })
-    .then(result => {
-        $('#loadingSpinner').hide();
-        if (result.error) {
-            alert("Error processing Excel: " + result.error);
-            return;
-        }
-        if (!result.data || !Array.isArray(result.data) || result.data.length === 0) {
-            alert("No valid data found in Excel or the format is incorrect.");
-            return;
-        }
-        populateFieldsFromExcel(result.data);
-        $('#manualSection').hide(); // Hide manual input section
-        $('#uploadSection').hide(); // Hide upload section after processing
-        $('#stationContainer').show(); // Show the container with populated cards
-        $('#submitContainer').show(); // Show the submit button area
-        $('#finishManualInputBtn').text('Review Excel Data & Submit').show(); // Or a more appropriate text
-        $('#addStationBtn').hide(); // Typically hide "Add manual station" when in Excel review mode
-    })
-    .catch(err => {
-        alert("Failed to upload or process Excel file. " + err.message);
-        $('#loadingSpinner').hide();
-    });
-}
-
-function populateFieldsFromExcel(stationDataArray) {
-    const container = document.getElementById("stationContainer");
-    container.innerHTML = ""; // Clear previous entries
-    // manualStationCount = 0; // Not strictly needed here if Excel cards use 'excel_' prefix and manual mode resets its own count.
-
-    stationDataArray.forEach((station, index) => {
-        const excelStationIndex = index + 1;
-        const stationIdSuffix = `excel_${excelStationIndex}`; // Distinct suffix for Excel items
-        const cardWrapperId = `stationCard_${stationIdSuffix}`;
-
-        const cardWrapper = document.createElement("div");
-        cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
-        cardWrapper.id = cardWrapperId;
-
-        // Normalize keys from Excel data (handle different possible capitalizations/spacings)
-        // Provide default empty strings or 0 for numbers if data might be missing
-        const sKavachID = String(station["Stationary Kavach ID"] || station["KavachID"] || station["kavachid"] || '');
-        const sName = String(station["Station Name"] || station["station name"] || station["StationName"] || station["name"] || '');
-        const sCode = String(station["Station Code"] || station["station code"] || station["StationCode"] || '');
-        const sLat = String(station["Stationary Unit Tower Latitude"] || station["Latitude"] || station["latitude"] || ''); 
-        const sLon = String(station["Stationary Unit Tower Longitude"] || station["Longitude"] || station["longitude"] || '');
-        const sStatic = String(station["Static"] || station["Optimum no. of Simultaneous Exclusive Static Profile Transfer"] || '0');
-        const sOnboard = String(station["Onboard Slots"] || station["onboardSlots"] || station["onboardslots"] || '0');
-
-        cardWrapper.innerHTML = `
-            <div class="card shadow p-0 h-100">
-                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center"
-                     id="headerFor_${stationIdSuffix}"
-                     data-bs-toggle="collapse"
-                     data-bs-target="#collapse_${stationIdSuffix}"
-                     aria-expanded="true"
-                     aria-controls="collapse_${stationIdSuffix}"
-                     style="cursor: pointer;">
-                    <span class="station-title-text">Station ${excelStationIndex} (Excel)</span>
-                    <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); removeStationCard('${cardWrapperId}')"></button>
-                </div>
-                <div class="collapse show" id="collapse_${stationIdSuffix}" aria-labelledby="headerFor_${stationIdSuffix}">
-                    <div class="card-body">
-                        <label class="form-label">Stationary Kavach ID:</label>
-                        <div class="input-wrapper">
-                             <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID${stationIdSuffix}" placeholder="Excel Value" value="${sKavachID}" oninput="this.value = this.value.replace(/[^0-9]/g, '')" maxlength="10" autocomplete="off">
-                             <div class="suggestions-box list-group" id="suggestions_kavach_${stationIdSuffix}"></div>
-                        </div>
-                        <div class="form-text kavach-id-feedback mb-2"></div>
-
-                        <label class="form-label">Station Code:</label>
-                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode${stationIdSuffix}" placeholder="Excel Value" value="${sCode}" required>
-
-                        <label class="form-label">Station Name:</label>
-                        <input type="text" class="form-control mb-2 station-name-input" id="stationName${stationIdSuffix}" value="${sName}" placeholder="Excel Value" required>
-
-                        <label class="form-label">Stationary Unit Tower Latitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude${stationIdSuffix}" value="${sLat}" placeholder="Excel Value" required max="37.100" min="8.06666667">
-
-                        <label class="form-label">Stationary Unit Tower Longitude:</label>
-                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude${stationIdSuffix}" value="${sLon}" placeholder="Excel Value" required max="92.100" min="68.06666667">
-
-                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic${stationIdSuffix}" min="0" value="${sStatic}" required>
-
-                        <label class="form-label">Onboard Slots:</label>
-                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots${stationIdSuffix}" min="0" value="${sOnboard}" required>
-                    </div>
-                </div>
-            </div>
-        `;
-        container.appendChild(cardWrapper);
-
-        // Setup listener for Kavach ID. This will also attach blur listeners for confirmation.
-        // For Excel data, the initial values are considered "original" and "auto-filled" for this purpose.
-        setupKavachIdListener(cardWrapper, stationIdSuffix);
-
-        // Manually mark fields as "auto-filled" from Excel and set their original values
-        // so that the confirmation logic in setupKavachIdListener works if user edits them.
-        const kavachIdEl = cardWrapper.querySelector(`#KavachID${stationIdSuffix}`);
-        const stationCodeElPop = cardWrapper.querySelector(`#StationCode${stationIdSuffix}`);
-        const nameElPop = cardWrapper.querySelector(`#stationName${stationIdSuffix}`);
-        const latElPop = cardWrapper.querySelector(`#Latitude${stationIdSuffix}`);
-        const lonElPop = cardWrapper.querySelector(`#Longtitude${stationIdSuffix}`);
-
-        // We assume values from Excel are definitive, like an auto-fill.
-        if (kavachIdEl) { kavachIdEl.dataset.originalValue = sKavachID; kavachIdEl.dataset.autoFilled = "true"; }
-        if (stationCodeElPop) { stationCodeElPop.dataset.originalValue = sCode; stationCodeElPop.dataset.autoFilled = "true"; }
-        if (nameElPop) { nameElPop.dataset.originalValue = sName; nameElPop.dataset.autoFilled = "true"; }
-        if (latElPop) { latElPop.dataset.originalValue = sLat; latElPop.dataset.autoFilled = "true"; }
-        if (lonElPop) { lonElPop.dataset.originalValue = sLon; lonElPop.dataset.autoFilled = "true"; }
-    });
-
-    if (stationDataArray.length > 0) {
-        $('#submitContainer').show(); // Redundant? Already shown in uploadExcel.
-    } else {
-        $('#submitContainer').hide();
-        alert("No valid station data to populate from Excel."); // Should have been caught earlier.
-    }
-    updateStationNumbers(); // Update visual numbering for Excel cards
-}
