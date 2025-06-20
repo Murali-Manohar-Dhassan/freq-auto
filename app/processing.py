@@ -13,15 +13,22 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_final_layout_v2.xlsx") # Updated output file name
 
-def haversine(lon1, lat1, lon2, lat2):
-    """Calculate distance between two points on Earth in kilometers."""
-    lon1, lat1, lon2, lat2 = map(radians, [lon1, lat1, lon2, lat2])
-    dlon = lon2 - lon1 
-    dlat = lat2 - lat1 
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a)) 
-    r = 6371 # Radius of earth in kilometers.
-    return c * r
+def parse_timeslot_range(timeslot_str: str) -> set[int]:
+    """
+    Parses a timeslot string like '2-14' into a set of 0-indexed slot integers.
+    'P2' corresponds to index 0, 'P45' corresponds to index 43.
+    """
+    if not timeslot_str:
+        return set()
+    try:
+        start_p_str, end_p_str = timeslot_str.split('-')
+        start_p = int(start_p_str)
+        end_p = int(end_p_str)
+        # Convert P-number to 0-indexed slot index (P2 -> 0, P45 -> 43)
+        return set(range(start_p - 2, end_p - 1)) # End is exclusive in range
+    except (ValueError, IndexError):
+        print(f"Warning: Could not parse timeslot string '{timeslot_str}'. Returning empty set.")
+        return set()
 
 def allocate_slots( 
     stations: list[dict],

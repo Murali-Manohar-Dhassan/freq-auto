@@ -70,20 +70,18 @@ def update_map():
                 planning_station = {
                     'lat': float(station_data.get('lat')),
                     'lon': float(station_data.get('lon')),
-                    'radius': float(station_data.get('rad', 15.0)), # Default radius to 15.0 km
+                    'radius': float(station_data.get('rad', 15.0)),
                     'name': station_data.get('name', 'New Station'),
-                    # Ensure frequency is converted to int for lookup, default to 1 if problematic
-                    'frequency': int(station_data.get('frequency', 1)), 
-                    'timestamp': station_data.get('timestamp', datetime.now().isoformat()) # Keep existing timestamp if sent
+                    'frequency': int(station_data.get('frequency', 1)), # Frontend now sends 'frequency'
+                    'timestamp': station_data.get('timestamp', datetime.now().isoformat())
                 }
                 new_planning_stations.append(planning_station)
             except (ValueError, TypeError) as e:
-                # Log error or handle invalid station data
                 print(f"Error processing planning station data: {station_data}. Error: {e}")
-                continue # Skip invalid station
+                continue
 
     session['planning_stations'] = new_planning_stations
-    session.modified = True # Crucial for Flask session to save changes
+    session.modified = True
 
     if session.get('planning_stations'):
         avg_lat = sum(s['lat'] for s in session['planning_stations']) / len(session['planning_stations'])
@@ -91,7 +89,6 @@ def update_map():
         center_location = [avg_lat, avg_lon]
         zoom_level = 7
     else:
-        # Default location if no stations are planned (Secunderabad, Telangana, India)
         center_location = [17.44, 78.50]
         zoom_level = 8
     
@@ -108,12 +105,11 @@ def update_map():
     
     approved_coords = []
     for station in approved_stations:
-        freq = station['allocated_frequency']
-        # Use FREQ_COLORS for approved stations
+        freq = station['allocated_frequency'] # Access directly, not .get()
         circle_color, _ = FREQ_COLORS.get(freq, DEFAULT_COLOR) 
         
         folium.Marker(
-            location=[float(station['latitude']), float(station['longitude'])], # Ensure float conversion
+            location=[float(station['latitude']), float(station['longitude'])],
             popup=folium.Popup(f"""
             <div style='width:200px'>
                 <b>{station['name']}</b><br>
@@ -121,16 +117,16 @@ def update_map():
                 <b>Frequency:</b> {freq}<br>
                 <b>Safe Radius:</b> {station['safe_radius_km']} km
             </div>
-            """, max_width=300), # Use folium.Popup for better control
+            """, max_width=300),
             icon=folium.Icon(color='green', icon='tower', prefix='fa')
         ).add_to(approved_group)
         
         folium.Circle(
-            location=[float(station['latitude']), float(station['longitude'])], # Ensure float conversion
+            location=[float(station['latitude']), float(station['longitude'])],
             radius=float(station['safe_radius_km']) * 1000,
-            color=circle_color, # Use frequency color
+            color=circle_color,
             fill=True,
-            fill_color=circle_color, # Use frequency color for fill
+            fill_color=circle_color,
             fill_opacity=0.15,
             weight=2,
             popup=f"Coverage: {station['name']}"
@@ -155,15 +151,15 @@ def update_map():
         ).add_to(approved_group)
     
     planning_coords = []
-    conflicts = [] # Clear conflicts for each map update
+    conflicts = []
 
-    for i, p_station in enumerate(session['planning_stations']): # Renamed 'station' to 'p_station' for clarity
-        # IMPORTANT CHANGE 2: Re-introduce frequency-based colors for planning stations
-        p_freq = p_station.get('frequency', 1) # Get frequency from planning station data
+    for i, p_station in enumerate(session['planning_stations']):
+        # p_freq is already set from p_station.get('frequency', 1) and converted to int
+        p_freq = p_station.get('frequency', 1)
         try:
             p_freq = int(p_freq)
         except (ValueError, TypeError):
-            p_freq = 1 # Default if conversion fails
+            p_freq = 1
 
         circle_color, planning_fill_color = FREQ_COLORS.get(p_freq, DEFAULT_COLOR)
         
@@ -181,16 +177,16 @@ def update_map():
                     Remove
                 </button>
             </div>
-            """, max_width=300), # Use folium.Popup
-            icon=folium.Icon(color='red', icon='satellite-dish', prefix='fa') # Keep icon red to denote "planning"
+            """, max_width=300),
+            icon=folium.Icon(color='red', icon='satellite-dish', prefix='fa')
         ).add_to(planning_group)
         
         folium.Circle(
             location=[p_station['lat'], p_station['lon']],
             radius=p_station['radius'] * 1000,
-            color=circle_color, # Use frequency color for outline
+            color=circle_color,
             fill=True,
-            fill_color=planning_fill_color, # Use lighter planning shade for fill
+            fill_color=planning_fill_color,
             fill_opacity=0.2,
             weight=2,
             popup=f"Proposed Coverage: {p_station['name']}"
@@ -199,8 +195,11 @@ def update_map():
         planning_coords.append([p_station['lat'], p_station['lon']])
         
         for approved in approved_stations:
-            # IMPORTANT CHANGE 3: Re-introduce frequency check for conflicts
-            if p_freq == approved['allocated_frequency']:
+            approved_freq = approved['allocated_frequency'] 
+            if approved_freq is None: 
+                continue 
+
+            if p_freq == approved_freq: 
                 distance = calculate_distance(
                     p_station['lat'], p_station['lon'],
                     approved['latitude'], approved['longitude']
@@ -220,7 +219,7 @@ def update_map():
                             [p_station['lat'], p_station['lon']],
                             [approved['latitude'], approved['longitude']]
                         ],
-                        color='red',
+                        color='red', # Conflict line color
                         weight=3,
                         opacity=0.8,
                         dash_array='10,5',
@@ -286,17 +285,20 @@ def update_map():
     if conflicts:
         conflict_html = "<h4>Potential Conflicts:</h4><ul>"
         for conflict in conflicts:
-            # Ensure 'distance' and 'min_distance' are always present in conflict dict
+            # FIX: Access sqlite3.Row elements directly using []
+            approved_name = conflict['approved']['name']
+            approved_freq = conflict['approved']['allocated_frequency'] # Direct access
+            
             conflict_html += f"""
             <li><b>Planning:</b> {conflict['planning']['name']} (Freq: {conflict['planning'].get('frequency', 'N/A')})<br>
-                <b>Approved:</b> {conflict['approved']['name']} (Freq: {conflict['approved'].get('allocated_frequency', 'N/A')})<br>
+                <b>Approved:</b> {approved_name} (Freq: {approved_freq})<br>
             Distance: {conflict['distance']:.2f}km (Min Required: {conflict['min_distance']:.2f}km)</li>
             """
         conflict_html += "</ul>"
         
         folium.Marker(
             location=[center_location[0] + 0.1, center_location[1] + 0.1],
-            popup=folium.Popup(conflict_html, max_width=400), # Increased max_width for better display
+            popup=folium.Popup(conflict_html, max_width=400),
             icon=folium.Icon(color='orange', icon='warning', prefix='fa')
         ).add_to(m)
     
@@ -353,17 +355,16 @@ def planning_summary():
 def check_conflicts():
     data = request.json
     
-    # --- CHANGE: The frontend must now send the frequency ---
     if not all(k in data for k in ['lat', 'lon', 'frequency']):
-        return jsonify({'hasConflict': False, 'conflictingStations': []})
+        return jsonify({'hasConflict': False, 'conflictingStations': [], 'error': 'Missing lat, lon, or frequency in payload'}), 400
 
-    new_lat = float(data.get('lat'))
-    new_lon = float(data.get('lon'))
-    new_rad = float(data.get('rad', 15.0))
     try:
+        new_lat = float(data.get('lat'))
+        new_lon = float(data.get('lon'))
+        new_rad = float(data.get('rad', 15.0))
         new_freq = int(data.get('frequency'))
-    except (ValueError, TypeError):
-        return jsonify({'hasConflict': False, 'conflictingStations': []})
+    except (ValueError, TypeError) as e:
+        return jsonify({'hasConflict': False, 'conflictingStations': [], 'error': f'Invalid data type for coordinates, radius, or frequency: {e}'}), 400
     
     conn = get_db_connection()
     approved_stations = conn.execute("SELECT * FROM stations WHERE status = 'approved'").fetchall()
@@ -371,8 +372,11 @@ def check_conflicts():
     
     conflicting_stations = []
     for station in approved_stations:
-        # --- CHANGE: Check for frequency match first ---
-        if new_freq == station['allocated_frequency']:
+        approved_freq = station['allocated_frequency']
+        if approved_freq is None:
+            continue
+        
+        if new_freq == approved_freq:
             distance = calculate_distance(new_lat, new_lon, station['latitude'], station['longitude'])
             min_separation = (new_rad + station['safe_radius_km'])
             

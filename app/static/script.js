@@ -195,8 +195,12 @@ function updateStationData(stationId, field, value) {
         }
         // Handle fields that should be numbers (float or integer)
         else if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(field)) {
-            // Use parseFloat for all numerical fields; it handles integers fine too
-            stationsData[stationIndex][field] = parseFloat(value) || 0; // Default to 0 if parsing fails
+            // Use parseFloat for lat/lon/radius, parseInt for frequency
+            if (field === 'allocated_frequency') {
+                stationsData[stationIndex][field] = parseInt(value) || 1; // Default frequency to 1
+            } else {
+                stationsData[stationIndex][field] = parseFloat(value) || 0; // Default to 0 if parsing fails
+            }
         }
         // Fallback for any other fields, though current design expects known fields
         else {
@@ -205,12 +209,14 @@ function updateStationData(stationId, field, value) {
 
         console.log(`[updateStationData] Updated station data for ${stationId}:`, stationsData[stationIndex]);
 
-        // When coordinates or radius change, refresh the map and check for conflicts
-        if (field === 'latitude' || field === 'longitude' || field === 'safe_radius_km') {
-            refreshMap();
-            // Call checkSingleStationConflicts for the updated station
-            checkSingleStationConflicts(stationsData[stationIndex]);
-        }
+        // Always refresh the map when station data changes
+        // The map update will now handle drawing all conflicts visually
+        refreshMap(); 
+        
+        // Optionally, still show immediate single-station text conflict if needed
+        // checkSingleStationConflicts(stationsData[stationIndex]);
+        // Consider if you need both. The map is now the source of truth for visual conflicts.
+        // If checkSingleStationConflicts is too redundant or causes flickering, remove this call.
     } else {
         console.warn(`[updateStationData] Station with ID ${stationId} not found in stationsData array.`);
     }
@@ -714,7 +720,8 @@ function refreshMap() {
             lat: parseFloat(s.latitude),
             lon: parseFloat(s.longitude),
             rad: parseFloat(s.safe_radius_km) || 12.0, // Default to 12 as per your HTML
-            name: s.stationName || `Station ${s.station_number}` // Use stationName or number for map label
+            name: s.stationName || `Station ${s.station_number}`, // Use stationName or number for map label
+            frequency: parseInt(s.allocated_frequency) || 1 // Send the frequency, default to 1 if invalid/missing
         }))
         .filter(s => !isNaN(s.lat) && !isNaN(s.lon)); // Only send valid coordinates
 
@@ -737,10 +744,11 @@ function refreshMap() {
         mapContainer.innerHTML = '<div class="map-placeholder"><p class="text-danger">Error loading map</p></div>';
     });
 }
-
-// Function to check conflicts for a SINGLE station. This is more efficient.
+// Function to check conflicts for a SINGLE station. This is more efficient for immediate feedback.
+// IMPORTANT: This function still uses the single station approach.
+// The primary visual conflict detection will now happen in refreshMap -> update_map backend.
 function checkSingleStationConflicts(stationData) {
-    if (!stationData.latitude || !stationData.longitude) {
+    if (!stationData.latitude || !stationData.longitude || !stationData.allocated_frequency) {
         document.getElementById('conflictWarning').style.display = 'none';
         return;
     }
@@ -748,7 +756,8 @@ function checkSingleStationConflicts(stationData) {
     const payload = {
         lat: parseFloat(stationData.latitude),
         lon: parseFloat(stationData.longitude),
-        rad: parseFloat(stationData.safe_radius_km) || 12.0 // Default to 12
+        rad: parseFloat(stationData.safe_radius_km) || 12.0, // Default to 12
+        frequency: parseInt(stationData.allocated_frequency) || 1 // *** IMPORTANT: Send frequency here too! ***
     };
 
     fetch('/api/check_conflicts', {
