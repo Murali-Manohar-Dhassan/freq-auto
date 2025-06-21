@@ -6,6 +6,9 @@ import pandas as pd
 import openpyxl
 from openpyxl.styles import PatternFill, Border, Side, Alignment, Font
 from openpyxl.utils import get_column_letter
+import sqlite3
+from app.database import get_db_connection
+
 
 # Define file paths
 BASE_DIR = os.getcwd()
@@ -13,21 +16,63 @@ UPLOAD_FOLDER = os.path.join(BASE_DIR, "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 OUTPUT_FILE = os.path.join(UPLOAD_FOLDER, "output_kavach_slots_final_layout_v2.xlsx") # Updated output file name
 
+def calculate_distance(lat1, lon1, lat2, lon2):
+    from math import radians, cos, sin, asin, sqrt
+    
+    # Convert to radians
+    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
+    
+    # Haversine formula
+    dlat = lat2 - lat1
+    dlon = lon2 - lon1
+    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
+    c = 2 * asin(sqrt(a))
+    km = 6371 * c  # Earth's radius in kilometers
+    
+    return km
+
+# Helper function to parse timeslot string into a list of occupied indices (0-indexed)
 def parse_timeslot_range(timeslot_str: str) -> set[int]:
     """
     Parses a timeslot string like '2-14' into a set of 0-indexed slot integers.
     'P2' corresponds to index 0, 'P45' corresponds to index 43.
+    Assumes database format is 'START-END' (e.g., '2-45')
     """
     if not timeslot_str:
         return set()
     try:
-        start_p_str, end_p_str = timeslot_str.split('-')
-        start_p = int(start_p_str)
-        end_p = int(end_p_str)
-        # Convert P-number to 0-indexed slot index (P2 -> 0, P45 -> 43)
-        return set(range(start_p - 2, end_p - 1)) # End is exclusive in range
+        timeslot_str = timeslot_str.strip() # Remove any leading/trailing whitespace
+
+        if '-' not in timeslot_str:
+            # Handle single slot numbers if they might appear like "2" instead of "2-2"
+            # Assuming if it's a single number, it still represents P_N
+            num = int(timeslot_str)
+            if 2 <= num <= 45: # P-numbers are from 2 to 45
+                return set([num - 2])
+            else:
+                print(f"DEBUG: Warning: Single timeslot number '{timeslot_str}' is out of P2-P45 range. Returning empty set.")
+                return set()
+        
+        start_num_str, end_num_str = timeslot_str.split('-')
+        start_p = int(start_num_str)
+        end_p = int(end_num_str)
+
+        # Convert P-number to 0-indexed slot index (e.g., 2 -> 0, 45 -> 43)
+        # P_N is index N-2
+        # So, for '2-14': start_p_idx = 2-2=0, end_p_idx = 14-2=12
+        # range(0, 12+1) which is range(0,13) -> [0, 1, ..., 12]
+        
+        # Ensure numbers are within valid P-number range before converting
+        start_idx = max(0, start_p - 2) # P2 -> 0, anything below 2 still maps to 0 if relevant
+        end_idx = min(43, end_p - 2)   # P45 -> 43, anything above 45 still maps to 43
+        
+        if start_idx > end_idx: # Edge case: if start P-number > end P-number (invalid range)
+            print(f"DEBUG: Warning: Invalid timeslot range '{timeslot_str}'. Start index ({start_idx}) > End index ({end_idx}). Returning empty set.")
+            return set()
+
+        return set(range(start_idx, end_idx + 1)) # +1 because range end is exclusive
     except (ValueError, IndexError):
-        print(f"Warning: Could not parse timeslot string '{timeslot_str}'. Returning empty set.")
+        print(f"DEBUG: Warning: Could not parse timeslot string '{timeslot_str}'. Expected format 'START-END' (e.g., '2-45') or single number ('2'). Returning empty set.")
         return set()
 
 def allocate_slots( 
@@ -36,28 +81,47 @@ def allocate_slots(
     max_frequencies: int = 7
 ) -> list[dict]:
     """
-    Allocates stationary and onboard slots using a relational 6-priority system.
-
-    Onboard Priority Definitions:
-    - P1: Alternating non-stationary slots that are NOT adjacent to ANY stationary slot.
-    - P2: Alternating non-stationary slots (from P1's initial pass) that ARE adjacent to a P3 slot.
-    - P3: Continuously filled non-stationary slots, including those adjacent to stationary slots. P45 is always P3.
-    - P4: Special "skip-bottom" alternating stationary slots that are NOT adjacent to a P6 slot.
-    - P5: Special "skip-bottom" alternating stationary slots that ARE adjacent to a P6 slot.
-    - P6: Continuously filled stationary slots.
+    Allocates stationary and onboard slots using a relational 6-priority system,
+    with an added layer of frequency-switching based on conflicts with approved stations'
+    geographical coverage and localized timeslot usage.
     """
     allocations_output: list[dict] = []
     
+    # This `frequency_slot_maps` tracks slots occupied by *planning stations*
+    # `0` means free, `station_name` means occupied by that planning station.
     frequency_slot_maps = {
         f_id: {
-            'station_alloc': [0] * max_slots, 
-            'onboard_alloc': [0] * max_slots  
+            'station_alloc': [0] * max_slots, # `0` for free, station_name for occupied
+            'onboard_alloc': [0] * max_slots  # `0` for free, station_name for occupied
         }
         for f_id in range(1, max_frequencies + 1)
     }
 
+    print("DEBUG: Starting allocate_slots function.")
+    # --- Fetch Approved Stations (only once) ---
+    conn = get_db_connection()
+    approved_stations = conn.execute("SELECT * FROM stations WHERE status = 'approved'").fetchall()
+    conn.close()
+
+    approved_stations_list = []
+    print(f"DEBUG: Found {len(approved_stations)} approved stations in DB.")
+    for ap_station_row in approved_stations:
+        ap_station_dict = dict(ap_station_row)
+        # Ensure numeric types are correct from DB
+        ap_station_dict['allocated_frequency'] = int(ap_station_dict['allocated_frequency']) if ap_station_dict['allocated_frequency'] is not None else -1
+        ap_station_dict['safe_radius_km'] = float(ap_station_dict['safe_radius_km']) if ap_station_dict['safe_radius_km'] is not None else 12.0
+        ap_station_dict['latitude'] = float(ap_station_dict['latitude']) if ap_station_dict['latitude'] is not None else 0.0
+        ap_station_dict['longitude'] = float(ap_station_dict['longitude']) if ap_station_dict['longitude'] is not None else 0.0
+        
+        # Parse timeslot range for approved stations if needed for future rule, though not directly used for blocking slots globally now.
+        ap_station_dict['parsed_timeslots'] = parse_timeslot_range(ap_station_dict.get('timeslot', ''))
+
+        approved_stations_list.append(ap_station_dict)
+        print(f"DEBUG: Loaded Approved: {ap_station_dict['name']} (Freq: {ap_station_dict['allocated_frequency']}, Radius: {ap_station_dict['safe_radius_km']}km, Timeslot DB: '{ap_station_dict.get('timeslot', 'N/A')}' -> Parsed Indices: {ap_station_dict['parsed_timeslots']})")
+
+    
     for station_data in stations:
-        # --- Station Data Initialization ---
+        # --- Station Data Initialization (Using keys from your original code snippet) ---
         station_name = station_data["name"]
         optimum_static_param = station_data["Static"]
         requested_onboard_slots = station_data["onboardSlots"]
@@ -65,54 +129,114 @@ def allocate_slots(
         skavach_id = station_data["KavachID"]
         latitude = station_data["Latitude"]
         longitude = station_data["Longitude"]
-        
+        # Assuming safe_radius_km is also part of planning station input, or use default
+        safe_radius_km = station_data.get("SafeRadius", 12.0) # Use .get() for optional, with a default
+
+        print(f"\nDEBUG: --- Processing Planning Station: {station_name} ---")
+        print(f"DEBUG: Input Data for {station_name} - Lat: {latitude}, Lon: {longitude}, SafeRadius: {safe_radius_km}km, StaticParam: {optimum_static_param}, RequestedOnboard: {requested_onboard_slots}")
+
+        # Input Type Checking / Validation
+        if not all(isinstance(val, (int, float)) for val in [latitude, longitude, safe_radius_km, optimum_static_param, requested_onboard_slots]):
+            print(f"DEBUG: Error for {station_name}: Invalid type for numeric input data. Lat:{type(latitude)}, Lon:{type(longitude)}, etc.")
+            allocations_output.append({
+                "Station": station_name, "Frequency": "N/A",
+                "Error": "Invalid numeric input data types for calculation."
+            })
+            continue
+
+        try:
+            latitude = float(latitude)
+            longitude = float(longitude)
+            safe_radius_km = float(safe_radius_km)
+            optimum_static_param = float(optimum_static_param)
+            requested_onboard_slots = int(requested_onboard_slots)
+        except (ValueError, TypeError) as e:
+            print(f"DEBUG: Error for {station_name}: Type conversion failed for station data: {e}. Skipping.")
+            allocations_output.append({
+                "Station": station_name, "Frequency": "N/A",
+                "Error": f"Type conversion failed for station data: {e}"
+            })
+            continue # Skip to next station
+
         val_for_roundup = ((optimum_static_param * 120) + (requested_onboard_slots - optimum_static_param) * 40 + 100) / 66
-        calculated_station_slots_needed = ceil(val_for_roundup)
+        calculated_station_slots_needed = ceil(val_for_roundup) if val_for_roundup > 0 else 1 # Ensure at least 1 slot if needed
+        print(f"DEBUG: Calculated Stationary Slots Needed for {station_name}: {calculated_station_slots_needed}")
 
         committed_plan_details_for_station = None
 
         # --- Find a Suitable Frequency ---
         for current_freq_id_attempt in range(1, max_frequencies + 1):
-            station_alloc_map = frequency_slot_maps[current_freq_id_attempt]['station_alloc']
-            onboard_alloc_map = frequency_slot_maps[current_freq_id_attempt]['onboard_alloc']
+            print(f"DEBUG: Attempting Frequency: {current_freq_id_attempt} for {station_name}")
+            
+            station_alloc_map = list(frequency_slot_maps[current_freq_id_attempt]['station_alloc']) # Use a copy for current checks
+            onboard_alloc_map = list(frequency_slot_maps[current_freq_id_attempt]['onboard_alloc']) # Use a copy for current checks
 
-            # --- Step 1: Find Prospective Stationary Slots ---
+            # --- 1. Geographical Conflict Check with Approved Stations on this frequency ---
+            has_geo_conflict_with_approved = False 
+            conflicting_approved_stations = [] 
+
+            for ap_station in approved_stations_list:
+                ap_freq = ap_station.get('allocated_frequency')
+                
+                # Only check if the approved station is on the current frequency attempt
+                if ap_freq == current_freq_id_attempt:
+                    distance = calculate_distance(latitude, longitude, ap_station['latitude'], ap_station['longitude'])
+                    min_distance_sum = (safe_radius_km + ap_station['safe_radius_km'])
+                    
+                    if distance < min_distance_sum:
+                        has_geo_conflict_with_approved = True
+                        conflicting_approved_stations.append(f"{ap_station['name']} (Dist: {distance:.2f}km, MinReq: {min_distance_sum:.2f}km, AppFreq: {ap_freq})")
+                        print(f"DEBUG:   -- Geo Conflict Detected: {station_name} (Planning) vs {ap_station['name']} (Approved) on Freq {current_freq_id_attempt}. Distance: {distance:.2f}km, Min Required: {min_distance_sum:.2f}km.")
+                        break # Found one, this frequency is unsuitable based on your rule.
+
+            if has_geo_conflict_with_approved:
+                print(f"DEBUG: Freq {current_freq_id_attempt} is unsuitable for {station_name} due to geographical conflict with approved stations: {', '.join(conflicting_approved_stations)}. Trying next frequency.")
+                continue # Skip to the next frequency
+
+            print(f"DEBUG: Freq {current_freq_id_attempt} is geographically clear for {station_name} with all approved stations.")
+
+            # --- 2. Find Prospective Stationary Slots (considering *only* previously allocated planning stations) ---
+            # This logic remains the same as your original, operating on station_alloc_map which tracks PLANNING stations.
             prospective_station_slots_indices: list[int] = []
+            
             for i in range(max_slots):
                 if len(prospective_station_slots_indices) < calculated_station_slots_needed:
-                    if station_alloc_map[i] == 0:
+                    if station_alloc_map[i] == 0: # Check if slot is free (0) for planning stations
                         prospective_station_slots_indices.append(i)
-                else: break
+                else: break # Enough slots found
             
             if len(prospective_station_slots_indices) < calculated_station_slots_needed:
-                continue 
-
-            # --- Step 2: Plan-Then-Reclassify Onboard Slots ---
+                print(f"DEBUG: Not enough free stationary slots ({len(prospective_station_slots_indices)}/{calculated_station_slots_needed}) in Freq {current_freq_id_attempt} for {station_name} (taken by other planning stations). Trying next frequency.")
+                continue # Not enough slots, try next frequency
             
-            # --- Non-Stationary Planning (Proto-P1 and P3) ---
+            print(f"DEBUG: Found {len(prospective_station_slots_indices)} prospective stationary slots for {station_name} on Freq {current_freq_id_attempt}: {sorted([s+2 for s in prospective_station_slots_indices])}")
+
+
+            # --- Step 2 (cont.): Plan-Then-Reclassify Onboard Slots ---
+            # This part of the logic remains largely the same as your original code,
+            # using the `station_alloc_map` and `onboard_alloc_map` which
+            # reflect commitments from *other planning stations*.
+            
+            # Non-Stationary Planning (Proto-P1 and P3)
             planned_proto_p1: list[int] = []
             planned_p3: list[int] = []
             set_prospective_station_slots = set(prospective_station_slots_indices)
 
-            # Plan Proto-P1 (Alternating pass, NON-ADJACENT to stationary)
             if requested_onboard_slots > 0:
                 idx = 0
                 while len(planned_proto_p1) < requested_onboard_slots and idx < max_slots:
-                    # Condition: Slot is free AND non-stationary
                     if (onboard_alloc_map[idx] == 0 and idx not in set_prospective_station_slots):
-                        # NEW Condition: Slot is NOT adjacent to any stationary slot
-                        is_adjacent_to_stationary = (idx > 0 and idx - 1 in set_prospective_station_slots) or \
-                                                    (idx < max_slots - 1 and idx + 1 in set_prospective_station_slots)
+                        is_adjacent_to_this_planning_stationary = (idx > 0 and idx - 1 in set_prospective_station_slots) or \
+                                                            (idx < max_slots - 1 and idx + 1 in set_prospective_station_slots)
                         
-                        if not is_adjacent_to_stationary:
+                        if not is_adjacent_to_this_planning_stationary:
                             planned_proto_p1.append(idx)
-                            idx += 2 # Alternate
+                            idx += 2 
                         else:
-                            idx += 1 # Skip slot adjacent to stationary
+                            idx += 1 
                     else:
-                        idx += 1 # Skip stationary or occupied slot
-            
-            # Plan P3 (Continuous pass for ALL other non-stationary gaps)
+                        idx += 1 
+                
             onboard_to_place_p3 = requested_onboard_slots - len(planned_proto_p1)
             if onboard_to_place_p3 > 0:
                 for i in range(max_slots):
@@ -121,7 +245,7 @@ def allocate_slots(
                             planned_p3.append(i)
                     else: break
             
-            # --- Re-classify Proto-P1 into final P1 and P2 ---
+            # Re-classify Proto-P1 into final P1 and P2
             planned_p1: list[int] = []
             planned_p2: list[int] = []
             set_p3 = set(planned_p3)
@@ -132,13 +256,16 @@ def allocate_slots(
                 else:
                     planned_p1.append(slot)
             
-            # --- On-Stationary Planning (Proto-P4 and P6) ---
+            # On-Stationary Planning (Proto-P4 and P6)
             planned_proto_p4: list[int] = []
             planned_p6: list[int] = []
-            on_stationary_candidates = [idx for idx in prospective_station_slots_indices if onboard_alloc_map[idx] == 0 and idx not in (planned_p1 + planned_p2 + planned_p3)]
+            # Filter candidates: must be one of the *current planning station's* prospective stationary slots,
+            # and free for onboard within the temporary map.
+            on_stationary_candidates = [idx for idx in prospective_station_slots_indices 
+                                        if onboard_alloc_map[idx] == 0 
+                                        and idx not in (planned_p1 + planned_p2 + planned_p3)] # Ensure it's not already designated as non-stationary onboard
 
             if on_stationary_candidates:
-                # Plan Proto-P4 ("Skip-Bottom, Alternate, Take-Bottom")
                 bottom_most_candidate = on_stationary_candidates[0]
                 main_p4_candidates = on_stationary_candidates[1:]
                 
@@ -158,7 +285,7 @@ def allocate_slots(
                     if len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_proto_p4) + len(planned_p6) >= requested_onboard_slots: break
                     planned_p6.append(c)
 
-            # --- Re-classify Proto-P4 into final P4 and P5 ---
+            # Re-classify Proto-P4 into final P4 and P5
             planned_p4: list[int] = []
             planned_p5: list[int] = []
             set_p6 = set(planned_p6)
@@ -169,21 +296,20 @@ def allocate_slots(
                 else:
                     planned_p4.append(slot)
 
-            # --- P45 Override Rule ---
             slot_p45_idx = 43
             all_lists = {
                 'p1': planned_p1, 'p2': planned_p2, 'p4': planned_p4, 
                 'p5': planned_p5, 'p6': planned_p6
             }
-            # Find which list (if any) P45 landed in and move it to P3
             for key, p_list in all_lists.items():
                 if slot_p45_idx in p_list:
                     p_list.remove(slot_p45_idx)
-                    if slot_p45_idx not in planned_p3: # Avoid duplicates if P45 was already P3
+                    if slot_p45_idx not in planned_p3:
                         planned_p3.append(slot_p45_idx)
+                    print(f"DEBUG: P45 (slot {slot_p45_idx+2}) moved from {key} to P3 for {station_name}.")
                     break
             
-            # --- Finalize Plan for this Frequency ---
+            # --- Finalize Plan for this Frequency Attempt ---
             total_onboard_planned = len(planned_p1) + len(planned_p2) + len(planned_p3) + len(planned_p4) + len(planned_p5) + len(planned_p6)
             all_onboard_met = (total_onboard_planned >= requested_onboard_slots)
 
@@ -197,16 +323,21 @@ def allocate_slots(
                     "onboard_indices_p3": list(planned_p3), "onboard_indices_p4": list(planned_p4),
                     "onboard_indices_p5": list(planned_p5), "onboard_indices_p6": list(planned_p6),
                     "Static": optimum_static_param, "StationCode": station_code, 
-                    "KavachID": skavach_id, "Latitude": latitude, "Longitude": longitude
+                    "KavachID": skavach_id, "Latitude": latitude, "Longitude": longitude,
+                    "SafeRadius": safe_radius_km # Add SafeRadius to committed plan
                 }
-                break
+                print(f"DEBUG: Successfully planned {total_onboard_planned} onboard slots (requested {requested_onboard_slots}) for {station_name} on Freq {current_freq_id_attempt}. Committing plan.")
+                break # Found a suitable frequency, break from frequency loop
+            else:
+                print(f"DEBUG: Failed to allocate all requested onboard slots ({total_onboard_planned}/{requested_onboard_slots}) for {station_name} on Freq {current_freq_id_attempt}. Trying next frequency.")
         
-        # --- Step 4: Commit the Chosen Plan ---
+        # --- Step 4: Commit the Chosen Plan if found ---
         if committed_plan_details_for_station:
             chosen_freq = committed_plan_details_for_station["frequency"]
             s_name_commit = committed_plan_details_for_station["station_name"]
 
             stat_p_nums_allocated: list[str] = []
+            # Mark stationary slots as occupied by this planning station in the *global* map
             for slot_idx in committed_plan_details_for_station["prospective_station_slots_indices"]:
                 frequency_slot_maps[chosen_freq]['station_alloc'][slot_idx] = s_name_commit
                 stat_p_nums_allocated.append(f"P{slot_idx+2}")
@@ -214,7 +345,7 @@ def allocate_slots(
             onboard_p_nums_overall: list[str] = []
             onboard_p1_nums, onboard_p2_nums, onboard_p3_nums, onboard_p4_nums, onboard_p5_nums, onboard_p6_nums = [], [], [], [], [], []
             
-            all_planned_indices = [
+            all_planned_indices_tuples = [
                 (onboard_p1_nums, committed_plan_details_for_station["onboard_indices_p1"]),
                 (onboard_p2_nums, committed_plan_details_for_station["onboard_indices_p2"]),
                 (onboard_p3_nums, committed_plan_details_for_station["onboard_indices_p3"]),
@@ -224,23 +355,37 @@ def allocate_slots(
             ]
 
             current_onboard_placed_count = 0
-            for p_num_list, p_indices_list in all_planned_indices:
-                for slot_idx in sorted(list(set(p_indices_list))):
+            for p_num_list, p_indices_list in all_planned_indices_tuples:
+                for slot_idx in sorted(list(set(p_indices_list))): # Use set to remove duplicates before sorting
                     if current_onboard_placed_count < committed_plan_details_for_station["requested_onboard_slots"]:
-                        if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0:
+                        # Check if slot is truly free (0) in the global map for onboard allocations
+                        if frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] == 0: 
                             frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx] = s_name_commit
                             p_num = f"P{slot_idx+2}"
                             p_num_list.append(p_num)
                             onboard_p_nums_overall.append(p_num)
                             current_onboard_placed_count += 1
+                        else:
+                            print(f"DEBUG: Warning: Onboard slot P{slot_idx+2} in Freq {chosen_freq} already occupied by {frequency_slot_maps[chosen_freq]['onboard_alloc'][slot_idx]} (another planning station) when placing {s_name_commit}'s onboard slots. Skipping this slot for {s_name_commit}.")
                     else: break
             
+            # Determine the allocated timeslot for this planning station
+            allocated_stationary_indices_sorted = sorted(committed_plan_details_for_station["prospective_station_slots_indices"])
+            allocated_timeslot_str = "N/A" # Default
+            if allocated_stationary_indices_sorted:
+                min_idx_p = allocated_stationary_indices_sorted[0] + 2 # Convert back to P-number
+                max_idx_p = allocated_stationary_indices_sorted[-1] + 2 # Convert back to P-number
+                allocated_timeslot_str = f"P{min_idx_p}-P{max_idx_p}" # Store as Px-Py format
+
+            print(f"DEBUG: {s_name_commit} successfully allocated on Frequency {chosen_freq}. Stationary Slots: {', '.join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:])))}. Onboard Slots: {', '.join(sorted(onboard_p_nums_overall, key=lambda x: int(x[1:])))}. Allocated Timeslot Range: {allocated_timeslot_str}")
+
             allocations_output.append({
                 "Station": s_name_commit, "Frequency": chosen_freq,
                 "Stationary Kavach ID": committed_plan_details_for_station["KavachID"],
                 "Station Code": committed_plan_details_for_station["StationCode"],
                 "Latitude": committed_plan_details_for_station["Latitude"],
                 "Longitude": committed_plan_details_for_station["Longitude"],
+                "SafeRadius": committed_plan_details_for_station["SafeRadius"], # Include SafeRadius in output
                 "Static": optimum_static_param,
                 "Stationary Kavach Slots Requested": committed_plan_details_for_station["calculated_station_slots"],
                 "Stationary Kavach Slots Allocated": ", ".join(sorted(stat_p_nums_allocated, key=lambda x: int(x[1:]))),
@@ -254,8 +399,10 @@ def allocate_slots(
                 "Onboard Slots P4 Allocated": ", ".join(sorted(onboard_p4_nums, key=lambda x: int(x[1:]))),
                 "Onboard Slots P5 Allocated": ", ".join(sorted(onboard_p5_nums, key=lambda x: int(x[1:]))),
                 "Onboard Slots P6 Allocated": ", ".join(sorted(onboard_p6_nums, key=lambda x: int(x[1:]))),
+                "Allocated Timeslot Range": allocated_timeslot_str
             })
         else:
+            print(f"DEBUG: Failed to find any suitable frequency for {station_name} after checking all {max_frequencies} frequencies. Marking as N/A.")
             allocations_output.append({
                 "Station": station_name, "Frequency": "N/A",
                 "Stationary Kavach ID": skavach_id, "Station Code": station_code,
@@ -267,14 +414,17 @@ def allocate_slots(
                 "Onboard Slots P1 Allocated": "", "Onboard Slots P2 Allocated": "", 
                 "Onboard Slots P3 Allocated": "", "Onboard Slots P4 Allocated": "",
                 "Onboard Slots P5 Allocated": "", "Onboard Slots P6 Allocated": "",
-                "Error": "No suitable slot configuration found on any frequency."
+                "Error": "No suitable frequency found due to geographical conflict with approved stations or insufficient available slots for planning."
             })
             
+    print("DEBUG: allocate_slots function finished.")
     return allocations_output
+
+
 
 def generate_excel(input_stations_data):
     alloc_results = allocate_slots(input_stations_data)
-    print("Generating Excel file with new styling logic...")
+    print("DEBUG processing.py: \n Generating Excel file with new styling logic...")
 
     try:
         df = pd.DataFrame(alloc_results)

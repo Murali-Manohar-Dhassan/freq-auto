@@ -9,6 +9,7 @@ from folium.plugins import HeatMap, PolyLineTextPath
 from datetime import datetime
 import json
 from app.processing import generate_excel
+from app.processing import calculate_distance
 import sqlite3
 from app.database import get_db_connection
 import traceback
@@ -25,20 +26,6 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 def process_data_in_background(stations):
     generate_excel(stations)
 # Helper function to calculate distance
-def calculate_distance(lat1, lon1, lat2, lon2):
-    from math import radians, cos, sin, asin, sqrt
-    
-    # Convert to radians
-    lat1, lon1, lat2, lon2 = map(radians, [lat1, lon1, lat2, lon2])
-    
-    # Haversine formula
-    dlat = lat2 - lat1
-    dlon = lon2 - lon1
-    a = sin(dlat/2)**2 + cos(lat1) * cos(lat2) * sin(dlon/2)**2
-    c = 2 * asin(sqrt(a))
-    km = 6371 * c  # Earth's radius in kilometers
-    
-    return km
 
 @app.route("/")
 def home():
@@ -542,7 +529,7 @@ def delete_station():
 def allocate_slots_endpoint():
     try:
         stations = request.json
-        print(f"🔄 Received station data for processing: {stations}")  
+        print(f"DEBUG routes.py :\n 🔄 Received station data for processing: {stations}")  
         
 
         # Ensure stations data is correctly formatted
