@@ -146,7 +146,7 @@ function createStationCard() {
                     <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="updateStationData('${stationId}', 'onboard_slots', this.value)">
                     
                     <div class="col-6">
-                        <label class="form-label">Safe Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
+                        <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${newStation.radius_km}</span></label>
                         <input type="range"
                             class="form-range mb-2"
                             id="radiusSlider_${stationId}"

@@ -1,8 +1,23 @@
 import sqlite3
 import os
+import sys
+import shutil
 
-# Make the path relative to the script's location
-DATABASE_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'approved_stations.db')
+def get_db_path():
+    # Destination path to store/write DB during runtime
+    user_data_path = os.path.join(os.getcwd(), "approved_stations.db")
+
+    if getattr(sys, 'frozen', False):
+        # Running in PyInstaller
+        bundle_db_path = os.path.join(sys._MEIPASS, "app", "approved_stations.db")
+
+        # Copy DB only if it doesn't exist already
+        if not os.path.exists(user_data_path):
+            shutil.copyfile(bundle_db_path, user_data_path)
+
+    return user_data_path
+
+DATABASE_FILE = get_db_path()
 
 def db_init():
     """Initializes the database and creates/updates the table schema."""
@@ -84,6 +99,8 @@ def db_init():
     conn.commit()
     conn.close()
     print("✅ Database initialized successfully.")
+    print("Using database at:", DATABASE_FILE)
+
 
 def create_new_table(cursor):
     """Creates the stations table with the latest schema."""

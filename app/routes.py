@@ -102,7 +102,7 @@ def update_map():
                 <b>{station['name']}</b><br>
                 <b>Status:</b> Approved<br>
                 <b>Frequency:</b> {freq}<br>
-                <b>Safe Radius:</b> {station['safe_radius_km']} km
+                <b>Radius:</b> {station['safe_radius_km']} km
             </div>
             """, max_width=300),
             icon=folium.Icon(color='green', icon='tower', prefix='fa')

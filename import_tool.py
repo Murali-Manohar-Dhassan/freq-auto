@@ -48,7 +48,7 @@ def import_stations_from_json():
             details.get('name'),
             float(details.get('latitude', 0.0)),
             float(details.get('longitude', 0.0)),
-            25.0,  # default safe_radius_km
+            25.0,  # default radius_km
             'approved',  # default status
             None,  # default allocated_frequency
             '2-45',  # default timeslot
