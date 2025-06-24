@@ -7,9 +7,12 @@
     <title>Home - Configuration Parameters Generation Tool</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Roboto+Slab&display=swap"
+        rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='lib/leaflet.css') }}">
     <style>
         body {
             background-color: #f8f9fa;
@@ -58,6 +61,7 @@
             justify-content: center;
             align-items: center;
             z-index: 1060;
+            /* Ensure it's on top of everything */
         }
 
         .loader-content {
@@ -81,10 +85,15 @@
             display: flex;
             flex-wrap: wrap;
             gap: 1rem;
+            justify-content: center;
+            /* Center station cards */
         }
 
         .station-card {
             min-width: 300px;
+            max-width: 45%;
+            /* Allow two columns on wider screens */
+            flex-grow: 1;
         }
 
         .input-wrapper {
@@ -120,6 +129,8 @@
         .input-section {
             flex: 1;
             min-width: 500px;
+            max-width: 60%;
+            /* Adjusted for better layout */
         }
 
         .map-section {
@@ -127,6 +138,8 @@
             position: sticky;
             top: 2rem;
             height: fit-content;
+            max-width: 40%;
+            /* Adjusted for better layout */
         }
 
         .map-container {
@@ -141,10 +154,12 @@
             color: #6c757d;
         }
 
-        .map-container iframe {
-            width: 100%;
+        /* Essential for Leaflet map to fill its container */
+        #mapid {
             height: 100%;
-            border: none;
+            width: 100%;
+            background-color: transparent;
+            /* Ensure map background is not interfering */
         }
 
         .map-placeholder {
@@ -166,10 +181,27 @@
                 flex-direction: column;
             }
 
+            .input-section,
             .map-section {
-                position: relative;
+                min-width: unset;
+                max-width: 100%;
                 width: 100%;
             }
+
+            .map-section {
+                position: relative;
+                top: unset;
+            }
+
+            .station-card {
+                max-width: 100%;
+                /* Full width on smaller screens */
+            }
+        }
+
+        /* Custom styles for Leaflet elements if needed */
+        .leaflet-popup-content-wrapper {
+            font-size: 14px;
         }
     </style>
 </head>
@@ -183,7 +215,7 @@
         <h3 class="text-secondary">Center of Excellence for Railway Kavach Technology</h3>
         <h5 class="text-secondary">Version 2.1</h5>
     </header>
-    <div id="floatingBrand" class="text-primary fw-bold" style="width: 430px;">
+    <div id="floatingBrand" class="text-primary fw-bold">
         <span>🚆 Center of Excellence for Railway Kavach Technology</span>
     </div>
 
@@ -194,35 +226,39 @@
                 </div>
             </div>
 
-            <div id="uploadSection" style="display: none;">
-                <div class="row mt-4 justify-content-center">
-                    <div class="col-md-10">
-                        <div class="card shadow-sm">
-                            <div class="card-body">
-                                <label for="excelFile" class="form-label">Upload Excel File:</label>
-                                <input type="file" id="excelFile" class="form-control mb-3" accept=".xlsx, .xls">
-                                <button class="btn btn-info w-100 shadow-sm" id="uploadBtn" onclick="uploadExcel()">Upload and Preview</button>
-                            </div>
+            <div id="stationContainer" class="row mt-4 justify-content-center"></div>
+
+            <div id="manualInputActions" class="row mt-3 justify-content-center">
+                <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2">
+                    <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn"
+                        onclick="addNewStation()">Add Station</button>
+                    <button class="btn btn-success flex-grow-1 shadow-sm" onclick="runAllocation()">Run Allocation</button>
+                    <button class="btn btn-warning flex-grow-1 shadow-sm" onclick="clearPlanningStations()">Clear All Planning</button>
+                </div>
+            </div>
+
+            <div class="row mt-4" id="allocationResults" style="display: none;">
+                <div class="col-md-12">
+                    <div class="card shadow-sm">
+                        <div class="card-header bg-primary text-white">
+                            <h5 class="mb-0">Allocation Results</h5>
+                        </div>
+                        <div class="card-body">
+                            <ul id="results-list" class="list-group list-group-flush">
+                                </ul>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div id="stationContainer" class="row mt-4 justify-content-center"></div>
-
-            <div id="manualInputActions" class="row mt-3 justify-content-center">
-                <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2">
-                    <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn" onclick="addNewStation()">Add Station</button>
-                    <button class="btn btn-info flex-grow-1 shadow-sm" id="finishManualInputBtn" onclick="finishManualInput()" style="display: none;">Finish & Preview Stations</button>
-                </div>
-            </div>
-
             <div class="row mt-4" id="submitContainer" style="display: none;">
                 <div class="col-md-10 mx-auto text-center position-relative">
-                    <div id="submitArrowGuide" style="display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 2.5rem; color: #0d6efd; margin-bottom: 5px; line-height: 1;">
+                    <div id="submitArrowGuide"
+                        style="display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 2.5rem; color: #0d6efd; margin-bottom: 5px; line-height: 1;">
                         ⬇️
                     </div>
-                    <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit & Generate sheet</button>
+                    <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit & Generate
+                        sheet</button>
                 </div>
             </div>
         </div>
@@ -238,9 +274,10 @@
                         <strong>⚠️ Coverage Conflict Detected!</strong>
                         <p class="mb-0">New station overlaps with existing approved coverage areas.</p>
                     </div>
-                    
+
                     <div class="map-container" id="mapContainer">
-                        <div class="map-placeholder">
+                        <div id="mapid"></div>
+                        <div class="map-placeholder" id="mapPlaceholder" style="display: none;">
                             <div class="text-muted">
                                 <h6 class="mt-2">Geographic Coverage Map</h6>
                                 <p class="small">Add station coordinates to view coverage areas.</p>
@@ -249,45 +286,45 @@
                     </div>
                 </div>
                 <div class="card-footer bg-light">
-    <div class="d-flex justify-content-between align-items-center flex-wrap">
-        
-        <div class="me-3 mb-2">
-            <small class="text-muted d-block"><strong>Icons:</strong></small>
-            <small class="text-muted me-3">
-                <i class="fa fa-tower" style="color: forestgreen;" ></i> Approved
-            </small>
-            <small class="text-muted">
-                <i class="fa fa-satellite-dish" style="color: red;"></i> Planning
-            </small>
-        </div>
+                    <div class="d-flex justify-content-between align-items-center flex-wrap">
 
-        <div>
-            <small class="text-muted d-block"><strong>Frequency Colors:</strong></small>
-            <small class="text-muted me-3">
-                <span style="color: rgb(214, 214, 41); font-size: 1.2em;">●</span> Freq 1
-            </small>
-            <small class="text-muted me-3">
-                <span style="color: rgb(0, 146, 24); font-size: 1.2em;">●</span> Freq 2
-            </small>
-            <small class="text-muted me-3">
-                <span style="color: rgb(248, 172, 30); font-size: 1.2em;">●</span> Freq 3
-            </small>
-            <small class="text-muted me-3">
-                <span style="color: rgb(48, 118, 209); font-size: 1.2em;">●</span> Freq 4
-            </small>
-            <small>
-                <span style="color: rgba(128, 128, 128, 0.966); font-size: 1.2em;">●</span> Freq 5
-            </small>
-            <small class="text-muted ms-3">
-                <span style="color: rgb(212, 31, 31); font-size: 1.2em;">●</span> Freq 6
-            </small>
-            <small class="text-muted ms-3">
-                <span style="color: rgb(224, 62, 230); font-size: 1.2em;">●</span> Freq 7
-            </small>
-        </div>
+                        <div class="me-3 mb-2">
+                            <small class="text-muted d-block"><strong>Icons:</strong></small>
+                            <small class="text-muted me-3">
+                                <i class="fa fa-tower" style="color: forestgreen;"></i> Approved
+                            </small>
+                            <small class="text-muted">
+                                <i class="fa fa-satellite-dish" style="color: red;"></i> Planning
+                            </small>
+                        </div>
 
-    </div>
-</div>
+                        <div>
+                            <small class="text-muted d-block"><strong>Frequency Colors:</strong></small>
+                            <small class="text-muted me-3">
+                                <span style="color: #e8f722e5; font-size: 1.2em;">●</span> Freq 1
+                            </small>
+                            <small class="text-muted me-3">
+                                <span style="color: #12b103; font-size: 1.2em;">●</span> Freq 2
+                            </small>
+                            <small class="text-muted me-3">
+                                <span style="color: #ee8915; font-size: 1.2em;">●</span> Freq 3
+                            </small>
+                            <small class="text-muted me-3">
+                                <span style="color: #1279ee; font-size: 1.2em;">●</span> Freq 4
+                            </small>
+                            <small class="text-muted me-3">
+                                <span style="color: #c0c0c0; font-size: 1.2em;">●</span> Freq 5
+                            </small>
+                            <small class="text-muted me-3">
+                                <span style="color: #e01c3d; font-size: 1.2em;">●</span> Freq 6
+                            </small>
+                            <small class="text-muted ms-3">
+                                <span style="color: #d835c2; font-size: 1.2em;">●</span> Freq 7
+                            </small>
+                        </div>
+
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -301,15 +338,46 @@
         </div>
     </div>
 
-    
-    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="{{ url_for('static', filename='lib/leaflet.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+
     <script>
-        // Ensure manual input section is shown on page load if you removed the toggle buttons
-        document.addEventListener('DOMContentLoaded', function() {
-            // No explicit showManual() call needed if the relevant sections are visible by default
-            // However, if your original showManual() did other setup, you might need parts of it.
-            // For now, let's assume the sections are visible and addStationBtn is the main entry.
+        // Ensure floating brand shows
+        document.addEventListener('DOMContentLoaded', function () {
+            document.getElementById('floatingBrand').classList.add('show');
+            // The initial map refresh and UI initialization will be handled by script.js's DOMContentLoaded
+            // (specifically, by calling refreshMap() and showManual() after loading S-Kavach ID lookup).
+            // We've removed the specific updateMapDisplay() call here, as script.js will manage its own setup.
         });
+
+        // The submitData function should be moved into script.js if it's part of your main logic.
+        // Keeping it here for now as a placeholder, but ideally, all event handlers are in script.js.
+        function submitData() {
+            alert("Submit Data function will trigger backend processing and sheet generation.");
+            // This is where you would collect all data, send it to Flask,
+            // and trigger the final configuration generation.
+            // showLoadingSpinner("Generating configuration sheet...");
+            // Example:
+            // fetch('/api/generate_config', { method: 'POST', body: JSON.stringify(getAllStationData()), headers: { 'Content-Type': 'application/json' } })
+            // .then(response => response.blob()) // Assuming it returns a file
+            // .then(blob => {
+            //      const url = window.URL.createObjectURL(blob);
+            //      const a = document.createElement('a');
+            //      a.style.display = 'none';
+            //      a.href = url;
+            //      a.download = 'kavach_config.xlsx'; // Or whatever filename
+            //      document.body.appendChild(a);
+            //      a.click();
+            //      window.URL.revokeObjectURL(url);
+            //      hideLoadingSpinner();
+            //      alert("Configuration sheet generated and downloaded!");
+            // }).catch(error => {
+            //      console.error('Error generating sheet:', error);
+            //      hideLoadingSpinner();
+            //      alert('Error generating sheet. See console for details.');
+            // });
+        }
     </script>
 </body>
+
 </html>

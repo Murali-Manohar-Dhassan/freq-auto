@@ -882,7 +882,6 @@ function checkFileReady(fileUrl) {
     poll();
 }
 
-
 // This function is still called 'showManual' but it now just represents showing the main input UI. It can be renamed to something like 'initializeInputUI' if desired, but for now, we'll keep it as is.
 function showManual() {
     $('#uploadSection').hide();
