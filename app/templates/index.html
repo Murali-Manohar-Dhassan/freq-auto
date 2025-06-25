@@ -12,6 +12,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
+    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='lib/leaflet.css') }}">
     <style>
         body {
@@ -223,6 +224,9 @@
         <div class="input-section">
             <div class="row justify-content-center mb-4">
                 <div class="col-md-8 col-lg-6 d-flex justify-content-center gap-2">
+                    <!-- Moved the "Finish/Collapse" button here for better UX control -->
+                    <button class="btn btn-info flex-grow-1 shadow-sm" id="finishManualInputBtn"
+                        onclick="window.toggleCardCollapse()">Finish & Preview Stations</button>
                 </div>
             </div>
 
@@ -231,12 +235,13 @@
             <div id="manualInputActions" class="row mt-3 justify-content-center">
                 <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2">
                     <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn"
-                        onclick="addNewStation()">Add Station</button>
-                    <button class="btn btn-success flex-grow-1 shadow-sm" onclick="runAllocation()">Run Allocation</button>
-                    <button class="btn btn-warning flex-grow-1 shadow-sm" onclick="clearPlanningStations()">Clear All Planning</button>
+                        onclick="window.addNewStation()">Add Station</button>
+                    <button class="btn btn-success flex-grow-1 shadow-sm" onclick="window.runAllocation()">Run Allocation</button>
+                    <button class="btn btn-warning flex-grow-1 shadow-sm" onclick="window.clearPlanningStations()">Clear All Planning</button>
                 </div>
             </div>
 
+            <!-- Allocation Results Section -->
             <div class="row mt-4" id="allocationResults" style="display: none;">
                 <div class="col-md-12">
                     <div class="card shadow-sm">
@@ -245,7 +250,8 @@
                         </div>
                         <div class="card-body">
                             <ul id="results-list" class="list-group list-group-flush">
-                                </ul>
+                                <!-- Allocation results will be populated here -->
+                            </ul>
                         </div>
                     </div>
                 </div>
@@ -257,7 +263,7 @@
                         style="display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); font-size: 2.5rem; color: #0d6efd; margin-bottom: 5px; line-height: 1;">
                         ⬇️
                     </div>
-                    <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="submitData()">Submit & Generate
+                    <button class="btn btn-success btn-lg w-100 shadow-sm" onclick="window.submitData()">Submit & Generate
                         sheet</button>
                 </div>
             </div>
@@ -267,7 +273,7 @@
             <div class="card shadow-sm">
                 <div class="card-header d-flex justify-content-between align-items-center">
                     <h5 class="mb-0">📍 Geographic Coverage View</h5>
-                    <button class="btn btn-sm btn-outline-primary" onclick="refreshMap()">🔄 Refresh</button>
+                    <button class="btn btn-sm btn-outline-primary" onclick="window.refreshMap()">🔄 Refresh</button>
                 </div>
                 <div class="card-body p-0">
                     <div id="conflictWarning" class="conflict-warning" style="display: none; margin: 1rem;">
@@ -301,25 +307,25 @@
                         <div>
                             <small class="text-muted d-block"><strong>Frequency Colors:</strong></small>
                             <small class="text-muted me-3">
-                                <span style="color: #e8f722e5; font-size: 1.2em;">●</span> Freq 1
+                                <span style="color: #00FF00; font-size: 1.2em;">●</span> Freq 1
                             </small>
                             <small class="text-muted me-3">
-                                <span style="color: #12b103; font-size: 1.2em;">●</span> Freq 2
+                                <span style="color: #0000FF; font-size: 1.2em;">●</span> Freq 2
                             </small>
                             <small class="text-muted me-3">
-                                <span style="color: #ee8915; font-size: 1.2em;">●</span> Freq 3
+                                <span style="color: #FFFF00; font-size: 1.2em;">●</span> Freq 3
                             </small>
                             <small class="text-muted me-3">
-                                <span style="color: #1279ee; font-size: 1.2em;">●</span> Freq 4
+                                <span style="color: #FFA500; font-size: 1.2em;">●</span> Freq 4
                             </small>
                             <small class="text-muted me-3">
-                                <span style="color: #c0c0c0; font-size: 1.2em;">●</span> Freq 5
+                                <span style="color: #800080; font-size: 1.2em;">●</span> Freq 5
                             </small>
                             <small class="text-muted me-3">
-                                <span style="color: #e01c3d; font-size: 1.2em;">●</span> Freq 6
+                                <span style="color: #FFC0CB; font-size: 1.2em;">●</span> Freq 6
                             </small>
                             <small class="text-muted ms-3">
-                                <span style="color: #d835c2; font-size: 1.2em;">●</span> Freq 7
+                                <span style="color: #A52A2A; font-size: 1.2em;">●</span> Freq 7
                             </small>
                         </div>
 
@@ -338,46 +344,15 @@
         </div>
     </div>
 
+    <!-- Leaflet JavaScript -->
     <script src="{{ url_for('static', filename='lib/leaflet.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+    
+    <!-- Modularized JavaScript files with type="module" -->
+    <!-- Order matters: ui_logic.js must be loaded before map_logic.js if map_logic imports currentPlanningStations directly -->
+    <script type="module" src="{{ url_for('static', filename='js/ui_logic.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/map_logic.js') }}"></script>
+    <script type="module" src="{{ url_for('static', filename='js/main.js') }}"></script>
 
-    <script>
-        // Ensure floating brand shows
-        document.addEventListener('DOMContentLoaded', function () {
-            document.getElementById('floatingBrand').classList.add('show');
-            // The initial map refresh and UI initialization will be handled by script.js's DOMContentLoaded
-            // (specifically, by calling refreshMap() and showManual() after loading S-Kavach ID lookup).
-            // We've removed the specific updateMapDisplay() call here, as script.js will manage its own setup.
-        });
-
-        // The submitData function should be moved into script.js if it's part of your main logic.
-        // Keeping it here for now as a placeholder, but ideally, all event handlers are in script.js.
-        function submitData() {
-            alert("Submit Data function will trigger backend processing and sheet generation.");
-            // This is where you would collect all data, send it to Flask,
-            // and trigger the final configuration generation.
-            // showLoadingSpinner("Generating configuration sheet...");
-            // Example:
-            // fetch('/api/generate_config', { method: 'POST', body: JSON.stringify(getAllStationData()), headers: { 'Content-Type': 'application/json' } })
-            // .then(response => response.blob()) // Assuming it returns a file
-            // .then(blob => {
-            //      const url = window.URL.createObjectURL(blob);
-            //      const a = document.createElement('a');
-            //      a.style.display = 'none';
-            //      a.href = url;
-            //      a.download = 'kavach_config.xlsx'; // Or whatever filename
-            //      document.body.appendChild(a);
-            //      a.click();
-            //      window.URL.revokeObjectURL(url);
-            //      hideLoadingSpinner();
-            //      alert("Configuration sheet generated and downloaded!");
-            // }).catch(error => {
-            //      console.error('Error generating sheet:', error);
-            //      hideLoadingSpinner();
-            //      alert('Error generating sheet. See console for details.');
-            // });
-        }
-    </script>
 </body>
 
 </html>
