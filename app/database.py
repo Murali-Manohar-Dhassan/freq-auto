@@ -132,6 +132,12 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
+def get_approved_stations_from_db():
+    conn = get_db_connection()
+    approved_stations = conn.execute("SELECT id, name, latitude, longitude, safe_radius_km, allocated_frequency FROM stations WHERE status = 'approved'").fetchall()
+    conn.close()
+    return approved_stations
+
 # You can run this file directly to initialize/update the database
 if __name__ == '__main__':
     db_init()

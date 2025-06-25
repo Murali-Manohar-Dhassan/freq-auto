@@ -75,6 +75,51 @@ def parse_timeslot_range(timeslot_str: str) -> set[int]:
         print(f"DEBUG: Warning: Could not parse timeslot string '{timeslot_str}'. Expected format 'START-END' (e.g., '2-45') or single number ('2'). Returning empty set.")
         return set()
 
+def calculate_all_overlaps(stations_list):
+    overlapping_pair_data = []
+    has_major_conflict = False
+
+    for i in range(len(stations_list)):
+        s1 = stations_list[i]
+        for j in range(i + 1, len(stations_list)):
+            s2 = stations_list[j]
+
+            freq1 = int(s1.get('frequency', s1.get('allocated_frequency', 0)))
+            freq2 = int(s2.get('frequency', s2.get('allocated_frequency', 0)))
+
+            if freq1 == 0 or freq2 == 0 or freq1 != freq2:
+                continue
+
+            lat1 = float(s1.get('lat', s1.get('latitude', 0.0)))
+            lon1 = float(s1.get('lon', s1.get('longitude', 0.0)))
+            lat2 = float(s2.get('lat', s2.get('latitude', 0.0)))
+            lon2 = float(s2.get('lon', s2.get('longitude', 0.0)))
+
+            rad1 = float(s1.get('radius', s1.get('safe_radius_km', 0.0)))
+            rad2 = float(s2.get('radius', s2.get('safe_radius_km', 0.0)))
+
+            if any(val is None for val in [lat1, lon1, lat2, lon2, rad1, rad2]):
+                print(f"Skipping overlap check due to missing/invalid coordinates/radius: {s1.get('name')} and {s2.get('name')}")
+                continue
+
+            dist_between_centers = calculate_distance(lat1, lon1, lat2, lon2)
+            sum_of_radii = rad1 + rad2
+
+            if dist_between_centers < sum_of_radii:
+                has_major_conflict = True
+                overlapping_pair_data.append({
+                    's1_id': s1['id'],
+                    's2_id': s2['id'],
+                    's1_name': s1.get('name') or s1.get('stationName'),
+                    's2_name': s2.get('name') or s2.get('stationName'),
+                    'frequency': freq1,
+                    'distance': dist_between_centers,
+                    'min_required': sum_of_radii,
+                    'line_coords': [[lat1, lon1], [lat2, lon2]],
+                    'popup_content': f"FREQ {freq1} OVERLAP: {s1.get('name') or s1.get('stationName')} & {s2.get('name') or s2.get('stationName')} - Dist: {dist_between_centers:.2f}km (Req: {sum_of_radii:.2f}km)"
+                })
+    return overlapping_pair_data, has_major_conflict
+
 def allocate_slots( 
     stations: list[dict],
     max_slots: int = 44,
@@ -419,8 +464,6 @@ def allocate_slots(
             
     print("DEBUG: allocate_slots function finished.")
     return allocations_output
-
-
 
 def generate_excel(input_stations_data):
     alloc_results = allocate_slots(input_stations_data)

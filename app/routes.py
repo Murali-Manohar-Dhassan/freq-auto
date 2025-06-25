@@ -4,14 +4,12 @@ import io
 import re
 import threading
 import pandas as pd
-import folium
-from folium.plugins import HeatMap, PolyLineTextPath
 from datetime import datetime
 import json
 from app.processing import generate_excel
-from app.processing import calculate_distance
+from app.processing import calculate_distance, calculate_all_overlaps
 import sqlite3
-from app.database import get_db_connection
+from app.database import get_db_connection, get_approved_stations_from_db, db_init
 import traceback
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -22,10 +20,13 @@ UPLOAD_FOLDER = os.path.join(os.getcwd(), "uploads")
 os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 
+with app.app_context():
+    db_init()
+
 # Background processing function
 def process_data_in_background(stations):
     generate_excel(stations)
-# Helper function to calculate distance
+
 
 @app.route("/")
 def home():
@@ -35,16 +36,17 @@ def home():
 # NOTE: Folium uses color names. I've matched them to your RGB values.
 # The tuple is (Circle Color, Lighter Fill for Planning Circle)
 FREQ_COLORS = {
-    1: ('#D6D629', '#FafaD2'),  # Yellow
-    2: ('#009218', '#C8E6C9'),  # Green
-    3: ('#F8AC1E', '#FFECB3'),  # Orange
-    4: ('#3076D1', '#D1E7FF'),  # Blue
-    5: ('gray', '#E0E0E0'),     # Gray
-    6: ('#D41F1F', '#FFCDD2'),  # Dark Red
-    7: ('#E03EE6', '#E1BEE7'),  # Purple
+    1: {'outline': "#F3EF18E2", 'fill': '#FFFACD'},  # Green, LightGreen
+    2: {'outline': "#10E610B2", 'fill': '#90EE90'},  # Blue, LightBlue
+    3: {'outline': "#C5691E", 'fill': "#C98130"},  # Yellow, LemonChiffon
+    4: {'outline': "#207BF3", 'fill': '#ADD8E6'},  # Orange, PeachPuff
+    5: {'outline': "#A8A8A8", 'fill': '#FFDAB9'},  # Purple, Plum
+    6: {'outline': "#E92243", 'fill': "#B14354"},  # Pink, LightPink
+    7: {'outline': "#A026C5", 'fill': "#F5B3F5"}   # Brown, Wheat
 }
-DEFAULT_COLOR = ('lightgray', '#F5F5F5')
 
+# Default color is also a DICTIONARY to maintain consistency if key not found in FREQ_COLORS
+DEFAULT_COLOR = {'outline': 'grey', 'fill': 'lightgrey'}
 
 @app.route('/api/update_map', methods=['POST'])
 def update_map():
@@ -55,19 +57,26 @@ def update_map():
 
     approved_stations = []
     for station in approved_stations_raw:
+        # Access sqlite3.Row directly (dict-like) and handle None for allocated_frequency
+        allocated_freq = station['allocated_frequency'] 
+        if allocated_freq is None:
+            allocated_freq = 0 # Default value if it's None in DB
+
         approved_stations.append({
             'id': f"approved_{station['id']}",
             'name': station['name'],
             'latitude': float(station['latitude']),
             'longitude': float(station['longitude']),
             'safe_radius_km': float(station['safe_radius_km']),
-            'allocated_frequency': int(station['allocated_frequency']),
+            'allocated_frequency': int(allocated_freq), # Now safe to convert to int
             'type': 'approved'
         })
 
     all_stations_for_map_drawing = []
 
     for station in approved_stations:
+        # freq_info will be a dictionary {'outline': '...', 'fill': '...'}
+        # because FREQ_COLORS and DEFAULT_COLOR are consistently dictionaries.
         freq_info = FREQ_COLORS.get(station['allocated_frequency'], DEFAULT_COLOR)
         all_stations_for_map_drawing.append({
             'id': station['id'],
@@ -77,7 +86,7 @@ def update_map():
             'lon': station['longitude'],
             'radius': station['safe_radius_km'],
             'frequency': station['allocated_frequency'],
-            'color': freq_info['outline'],
+            'color': freq_info['outline'], # This line will now work correctly
             'fillColor': freq_info['fill'],
             'fillOpacity': 0.15,
             'weight': 2,
@@ -111,8 +120,8 @@ def update_map():
             'lon': p_lon,
             'radius': p_rad,
             'frequency': p_freq,
-            'color': 'red',
-            'fillColor': freq_info['fill'],
+            'color': 'red', 
+            'fillColor': freq_info['fill'], 
             'fillOpacity': 0.25,
             'weight': 3,
             'popup_content': f"""
@@ -124,7 +133,7 @@ def update_map():
                     <b>Proposed Radius:</b> {p_rad} km<br>
                     <b>Onboard Slots:</b> {p_onboard_slots}<br>
                     <br>
-                    <button onclick="removeStation('{p_id}')" style='background:red;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;'>
+                    <button onclick="window.removeStation('{p_id}')" style='background:red;color:white;border:none;padding:5px;border-radius:4px;cursor:pointer;'>
                         Remove
                     </button>
                 </div>
@@ -141,97 +150,6 @@ def update_map():
         center_location = [20.5937, 78.9629]
         zoom_level = 6
     
-    m = folium.Map(location=center_location, zoom_start=zoom_level)
-    folium.TileLayer('OpenStreetMap').add_to(m)
-
-    approved_group = folium.FeatureGroup(name='Approved Stations').add_to(m)
-    planning_group = folium.FeatureGroup(name='Planning Stations').add_to(m)
-    conflict_group = folium.FeatureGroup(name='Inter-Type Conflicts').add_to(m)
-    overlap_highlight_group = folium.FeatureGroup(name='Intra-Frequency Overlaps').add_to(m)
-    
-    for s in all_stations_for_map_drawing:
-        if s['type'] == 'approved':
-            icon = folium.Icon(color='green', icon='tower', prefix='fa')
-            folium.Marker(
-                location=[s['lat'], s['lon']],
-                popup=s['popup_content'],
-                icon=icon
-            ).add_to(approved_group)
-        elif s['type'] == 'planning':
-            icon = folium.Icon(color='red', icon='satellite-dish', prefix='fa')
-            folium.Marker(
-                location=[s['lat'], s['lon']],
-                popup=s['popup_content'],
-                icon=icon
-            ).add_to(planning_group)
-
-    approved_coords_for_lines = [[s['latitude'], s['longitude']] for s in approved_stations if s['latitude'] is not None and s['longitude'] is not None]
-    if len(approved_coords_for_lines) > 1:
-        rail_line_approved = folium.PolyLine(
-            locations=approved_coords_for_lines,
-            color='darkgreen',
-            weight=4,
-            opacity=0.8,
-            popup='Existing Railway Network'
-        ).add_to(approved_group)
-        PolyLineTextPath(
-            rail_line_approved, 
-            text='  ▶  ', 
-            repeat=True, 
-            offset=7, 
-            attributes={'fill': 'darkgreen', 'font-weight': 'bold', 'font-size': '16'}
-        ).add_to(approved_group)
-    
-    planning_coords_for_lines = [[s['lat'], s['lon']] for s in frontend_planning_stations if s['lat'] is not None and s['lon'] is not None]
-    if len(planning_coords_for_lines) > 1:
-        proposed_rail_line = folium.PolyLine(
-            locations=planning_coords_for_lines,
-            color='red',
-            weight=4,
-            opacity=0.7,
-            dash_array='15,10',
-            popup='Proposed Railway Extension'
-        ).add_to(planning_group)
-        PolyLineTextPath(
-            proposed_rail_line, 
-            text='  ►  ', 
-            repeat=True, 
-            offset=7, 
-            attributes={'fill': 'red', 'font-weight': 'bold', 'font-size': '16'}
-        ).add_to(planning_group)
-    
-    if approved_coords_for_lines and planning_coords_for_lines:
-        min_distance = float('inf')
-        closest_approved_coord = None
-        closest_planning_coord = None
-        
-        for approved_coord in approved_coords_for_lines:
-            for planning_coord in planning_coords_for_lines:
-                dist = calculate_distance(
-                    approved_coord[0], approved_coord[1],
-                    planning_coord[0], planning_coord[1]
-                )
-                if dist < min_distance:
-                    min_distance = dist
-                    closest_approved_coord = approved_coord
-                    closest_planning_coord = planning_coord
-        
-        connection_line = folium.PolyLine(
-            locations=[closest_approved_coord, closest_planning_coord],
-            color='orange',
-            weight=3,
-            opacity=0.6,
-            dash_array='5,5',
-            popup=f'Proposed Connection: {min_distance:.2f}km'
-        ).add_to(planning_group)
-        PolyLineTextPath(
-            connection_line, 
-            text='  ›  ', 
-            repeat=True, 
-            offset=7, 
-            attributes={'fill': 'orange', 'font-weight': 'bold', 'font-size': '14'}
-        ).add_to(planning_group)
-            
     inter_type_conflicts = []
     for p_station in frontend_planning_stations:
         p_lat = float(p_station.get('latitude') or 0.0)
@@ -258,144 +176,29 @@ def update_map():
                         'approved_name': approved['name'],
                         'approved_freq': approved_freq,
                         'distance': distance,
-                        'min_distance': min_distance
+                        'min_distance': min_distance,
+                        'planning_lat': p_lat, 
+                        'planning_lon': p_lon, 
+                        'approved_lat': approved['latitude'], 
+                        'approved_lon': approved['longitude'], 
+                        'popup_content': f"CONFLICT (Freq {p_freq}): {p_station.get('stationName')} & {approved['name']} - Dist: {distance:.2f}km < {min_distance:.2f}km required"
                     })
-                    
-                    folium.PolyLine(
-                        locations=[
-                            [p_lat, p_lon],
-                            [approved['latitude'], approved['longitude']]
-                        ],
-                        color='red',
-                        weight=3,
-                        opacity=0.8,
-                        dash_array='10,5',
-                        popup=f"CONFLICT (Freq {p_freq}): {distance:.2f}km < {min_distance:.2f}km required"
-                    ).add_to(conflict_group)
 
     overlapping_pair_data, has_major_conflict = calculate_all_overlaps(all_stations_for_map_drawing)
     
-    for overlap in overlapping_pair_data:
-        folium.PolyLine(
-            locations=overlap['line_coords'],
-            color='darkred',
-            weight=5,
-            opacity=0.9,
-            dash_array='5, 10',
-            popup=overlap['popup_content']
-        ).add_to(overlap_highlight_group)
-
-
-    # Add LayerControl to the map (this adds the UI for toggling layers)
-    folium.LayerControl().add_to(m)
-    
-    # If there are conflicts, add a general warning marker
     overall_has_conflict = has_major_conflict or bool(inter_type_conflicts)
-    if overall_has_conflict:
-        conflict_html_content = "<h4>Potential Conflicts & Overlaps:</h4><ul>"
-        
-        for conflict in inter_type_conflicts:
-            conflict_html_content += f"""
-            <li><b>Planning:</b> {conflict['planning_name']} (Freq: {conflict['planning_freq']})<br>
-                <b>Approved:</b> {conflict['approved_name']} (Freq: {conflict['approved_freq']})<br>
-                Distance: {conflict['distance']:.2f}km (Min Required: {conflict['min_distance']:.2f}km)</li>
-            """
-        
-        if overlapping_pair_data:
-            conflict_html_content += "<h5>Intra-Frequency Overlaps:</h5>"
-            for overlap in overlapping_pair_data:
-                conflict_html_content += f"""
-                <li><b>Freq {overlap['frequency']}:</b> {overlap['s1_name']} & {overlap['s2_name']}<br>
-                Distance: {overlap['distance']:.2f}km (Min Required: {overlap['min_required']:.2f}km)</li>
-                """
-        conflict_html_content += "</ul>"
-        
-        folium.Marker(
-            location=[center_location[0] + 0.05, center_location[1] + 0.05],
-            popup=folium.Popup(conflict_html_content, max_width=400),
-            icon=folium.Icon(color='orange', icon='triangle-exclamation', prefix='fa')
-        ).add_to(m)
-
-    # Generate the HTML string for the map. This is still needed for the base structure.
-    data_io = io.BytesIO()
-    m.save(data_io, close_file=False)
-    data_io.seek(0)
-    map_html = data_io.read().decode('utf-8')
-    
-    # Return a JSON response with map HTML and all necessary data for client-side drawing
-    return jsonify({
-        'mapHtml': map_html,
-        'allStationData': all_stations_for_map_drawing, # Send this for client-side circle/marker drawing
-        'overlappingPairData': overlapping_pair_data,    # Send this for client-side polyline drawing
-        'hasConflict': overall_has_conflict # Simplified conflict status for frontend warning
-    })
-# Route to remove planning station
-@app.route('/remove_planning_station', methods=['POST'])
-def remove_planning_station():
-    data = request.json
-    index = data.get('index')
-    
-    if 'planning_stations' in session and 0 <= index < len(session['planning_stations']):
-        session['planning_stations'].pop(index)
-        session.modified = True
-    
-    return jsonify({'status': 'success'})
-
-# Route to clear all planning stations
-@app.route('/clear_planning', methods=['POST'])
-def clear_planning():
-    session['planning_stations'] = []
-    session.modified = True
-    return jsonify({'status': 'success'})
-
-# Route to get planning summary
-@app.route('/planning_summary', methods=['GET'])
-def planning_summary():
-    if 'planning_stations' not in session:
-        return jsonify({'stations': [], 'count': 0})
-
-    return jsonify({
-        'stations': session['planning_stations'],
-        'count': len(session['planning_stations'])
-    })
-
-@app.route('/api/check_conflicts', methods=['POST'])
-def check_conflicts():
-    data = request.json
-    
-    if not all(k in data for k in ['lat', 'lon', 'frequency']):
-        return jsonify({'hasConflict': False, 'conflictingStations': [], 'error': 'Missing lat, lon, or frequency in payload'}), 400
-
-    try:
-        new_lat = float(data.get('lat'))
-        new_lon = float(data.get('lon'))
-        new_rad = float(data.get('rad', 15.0))
-        new_freq = int(data.get('frequency'))
-    except (ValueError, TypeError) as e:
-        return jsonify({'hasConflict': False, 'conflictingStations': [], 'error': f'Invalid data type for coordinates, radius, or frequency: {e}'}), 400
-    
-    conn = get_db_connection()
-    approved_stations = conn.execute("SELECT * FROM stations WHERE status = 'approved'").fetchall()
-    conn.close()
-    
-    conflicting_stations = []
-    for station in approved_stations:
-        approved_freq = station['allocated_frequency']
-        if approved_freq is None:
-            continue
-        
-        if new_freq == approved_freq:
-            distance = calculate_distance(new_lat, new_lon, station['latitude'], station['longitude'])
-            min_separation = (new_rad + station['safe_radius_km'])
-            
-            if distance < min_separation:
-                conflicting_stations.append(station['name'])
     
     return jsonify({
-        'hasConflict': len(conflicting_stations) > 0,
-        'conflictingStations': conflicting_stations
+        'allStationData': all_stations_for_map_drawing, 
+        'overlappingPairData': overlapping_pair_data,    
+        'interTypeConflicts': inter_type_conflicts,     
+        'hasConflict': overall_has_conflict,             
+        'center_location': center_location,              
+        'zoom_level': zoom_level                         
     })
 
+
+# DB Ui Admin Page
 @app.route("/admin")
 def admin_page():
     return render_template("admin.html")

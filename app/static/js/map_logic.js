@@ -1,15 +1,19 @@
 // map_logic.js
 // This file handles all Leaflet map initialization, rendering, and interaction logic.
 
-// Import currentPlanningStations from ui_logic.js (needs to be exported there)
+// Import currentPlanningStations and validateAllStationCards from ui_logic.js
 import { currentPlanningStations, validateAllStationCards } from './ui_logic.js';
+// Import India boundary GeoJSON data
+import { indiaBoundayLines } from './india_boundaries.js';
 
 // --- Global State for Map ---
 let mymap; // Will hold the Leaflet map instance
 let coverageCircles = {}; // Stores references to Leaflet circle objects for highlight/unhighlight
 let activeCoverageCircle = null; // To track the currently highlighted circle
-let coverageGroupLayer; // A Leaflet FeatureGroup for all coverage circles (managed by JS)
-let overlapHighlightGroupLayer; // A Leaflet FeatureGroup for explicit overlap highlights (managed by JS)
+let coverageGroupLayer; // A Leaflet FeatureGroup for all coverage circles
+let overlapHighlightGroupLayer; // A Leaflet FeatureGroup for explicit overlap highlights
+let indiaBoundariesLayer; // New: To hold the Leaflet GeoJSON layer for India boundaries
+
 
 // Define Leaflet highlight style
 const HIGHLIGHT_STYLE = { color: 'black', fillColor: 'yellow', fillOpacity: 0.5, weight: 4 };
@@ -27,7 +31,7 @@ const FREQ_COLORS = {
 const DEFAULT_MAP_COLOR = { outline: 'grey', fill: 'lightgrey' };
 
 
-// --- Utility Functions for Loading Spinner (moved here as they are map/allocation related) ---
+// --- Utility Functions for Loading Spinner ---
 export function showLoadingSpinner(message = "Processing... Please wait.") {
     const spinner = document.getElementById('loadingSpinnerOverlay');
     const msgElement = document.getElementById('loadingMessage');
@@ -42,14 +46,13 @@ export function hideLoadingSpinner() {
 
 
 // The new and improved function to update the map with ALL planning stations
-export async function refreshMap() { // Exported for use by ui_logic.js functions
+export async function refreshMap() {
     showLoadingSpinner("Updating map visualization...");
 
     const mapidDiv = document.getElementById('mapid');
     const mapPlaceholder = document.getElementById('mapPlaceholder');
     const conflictWarning = document.getElementById('conflictWarning');
 
-    // Filter out stations that don't have valid coordinates
     const planningStationsPayload = currentPlanningStations
         .map(s => ({
             id: s.id,
@@ -63,8 +66,7 @@ export async function refreshMap() { // Exported for use by ui_logic.js function
         }))
         .filter(s => !isNaN(s.lat) && !isNaN(s.lon));
 
-    if (planningStationsPayload.length === 0) {
-        // Destroy existing map instance if it exists before showing placeholder
+    if (planningStationsPayload.length === 0 && (!mymap || mymap.getBounds().isValid() === false)) {
         if (mymap) {
             mymap.remove();
             mymap = null;
@@ -86,50 +88,71 @@ export async function refreshMap() { // Exported for use by ui_logic.js function
         });
 
         if (!response.ok) {
-            const errorData = await response.json(); // Assuming error response is JSON
+            const errorData = await response.json();
             throw new Error(`HTTP error! status: ${response.status} - ${errorData.message || response.statusText}`);
         }
 
-        const mapData = await response.json(); // Expecting JSON response now
+        const mapData = await response.json();
 
-        // Check if map already exists. If so, destroy it to prevent Leaflet errors on re-init.
         if (mymap) {
             mymap.remove();
             mymap = null;
         }
 
-        // Initialize the Leaflet map directly in JS, instead of relying on Folium's JS.
-        // This gives us more control and avoids script execution issues from innerHTML.
-        mapidDiv.innerHTML = ''; // Clear map container first
-        mapidDiv.style.display = 'block'; // Ensure map container is visible
-        mapPlaceholder.style.display = 'none'; // Hide placeholder
+        mapidDiv.innerHTML = '';
+        mapidDiv.style.display = 'block';
+        mapPlaceholder.style.display = 'none';
 
-        // Set up the map with a base layer
-        mymap = L.map('mapid').setView(mapData.center_location, mapData.zoom_level);
+        const initialCenter = Array.isArray(mapData.center_location) && mapData.center_location.length === 2 && 
+                              !isNaN(mapData.center_location[0]) && !isNaN(mapData.center_location[1])
+                              ? mapData.center_location : [20.5937, 78.9629]; // Default to central India
+        const initialZoom = !isNaN(mapData.zoom_level) ? mapData.zoom_level : 6;
+
+        mymap = L.map('mapid').setView(initialCenter, initialZoom);
+        
+        // Note on base map labels:
+        // OpenStreetMap tiles often include local language labels.
+        // If you need to remove Chinese/Urdu names from the *base map*,
+        // you might need to use a different tile provider like CartoDB Positron
+        // (L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '...' }))
+        // or CartoDB DarkMatter, or a custom tile server that provides English-only labels.
+        /*
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">CartoDB</a> contributors'
+        }).addTo(mymap);
+        */
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
         }).addTo(mymap);
+
+        // Add India Boundaries (now filtered to exclude 'disputed')
+        _addIndiaBoundaries();
+        mymap.on("zoomend", _handleZoomEnd);
 
         // Initialize FeatureGroups directly in JS
         const approvedGroup = L.featureGroup().addTo(mymap);
         const planningGroup = L.featureGroup().addTo(mymap);
         const conflictGroup = L.featureGroup().addTo(mymap);
         const overlapHighlightGroup = L.featureGroup().addTo(mymap);
-        coverageGroupLayer = L.featureGroup().addTo(mymap); // Already global
-        overlapHighlightGroupLayer = L.featureGroup().addTo(mymap); // Already global
+        coverageGroupLayer = L.featureGroup().addTo(mymap);
+        overlapHighlightGroupLayer = L.featureGroup().addTo(mymap);
 
 
         // Draw all markers, circles, and polylines using the data from Flask
         drawAllMapElements(mapData.allStationData, approvedGroup, planningGroup);
-        drawInterTypeConflicts(mapData.interTypeConflicts, conflictGroup); // Add specific inter-type conflicts
-        drawOverlapHighlights(mapData.overlappingPairData, overlapHighlightGroup); // Add intra-frequency overlaps
-        drawCircles(mapData.allStationData); // Draws all coverage circles into coverageGroupLayer
+        drawInterTypeConflicts(mapData.interTypeConflicts, conflictGroup);
+        drawOverlapHighlights(mapData.overlappingPairData, overlapHighlightGroup);
+        drawCircles(mapData.allStationData);
 
 
         // Add Layer Control
+        /*L.control.layers({
+            'CartoDB Positron': L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png')
+        }, */
         L.control.layers({
             'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
         }, {
+            'India Boundaries': indiaBoundariesLayer,
             'Approved Stations': approvedGroup,
             'Planning Stations': planningGroup,
             'Inter-Type Conflicts': conflictGroup,
@@ -137,10 +160,8 @@ export async function refreshMap() { // Exported for use by ui_logic.js function
             'Coverage Areas': coverageGroupLayer
         }, { collapsed: true }).addTo(mymap);
 
-        // Conflict warning (based on the hasConflict flag from backend)
         if (mapData.hasConflict) {
             conflictWarning.style.display = 'block';
-            // You might want to update the text of the warning too
         } else {
             conflictWarning.style.display = 'none';
         }
@@ -148,7 +169,6 @@ export async function refreshMap() { // Exported for use by ui_logic.js function
     } catch (error) {
         console.error('Error refreshing map:', error);
         alert('An error occurred while updating the map. Check console for details: ' + error.message);
-        // Ensure map is cleared and placeholder shown on error
         if (mymap) {
             mymap.remove();
             mymap = null;
@@ -179,16 +199,15 @@ function drawAllMapElements(stationDataArray, approvedGroup, planningGroup) {
 
         const customIcon = L.divIcon({
             html: iconHtml,
-            className: '', // No default Leaflet class
+            className: '',
             iconSize: [24, 24],
-            iconAnchor: [12, 24], // Center bottom
+            iconAnchor: [12, 24],
             popupAnchor: [0, -20]
         });
 
         const marker = L.marker(latlng, { icon: customIcon }).addTo(group);
         marker.bindPopup(s.popup_content);
 
-        // Attach click listener for highlighting coverage circles
         marker.on('click', function() {
             highlightCircle(s.id);
         });
@@ -207,7 +226,7 @@ function drawInterTypeConflicts(conflictDataArray, conflictGroup) {
             weight: 3,
             opacity: 0.8,
             dashArray: '10,5',
-            popup: c.popup_content || `CONFLICT (Freq ${c.planning_freq}): ${c.distance.toFixed(2)}km < ${c.min_distance.toFixed(2)}km required`
+            popup: c.popup_content
         }).addTo(conflictGroup);
     });
 }
@@ -232,7 +251,7 @@ export function drawCircles(stationDataArray) {
             fillOpacity: s.fillOpacity,
             weight: s.weight,
             radius: radiusInMeters,
-            id: s.id // Custom property to link to data
+            id: s.id
         });
 
         circle.bindPopup(s.popup_content);
@@ -263,7 +282,7 @@ export function highlightCircle(stationId) {
 }
 
 // Function to draw overlap highlights (PolyLines)
-export function drawOverlapHighlights(overlapDataArray, overlapHighlightGroup) { // Pass group as argument
+export function drawOverlapHighlights(overlapDataArray, overlapHighlightGroup) {
     if (!overlapHighlightGroup) {
         console.error("overlapHighlightGroup not initialized. Cannot draw overlap highlights.");
         return;
@@ -277,13 +296,58 @@ export function drawOverlapHighlights(overlapDataArray, overlapHighlightGroup) {
             opacity: 0.9,
             dashArray: '5, 10'
         })
-        .bindPopup(overlap.popup_content || `FREQ ${overlap.frequency} OVERLAP: ${overlap.s1_name} & ${overlap.s2_name} - Dist: ${overlap.distance.toFixed(2)}km (Req: ${overlap.min_required.toFixed(2)}km)`)
+        .bindPopup(overlap.popup_content)
         .addTo(overlapHighlightGroup);
     }
 }
 
-// Function to run the allocation process
-export async function runAllocation() { // Exported for HTML button click
+// Internal function to define boundary style
+function _boundaryStyle(feature) {
+    let wt = mymap.getZoom() / 4; // Adjusted divisor back to 4 for thicker lines
+    // Set claimed border color to a subtle grey, typical for map borders
+    switch (feature.properties.boundary) {
+        case 'claimed':
+            return { color: "#666666", weight: wt, opacity: 0.8 }; // Dark grey, slightly transparent
+        default:
+            return { color: "lightgray", weight: wt / 2, opacity: 0.8 };
+    }
+}
+
+// Internal function to add India boundaries layer
+function _addIndiaBoundaries() {
+    console.log("Attempting to add India boundaries...");
+
+    if (indiaBoundariesLayer && mymap.hasLayer(indiaBoundariesLayer)) {
+        mymap.removeLayer(indiaBoundariesLayer);
+    }
+    try {
+        const filteredFeatures = indiaBoundayLines.features.filter(feature => 
+            feature.properties && feature.properties.boundary !== 'disputed'
+        );
+        const filteredGeoJSON = {
+            ...indiaBoundayLines,
+            features: filteredFeatures
+        };
+
+        indiaBoundariesLayer = L.geoJSON(filteredGeoJSON, { style: _boundaryStyle }).addTo(mymap);
+        console.log("India boundaries layer added to map (disputed filtered).");
+        if (indiaBoundariesLayer.getLayers().length === 0 && filteredFeatures.length > 0) {
+            console.warn("India boundaries layer added but contains no features. Check filtered GeoJSON data for completeness/errors.");
+        }
+    } catch (e) {
+        console.error("Error adding India boundaries layer:", e);
+    }
+}
+
+// Internal function to handle zoom end event
+function _handleZoomEnd() {
+    if (mymap && indiaBoundariesLayer) {
+        indiaBoundariesLayer.removeFrom(mymap);
+        _addIndiaBoundaries();
+    }
+}
+
+export async function runAllocation() {
     showLoadingSpinner("Running allocation and conflict resolution...");
     try {
         if (currentPlanningStations.length === 0) {
@@ -292,14 +356,11 @@ export async function runAllocation() { // Exported for HTML button click
             return;
         }
 
-        // Validate all planning stations before sending to backend
-        // (Assuming validateAllStationCards is accessible, imported from ui_logic)
         if (!validateAllStationCards()) {
             alert("Please correct errors in station data before running allocation.");
             hideLoadingSpinner();
             return;
         }
-
 
         const response = await fetch('/api/run_allocation', {
             method: 'POST',
@@ -368,8 +429,7 @@ export async function runAllocation() { // Exported for HTML button click
     }
 }
 
-// Function to submit all valid planning station data for configuration generation
-export async function submitData() { // Exported for HTML button click
+export async function submitData() {
     console.log("[submitData] Starting submission process.");
     if (!validateAllStationCards()) {
         console.log("[submitData] Validation failed. Aborting submission.");
@@ -400,7 +460,7 @@ export async function submitData() { // Exported for HTML button click
     try {
         const response = await fetch("/allocate_slots_endpoint", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payloadStations)
         });
 
@@ -423,7 +483,6 @@ export async function submitData() { // Exported for HTML button click
     }
 }
 
-// Helper to check file readiness for download
 async function checkFileReady(fileUrl) {
     let attempts = 0;
     const maxAttempts = 20;
@@ -439,8 +498,6 @@ async function checkFileReady(fileUrl) {
                     setTimeout(() => {
                         window.location.href = fileUrl;
                         hideLoadingSpinner();
-                        // Call clearPlanningStations and showManual from ui_logic
-                        // As they are exported, we can import and call them here.
                         import('./ui_logic.js').then(uiLogic => {
                             uiLogic.clearPlanningStations();
                             uiLogic.showManual();
@@ -463,4 +520,3 @@ async function checkFileReady(fileUrl) {
     }
     poll();
 }
-
