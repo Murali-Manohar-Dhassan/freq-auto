@@ -20,13 +20,13 @@ const HIGHLIGHT_STYLE = { color: 'black', fillColor: 'yellow', fillOpacity: 0.5,
 
 // Define frequency colors (should be consistent with backend and UI legend)
 const FREQ_COLORS = {
-    1: { outline: '#00FF00', fill: '#90EE90' },  // Green, LightGreen
-    2: { outline: '#0000FF', fill: '#ADD8E6' },  // Blue, LightBlue
-    3: { outline: '#FFFF00', fill: '#FFFACD' },  // Yellow, LemonChiffon
-    4: { outline: '#FFA500', fill: '#FFDAB9' },  // Orange, PeachPuff
-    5: { outline: '#800080', fill: '#DDA0DD' },  // Purple, Plum
-    6: { outline: '#FFC0CB', 'fill': '#FFB6C1' },  // Pink, LightPink
-    7: { outline: '#A52A2A', 'fill': '#F5DEB3' }   // Brown, Wheat
+    1: { outline: '#12ab12', fill: '#90EE90' },  // Green, LightGreen
+    2: { outline: '#0066ff', fill: '#ADD8E6' },  // Blue, LightBlue
+    3: { outline: '#ecec0e', fill: '#FFFACD' },  // Yellow, LemonChiffon
+    4: { outline: '#ff9900', fill: '#FFDAB9' },  // Orange, PeachPuff
+    5: { outline: '#868688', fill: '#bdbdc1' }, // Cement, Plum
+    6: { outline: '#cc0000', 'fill': '#ff5050' }, // Red, LightCoral
+    7: { outline: '#cc0099', 'fill': '#FFB6C1' }  // Pink, LightPink
 };
 const DEFAULT_MAP_COLOR = { outline: 'grey', fill: 'lightgrey' };
 
@@ -43,7 +43,6 @@ export function hideLoadingSpinner() {
     const spinner = document.getElementById('loadingSpinnerOverlay');
     if (spinner) spinner.style.display = 'none';
 }
-
 
 // The new and improved function to update the map with ALL planning stations
 export async function refreshMap() {
