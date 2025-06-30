@@ -38,7 +38,7 @@ def home():
 FREQ_COLORS = {
     1: {'outline': "#F3EF18E2", 'fill': '#FFFACD'},  # Green, LightGreen
     2: {'outline': "#10E610B2", 'fill': '#90EE90'},  # Blue, LightBlue
-    3: {'outline': "#C5691E", 'fill': "#C98130"},  # Yellow, LemonChiffon
+    3: {'outline': "#C5691E", 'fill': "#C28947"},  # Yellow, LemonChiffon
     4: {'outline': "#207BF3", 'fill': '#ADD8E6'},  # Orange, PeachPuff
     5: {'outline': "#A8A8A8", 'fill': '#FFDAB9'},  # Purple, Plum
     6: {'outline': "#E92243", 'fill': "#B14354"},  # Pink, LightPink

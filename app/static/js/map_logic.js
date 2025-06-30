@@ -15,8 +15,14 @@ let overlapHighlightGroupLayer; // A Leaflet FeatureGroup for explicit overlap h
 let indiaBoundariesLayer; // New: To hold the Leaflet GeoJSON layer for India boundaries
 
 
-// Define Leaflet highlight style
-const HIGHLIGHT_STYLE = { color: 'black', fillColor: 'yellow', fillOpacity: 0.5, weight: 4 };
+// Define Leaflet highlight style for circles (now dotted white)
+const HIGHLIGHT_STYLE = { 
+    color: 'white',        // White outline
+    dashArray: '10, 10',   // Dotted effect: 10px dash, 10px gap
+    fillColor: 'transparent', // Transparent fill
+    fillOpacity: 0.0,      // Fully transparent fill
+    weight: 4              // Line thickness
+};
 
 // Define frequency colors (should be consistent with backend and UI legend)
 const FREQ_COLORS = {
@@ -55,6 +61,7 @@ export async function refreshMap() {
     const planningStationsPayload = currentPlanningStations
         .map(s => ({
             id: s.id,
+            // Ensure latitude and longitude are explicitly parsed as floats
             lat: parseFloat(s.latitude),
             lon: parseFloat(s.longitude),
             rad: parseFloat(s.safe_radius_km) || 12.0,
@@ -63,6 +70,7 @@ export async function refreshMap() {
             onboardSlots: parseInt(s.onboard_slots) || 0,
             type: s.type
         }))
+        // Filter out stations with invalid (NaN) latitude or longitude
         .filter(s => !isNaN(s.lat) && !isNaN(s.lon));
 
     if (planningStationsPayload.length === 0 && (!mymap || mymap.getBounds().isValid() === false)) {
@@ -184,29 +192,38 @@ export async function refreshMap() {
 // Function to draw all map elements (markers, circles) based on data from Flask
 function drawAllMapElements(stationDataArray, approvedGroup, planningGroup) {
     stationDataArray.forEach(s => {
-        const latlng = [s.lat, s.lon];
+        // Ensure lat/lon are valid numbers before using them
+        const lat = !isNaN(parseFloat(s.lat)) ? parseFloat(s.lat) : 0;
+        const lon = !isNaN(parseFloat(s.lon)) ? parseFloat(s.lon) : 0;
+        const latlng = [lat, lon];
+
         let iconHtml;
         let group;
 
+        // Determine icon based on station type
         if (s.type === 'approved') {
-            iconHtml = '<i class="fa fa-tower" style="color: forestgreen; font-size: 24px;"></i>';
+            // Font Awesome tower icon for approved stations
+            iconHtml = '<i class="fa fa-tower" style="color: forestgreen; font-size: 28px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);"></i>';
             group = approvedGroup;
         } else { // type === 'planning'
-            iconHtml = '<i class="fa fa-satellite-dish" style="color: red; font-size: 24px;"></i>';
+            // Font Awesome satellite-dish icon for planning stations
+            iconHtml = '<i class="fa fa-satellite-dish" style="color: red; font-size: 28px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);"></i>';
             group = planningGroup;
         }
 
+        // Create a custom DivIcon using the Font Awesome HTML
         const customIcon = L.divIcon({
             html: iconHtml,
-            className: '',
-            iconSize: [24, 24],
-            iconAnchor: [12, 24],
-            popupAnchor: [0, -20]
+            className: '', // Important: set to empty string to avoid default Leaflet icon styling
+            iconSize: [28, 28], // Size of the icon area
+            iconAnchor: [14, 28], // Point of the icon which will correspond to marker's location (center-bottom)
+            popupAnchor: [0, -28] // Point from which the popup should open relative to the iconAnchor
         });
 
         const marker = L.marker(latlng, { icon: customIcon }).addTo(group);
         marker.bindPopup(s.popup_content);
 
+        // Add click listener to highlight circle
         marker.on('click', function() {
             highlightCircle(s.id);
         });
@@ -274,6 +291,7 @@ export function highlightCircle(stationId) {
 
     const circleToHighlight = coverageCircles[stationId];
     if (circleToHighlight) {
+        // Apply the new HIGHLIGHT_STYLE for the dotted white circle
         circleToHighlight.setStyle(HIGHLIGHT_STYLE);
         activeCoverageCircle = circleToHighlight;
         mymap.panTo(circleToHighlight.getLatLng());
