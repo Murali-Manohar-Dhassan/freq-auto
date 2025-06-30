@@ -26,10 +26,10 @@ const HIGHLIGHT_STYLE = {
 
 // Define frequency colors (should be consistent with backend and UI legend)
 const FREQ_COLORS = {
-    1: { outline: '#12ab12', fill: '#90EE90' },  // Green, LightGreen
-    2: { outline: '#0066ff', fill: '#ADD8E6' },  // Blue, LightBlue
-    3: { outline: '#ecec0e', fill: '#FFFACD' },  // Yellow, LemonChiffon
-    4: { outline: '#ff9900', fill: '#FFDAB9' },  // Orange, PeachPuff
+    1: { outline: '#ecec0e', fill: '#FFFACD' },  // Yellow, LemonChiffon
+    2: { outline: '#12ab12', fill: '#90EE90' },  // Green, LightGreen
+    3: { outline: '#ff9900', fill: '#FFDAB9' },  // Orange, PeachPuff
+    4: { outline: '#0066ff', fill: '#ADD8E6' },  // Blue, LightBlue
     5: { outline: '#868688', fill: '#bdbdc1' }, // Cement, Plum
     6: { outline: '#cc0000', 'fill': '#ff5050' }, // Red, LightCoral
     7: { outline: '#cc0099', 'fill': '#FFB6C1' }  // Pink, LightPink
