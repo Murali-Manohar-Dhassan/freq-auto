@@ -227,7 +227,7 @@ function drawAllMapElements(stationDataArray, approvedGroup, planningGroup) {
             // Font Awesome tower icon for approved stations with name label below
             iconHtml = `
                 <div style="text-align: center; white-space: nowrap; font-weight: bold; color: forestgreen; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
-                    <i class="fa fa-tower" style="font-size: 28px; line-height: 1;"></i>
+                    <i class="fa fa-tower-cell" style="font-size: 28px; line-height: 1;"></i>
                     <div style="font-size: 10px; margin-top: 2px;">${stationName}</div>
                 </div>
             `;
@@ -364,7 +364,7 @@ function _boundaryStyle(feature) {
 
 // Internal function to add India boundaries layer
 function _addIndiaBoundaries() {
-    console.log("Attempting to add India boundaries...");
+    //console.log("Attempting to add India boundaries...");
 
     if (indiaBoundariesLayer && mymap.hasLayer(indiaBoundariesLayer)) {
         mymap.removeLayer(indiaBoundariesLayer);
@@ -379,7 +379,7 @@ function _addIndiaBoundaries() {
         };
 
         indiaBoundariesLayer = L.geoJSON(filteredGeoJSON, { style: _boundaryStyle }).addTo(mymap);
-        console.log("India boundaries layer added to map (disputed filtered).");
+        //console.log("India boundaries layer added to map (disputed filtered).");
         if (indiaBoundariesLayer.getLayers().length === 0 && filteredFeatures.length > 0) {
             console.warn("India boundaries layer added but contains no features. Check filtered GeoJSON data for completeness/errors.");
         }
