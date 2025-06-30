@@ -50,6 +50,7 @@ export function hideLoadingSpinner() {
     if (spinner) spinner.style.display = 'none';
 }
 
+
 // The new and improved function to update the map with ALL planning stations
 export async function refreshMap() {
     showLoadingSpinner("Updating map visualization...");
@@ -58,20 +59,37 @@ export async function refreshMap() {
     const mapPlaceholder = document.getElementById('mapPlaceholder');
     const conflictWarning = document.getElementById('conflictWarning');
 
+    // Robustly map and filter planning stations for map update
     const planningStationsPayload = currentPlanningStations
-        .map(s => ({
-            id: s.id,
-            // Ensure latitude and longitude are explicitly parsed as floats
-            lat: parseFloat(s.latitude),
-            lon: parseFloat(s.longitude),
-            rad: parseFloat(s.safe_radius_km) || 12.0,
-            name: s.stationName || `Station ${s.station_number}`,
-            frequency: parseInt(s.allocated_frequency) || 1,
-            onboardSlots: parseInt(s.onboard_slots) || 0,
-            type: s.type
-        }))
-        // Filter out stations with invalid (NaN) latitude or longitude
-        .filter(s => !isNaN(s.lat) && !isNaN(s.lon));
+        .map(s => {
+            const lat = parseFloat(s.latitude);
+            const lon = parseFloat(s.longitude);
+            const rad = parseFloat(s.safe_radius_km) || 12.0;
+            const freq = parseInt(s.allocated_frequency) || 1;
+            const onboardSlots = parseInt(s.onboard_slots) || 0;
+
+            // Only return the object if lat and lon are valid numbers
+            if (isNaN(lat) || isNaN(lon)) {
+                console.warn(`Skipping station ${s.stationName || s.id} due to invalid coordinates: Lat=${s.latitude}, Lon=${s.longitude}`);
+                return null; // Return null for invalid stations
+            }
+
+            return {
+                id: s.id,
+                lat: lat,
+                lon: lon,
+                rad: rad,
+                name: s.stationName || `Station ${s.station_number || s.id}`, // Use stationName or a fallback
+                frequency: freq,
+                onboardSlots: onboardSlots,
+                type: s.type
+            };
+        })
+        .filter(s => s !== null); // Filter out any null entries (invalid stations)
+
+    // Log the payload being sent to the backend for debugging
+    console.log("[refreshMap] Sending payload to /api/update_map:", planningStationsPayload);
+
 
     if (planningStationsPayload.length === 0 && (!mymap || mymap.getBounds().isValid() === false)) {
         if (mymap) {
@@ -100,6 +118,9 @@ export async function refreshMap() {
         }
 
         const mapData = await response.json();
+        // Log the data received from the backend for debugging
+        console.log("[refreshMap] Received map data from backend:", mapData);
+
 
         if (mymap) {
             mymap.remove();
@@ -192,32 +213,43 @@ export async function refreshMap() {
 // Function to draw all map elements (markers, circles) based on data from Flask
 function drawAllMapElements(stationDataArray, approvedGroup, planningGroup) {
     stationDataArray.forEach(s => {
-        // Ensure lat/lon are valid numbers before using them
+        // Ensure lat/lon are valid numbers before using them (already filtered above, but good for local checks)
         const lat = !isNaN(parseFloat(s.lat)) ? parseFloat(s.lat) : 0;
         const lon = !isNaN(parseFloat(s.lon)) ? parseFloat(s.lon) : 0;
         const latlng = [lat, lon];
 
         let iconHtml;
         let group;
+        let stationName = s.name || ''; // Ensure stationName is available for the label
 
-        // Determine icon based on station type
+        // Determine icon based on station type and include the label
         if (s.type === 'approved') {
-            // Font Awesome tower icon for approved stations
-            iconHtml = '<i class="fa fa-tower" style="color: forestgreen; font-size: 28px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);"></i>';
+            // Font Awesome tower icon for approved stations with name label below
+            iconHtml = `
+                <div style="text-align: center; white-space: nowrap; font-weight: bold; color: forestgreen; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                    <i class="fa fa-tower" style="font-size: 28px; line-height: 1;"></i>
+                    <div style="font-size: 10px; margin-top: 2px;">${stationName}</div>
+                </div>
+            `;
             group = approvedGroup;
         } else { // type === 'planning'
-            // Font Awesome satellite-dish icon for planning stations
-            iconHtml = '<i class="fa fa-satellite-dish" style="color: red; font-size: 28px; text-shadow: 1px 1px 2px rgba(0,0,0,0.3);"></i>';
+            // Font Awesome satellite-dish icon for planning stations with name label below
+            iconHtml = `
+                <div style="text-align: center; white-space: nowrap; font-weight: bold; color: red; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">
+                    <i class="fa fa-satellite-dish" style="font-size: 28px; line-height: 1;"></i>
+                    <div style="font-size: 10px; margin-top: 2px;">${stationName}</div>
+                </div>
+            `;
             group = planningGroup;
         }
 
-        // Create a custom DivIcon using the Font Awesome HTML
+        // Create a custom DivIcon using the Font Awesome HTML and the label
         const customIcon = L.divIcon({
             html: iconHtml,
             className: '', // Important: set to empty string to avoid default Leaflet icon styling
-            iconSize: [28, 28], // Size of the icon area
-            iconAnchor: [14, 28], // Point of the icon which will correspond to marker's location (center-bottom)
-            popupAnchor: [0, -28] // Point from which the popup should open relative to the iconAnchor
+            iconSize: [80, 50], // Increased size to accommodate icon and text label
+            iconAnchor: [40, 50], // Adjust anchor to center the icon+label (half of width, full height for bottom-center)
+            popupAnchor: [0, -45] // Adjust popup anchor to appear above the entire icon/label combo
         });
 
         const marker = L.marker(latlng, { icon: customIcon }).addTo(group);
