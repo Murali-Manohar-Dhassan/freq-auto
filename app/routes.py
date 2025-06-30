@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify, send_file, session
+from flask import Flask, render_template, request, jsonify, send_file, session, url_for, send_from_directory
 import os
 import io
 import re
@@ -6,8 +6,7 @@ import threading
 import pandas as pd
 from datetime import datetime
 import json
-from app.processing import generate_excel
-from app.processing import calculate_distance, calculate_all_overlaps
+from app.processing import calculate_distance, calculate_all_overlaps, generate_excel, allocate_slots
 import sqlite3
 from app.database import get_db_connection, get_approved_stations_from_db, db_init
 import traceback
@@ -52,6 +51,7 @@ DEFAULT_COLOR = {'outline': 'grey', 'fill': 'lightgrey'}
 def update_map():
     data = request.json
     frontend_planning_stations = data.get('planning_stations', [])
+    print(f"Received planning stations from frontend: {frontend_planning_stations}") # Debugging
 
     approved_stations_raw = get_approved_stations_from_db()
 
@@ -76,7 +76,6 @@ def update_map():
 
     for station in approved_stations:
         # freq_info will be a dictionary {'outline': '...', 'fill': '...'}
-        # because FREQ_COLORS and DEFAULT_COLOR are consistently dictionaries.
         freq_info = FREQ_COLORS.get(station['allocated_frequency'], DEFAULT_COLOR)
         all_stations_for_map_drawing.append({
             'id': station['id'],
@@ -86,7 +85,7 @@ def update_map():
             'lon': station['longitude'],
             'radius': station['safe_radius_km'],
             'frequency': station['allocated_frequency'],
-            'color': freq_info['outline'], # This line will now work correctly
+            'color': freq_info['outline'], 
             'fillColor': freq_info['fill'],
             'fillOpacity': 0.15,
             'weight': 2,
@@ -103,11 +102,12 @@ def update_map():
 
     for p_station in frontend_planning_stations:
         p_id = p_station.get('id')
-        p_name = p_station.get('stationName') or f"Planning Station {p_station.get('station_number', 'N/A')}"
-        p_lat = float(p_station.get('latitude') or 0.0)
-        p_lon = float(p_station.get('longitude') or 0.0)
-        p_rad = float(p_station.get('safe_radius_km') or 12.0)
-        p_freq = int(p_station.get('allocated_frequency') or 1)
+        # FIX: Correctly access 'name', 'lat', 'lon', 'rad', 'frequency' as sent from the frontend
+        p_name = p_station.get('name') or f"Planning Station {p_station.get('id', 'N/A')}" # Use 'name' key
+        p_lat = float(p_station.get('lat') or 0.0) # Use 'lat' key
+        p_lon = float(p_station.get('lon') or 0.0) # Use 'lon' key
+        p_rad = float(p_station.get('rad') or 12.0) # Use 'rad' key
+        p_freq = int(p_station.get('frequency') or 1) # Use 'frequency' key
         p_onboard_slots = int(p_station.get('onboard_slots') or 0)
         
         freq_info = FREQ_COLORS.get(p_freq, DEFAULT_COLOR)
@@ -139,6 +139,7 @@ def update_map():
                 </div>
             """
         })
+    print(f"All stations for map drawing (after processing): {all_stations_for_map_drawing}") # Debugging
 
     all_coords = [(s['lat'], s['lon']) for s in all_stations_for_map_drawing if s['lat'] is not None and s['lon'] is not None]
     if all_coords:
@@ -152,10 +153,11 @@ def update_map():
     
     inter_type_conflicts = []
     for p_station in frontend_planning_stations:
-        p_lat = float(p_station.get('latitude') or 0.0)
-        p_lon = float(p_station.get('longitude') or 0.0)
-        p_rad = float(p_station.get('safe_radius_km') or 12.0)
-        p_freq = int(p_station.get('allocated_frequency') or 1)
+        # FIX: Ensure these also use 'lat', 'lon', 'rad', 'frequency' as sent from frontend
+        p_lat = float(p_station.get('lat') or 0.0) 
+        p_lon = float(p_station.get('lon') or 0.0)
+        p_rad = float(p_station.get('rad') or 12.0)
+        p_freq = int(p_station.get('frequency') or 1)
 
         for approved in approved_stations:
             approved_freq = approved['allocated_frequency'] 
@@ -171,7 +173,7 @@ def update_map():
                 
                 if distance < min_distance:
                     inter_type_conflicts.append({
-                        'planning_name': p_station.get('stationName'),
+                        'planning_name': p_station.get('name'), # Use 'name' key
                         'planning_freq': p_freq,
                         'approved_name': approved['name'],
                         'approved_freq': approved_freq,
@@ -181,10 +183,12 @@ def update_map():
                         'planning_lon': p_lon, 
                         'approved_lat': approved['latitude'], 
                         'approved_lon': approved['longitude'], 
-                        'popup_content': f"CONFLICT (Freq {p_freq}): {p_station.get('stationName')} & {approved['name']} - Dist: {distance:.2f}km < {min_distance:.2f}km required"
+                        'popup_content': f"CONFLICT (Freq {p_freq}): {p_station.get('name')} & {approved['name']} - Dist: {distance:.2f}km < {min_distance:.2f}km required"
                     })
+    print(f"Inter-type conflicts: {inter_type_conflicts}") # Debugging
 
     overlapping_pair_data, has_major_conflict = calculate_all_overlaps(all_stations_for_map_drawing)
+    print(f"Overlapping pair data: {overlapping_pair_data}") # Debugging
     
     overall_has_conflict = has_major_conflict or bool(inter_type_conflicts)
     
@@ -197,6 +201,70 @@ def update_map():
         'zoom_level': zoom_level                         
     })
 
+@app.route('/api/run_allocation', methods=['POST'])
+def run_allocation_route():
+    """
+    Handles the request to run the allocation logic and returns results for UI display.
+    This does NOT generate an Excel file for download.
+    """
+    planning_stations_input = request.json.get('planning_stations', [])
+    print(f"DEBUG routes.py: Received planning_stations for /api/run_allocation: {planning_stations_input}")
+    
+    if not planning_stations_input or not isinstance(planning_stations_input, list):
+        return jsonify({"error": "Invalid station data received for allocation"}), 400
+
+    # Call the actual allocation logic from processing.py
+    results = allocate_slots(planning_stations_input) 
+
+    return jsonify(results)
+
+@app.route('/allocate_slots_endpoint', methods=['POST'])
+def submit_data_for_excel_generation(): # Renamed from allocate_slots_endpoint for clarity, but same URL
+    """
+    Handles the request to generate the Excel file.
+    This replaces your old /allocate_slots_endpoint with dynamic file URL generation.
+    """
+    try:
+        planning_stations_data = request.json # This is the payload from frontend submitData
+        print(f"DEBUG routes.py: Received station data for Excel generation: {planning_stations_data}")
+
+        if not planning_stations_data or not isinstance(planning_stations_data, list):
+            return jsonify({"error": "Invalid station data received for Excel generation"}), 400
+        
+        # Generate the Excel file using the function from processing.py
+        output_filepath = generate_excel(planning_stations_data)
+        
+        if output_filepath:
+            # Construct the URL for the frontend to download the file
+            filename = os.path.basename(output_filepath)
+            return jsonify({
+                "message": "Excel file generated successfully.",
+                "fileUrl": url_for('download_generated_file', filename=filename, _external=True)
+            })
+        else:
+            return jsonify({"error": "Failed to generate Excel file."}, 500)
+
+    except Exception as e:
+        print(f"Error in /allocate_slots_endpoint (Excel generation): {e}")
+        traceback.print_exc() # Print full traceback for debugging
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/static/downloads/<filename>')
+def download_generated_file(filename): # Renamed from 'download_file' for clarity
+    """
+    Serves the generated Excel file from the UPLOAD_FOLDER.
+    This replaces your old '/download' endpoint with a more specific and secure one.
+    """
+    full_path_to_downloads = os.path.join(app.root_path, app.config["UPLOAD_FOLDER"])
+    print(f"DEBUG routes.py: Attempting to serve file: {filename} from {full_path_to_downloads}")
+    try:
+        return send_from_directory(full_path_to_downloads, filename, as_attachment=True)
+    except FileNotFoundError:
+        return jsonify({"message": "File not found or not yet available."}), 404
+    except Exception as e:
+        print(f"Error serving file {filename}: {e}")
+        return jsonify({"error": str(e)}), 500
 
 # DB Ui Admin Page
 @app.route("/admin")
@@ -349,27 +417,7 @@ def delete_station():
         traceback.print_exc()
         return jsonify(success=False, message=f"An internal server error: {e}"), 500
     
-@app.route("/allocate_slots_endpoint", methods=["POST"])
-def allocate_slots_endpoint():
-    try:
-        stations = request.json
-        print(f"DEBUG routes.py :\n 🔄 Received station data for processing: {stations}")  
-        
 
-        # Ensure stations data is correctly formatted
-        if not stations or not isinstance(stations, list):
-            return jsonify({"error": "Invalid station data received"}), 400
-        
-        # Start processing without threading for now
-        generate_excel(stations)  # Call directly in /allocate_slots_endpoint
-
-        return jsonify({"message": "Processing started, check back in a few seconds", "fileUrl": "/download"})
-    except Exception as e:
-        print(f"Error in allocation: {e}")  # Debug log
-        return jsonify({"error": str(e)}), 500
-
-@app.route("/download")
-def download_file():
     file_path = os.path.join(app.config["UPLOAD_FOLDER"], "output_kavach_slots_final_layout_v2.xlsx")
     print(f"Checking if file exists: {file_path} -> {os.path.exists(file_path)}")
 
