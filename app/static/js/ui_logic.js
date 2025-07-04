@@ -804,21 +804,23 @@ function _setupKavachIdListener(cardWrapper, stationId) {
     });
 
     kavachIdInput.on('blur', function() {
-        setTimeout(() => suggestionsBox.hide(), 100);
-        
-        const finalKavachId = this.value;
-        if (finalKavachId && skavIdLookup[finalKavachId]) {
-            _fillStationDetails(stationId, finalKavachId);
-            kavachIdInput.addClass('is-valid');
-        } else if (finalKavachId) {
-            _clearStationDetails(stationId);
-            kavachIdInput.addClass('is-invalid');
-            kavachIdFeedback.text('Kavach ID not found in master list.').addClass('text-danger').show();
-        } else {
-            _clearStationDetails(stationId);
-            kavachIdInput.removeClass('is-invalid is-valid');
-            kavachIdFeedback.hide();
-        }
+        // Add a slight delay before hiding suggestions to allow click event on suggestion to fire
+        setTimeout(() => {
+            suggestionsBox.hide();
+            const finalKavachId = this.value;
+            if (finalKavachId && skavIdLookup[finalKavachId]) {
+                _fillStationDetails(stationId, finalKavachId);
+                kavachIdInput.addClass('is-valid');
+            } else if (finalKavachId) {
+                _clearStationDetails(stationId);
+                kavachIdInput.addClass('is-invalid');
+                kavachIdFeedback.text('Kavach ID not found in master list.').addClass('text-danger').show();
+            } else {
+                _clearStationDetails(stationId);
+                kavachIdInput.removeClass('is-invalid is-valid');
+                kavachIdFeedback.hide();
+            }
+        }, 150); // 150ms delay
     });
 }
 

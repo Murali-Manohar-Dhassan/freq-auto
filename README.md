@@ -61,8 +61,8 @@ approved_stations.db Columns: Listing the column names explicitly is great.
 Revised Structure with minor suggestions:
 .
 ├── app/
-│   ├── __init__.py          # Flask application instance, initial configuration, and database initialization.
-│   ├── routes.py            # Defines Flask API endpoints (e.g., /api/update_map, /api/run_allocation for UI feedback, /allocate_slots_endpoint for Excel generation) and handles CRUD operations for the database.
+│   ├── __init__.py          
+│   ├── routes.py            # Defines Flask API endpoints (e.g., /api/update_map,  /allocate_slots_endpoint for Excel generation) and handles CRUD operations for the database.
 │   ├── processing.py        # Contains core business logic: allocation algorithms, geographical calculations, and Excel file generation (`generate_excel` and `allocate_slots`).
 │   └── database.py          # Manages SQLite database connection and provides functions for fetching/modifying station data.
 ├── static/
@@ -79,5 +79,38 @@ Revised Structure with minor suggestions:
 │   └── admin.html           # HTML template for the database administration interface.
 ├── uploads/                 # Directory where generated Excel output files are temporarily stored by the backend.
 ├── main.py                  # The primary script to run the Flask application.
-└── approved_stations.db     # The SQLite database file storing approved station data.
-                             # Columns: ID, name, Code, Kavac
+└── approved_stations.db     # The SQLite database file storing approved station data.(two tables)
+                         
+
+
+This is a flask app i have
+                         .
+├── app/
+│   ├── __init__.py          
+│   ├── routes.py            # Defines Flask API endpoints (e.g., /api/update_map,  /allocate_slots_endpoint for Excel generation) and handles CRUD operations for the database.
+│   ├── processing.py        # Contains core business logic: allocation algorithms, geographical calculations, and Excel file generation (`generate_excel` and `allocate_slots`).
+│   └── database.py          # Manages SQLite database connection and provides functions for fetching/modifying station data.
+├── static/
+│   ├── css/                 # (Currently inlined in index.html, but reserved for external custom CSS.)
+│   ├── js/
+│   │   ├── admin.js         # Frontend JavaScript for interacting with the database administration interface (CRUD).
+│   │   ├── main.js          # Main entry point for frontend JavaScript, orchestrates module loading and sets up global functions.
+│   │   ├── ui_logic.js      # Manages user interface elements: station card creation, input forms, validation, and controlling section visibility.
+│   │   ├── map_logic.js     # Handles Leaflet map initialization, rendering station markers, coverage circles, conflict visualizations, and map-related API calls.
+│   │   └── india_boundaries.js # GeoJSON data specifically for rendering India's geographical boundaries on the map.
+│   └── lib/                 # Third-party JavaScript libraries (e.g., Leaflet.js, Bootstrap JS bundle).
+├── templates/
+│   ├── index.html           # Main HTML template for the user-facing configuration interface.
+│   └── admin.html           # HTML template for the database administration interface.
+├── uploads/                 # Directory where generated Excel output files are temporarily stored by the backend.
+├── main.py                  # The primary script to run the Flask application.
+└── approved_stations.db     # The SQLite database file storing approved station data.(two tables)
+                         
+
+in map there is issues,
+
+
+Map Zoom after each refresh should be avg of current planning, so that it helps user in planning. at the iniitall point maybe avg of all could be nice.
+
+There is many issues with the features sections of the map, they are not reponsive and not syncing with the refresh,
+pls watch out if all the features loigic are properly implemented
