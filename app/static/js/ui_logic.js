@@ -3,17 +3,27 @@
 // validation, and local storage.
 
 // Import necessary functions from map_logic.js.
-// We only need refreshMap here, and runAllocation for the button click.
-import { refreshMap, showLoadingSpinner, hideLoadingSpinner } from './map_logic.js';
+import { refreshMap, submitData as submitDataMapLogic, showLoadingSpinner, hideLoadingSpinner } from './map_logic.js';
 
 // --- Global State for UI and Planning Stations ---
 let stationCounter = 0; // Tracks the number of planning stations (for numbering)
 let skavIdLookup = {}; // Stores the S-Kavach ID lookup data
 export let currentPlanningStations = []; // Global array to hold all planning station data. EXPORTED for other modules.
 
-// Function to load S-Kavach ID lookup data (remains in UI logic as it supports KavachID input)
+// --- Assign global window functions for HTML onclick ---
+// These functions need to be accessible globally by the HTML 'onclick' attributes.
+window.addNewStation = addNewStation;
+window.removeStation = removeStation;
+window.updateStationData = updateStationData;
+window.validateInput = validateInput;
+window.clearPlanningStations = clearPlanningStations;
+window.submitData = submitDataWrapper;
+window.toggleCardCollapse = toggleCardCollapse;
+
+
+// Function to load S-Kavach ID lookup data
 export function loadSkavIdLookup(callback) {
-    fetch('/static/skavidLookup.json') // Verify this filename
+    fetch('/static/skavidLookup.json')
         .then(response => {
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status} for skavIdLookup.json`);
@@ -37,7 +47,7 @@ function generateUniqueStationId() {
 }
 
 // Function to add a new station card to the UI and update global state
-export function addNewStation() { // Exported for HTML button click
+export function addNewStation() {
     if (currentPlanningStations.length > 0) {
         const lastStationIndex = currentPlanningStations.length - 1;
         const prevStationId = currentPlanningStations[lastStationIndex]?.id;
@@ -107,13 +117,12 @@ export function addNewStation() { // Exported for HTML button click
             if (prevCollapseElement && prevCollapseElement.classList.contains('show')) {
                 bootstrap.Collapse.getOrCreateInstance(prevCollapseElement).hide();
             }
-            if (prevHeaderElement) {
+            if (prevHeaderElement.length) { // Check if jQuery object exists
                 prevHeaderElement.attr('aria-expanded', 'false');
             }
         }
     }
-    // Call the internal function to create and append the new card
-    _createStationCard(); 
+    _createStationCard();
 }
 
 // Internal function to create the HTML for a new station card and append it
@@ -138,81 +147,88 @@ function _createStationCard() {
     currentPlanningStations.push(newStation);
 
     const container = document.getElementById("stationContainer");
-    const cardWrapper = document.createElement("div");
-    cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
-    cardWrapper.id = `card_${stationId}`;
+    if (!container) {
+        console.error("Station container not found. Cannot create new station card.");
+        return;
+    }
 
-    cardWrapper.innerHTML = `
-        <div class="card shadow p-0 h-100">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
-                id="headerFor_${stationId}"
-                data-bs-toggle="collapse"
-                data-bs-target="#collapse_${stationId}"
-                aria-expanded="true"
-                aria-controls="collapse_${stationId}"
-                style="cursor: pointer;">
-                <span class="station-title-text">Station ${stationCounter}</span>
-                <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); window.removeStation('${stationId}')"></button>
-            </div>
-            <div class="collapse show" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}">
-                <div class="card-body">
-                    <label class="form-label">Stationary Kavach ID:</label>
-                    <div class="input-wrapper">
-                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off" required>
-                        <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
-                    </div>
-                    <div class="form-text kavach-id-feedback mb-2"></div>
+    const cardWrapperHtml = `
+        <div class="col-12 col-sm-6 col-md-4 mb-3 station-card" id="card_${stationId}">
+            <div class="card shadow p-0 h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+                    id="headerFor_${stationId}"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse_${stationId}"
+                    aria-expanded="true"
+                    aria-controls="collapse_${stationId}"
+                    style="cursor: pointer;">
+                    <span class="station-title-text">Station ${stationCounter}</span>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); window.removeStation('${stationId}')"></button>
+                </div>
+                <div class="collapse show" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}">
+                    <div class="card-body">
+                        <label class="form-label">Stationary Kavach ID:</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off" required>
+                            <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
+                        </div>
+                        <div class="form-text kavach-id-feedback mb-2"></div>
 
-                    <label class="form-label">Station Code:</label>
-                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode_${stationId}" placeholder="Enter Station Code" required oninput="window.updateStationData('${stationId}', 'StationCode', this.value)">
+                        <label class="form-label">Station Code:</label>
+                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode_${stationId}" placeholder="Enter Station Code" required oninput="window.updateStationData('${stationId}', 'StationCode', this.value)">
 
-                    <label class="form-label">Station Name:</label>
-                    <input type="text" class="form-control mb-2 station-name-input" id="stationName_${stationId}" placeholder="Auto-filled or manual entry" required oninput="window.updateStationData('${stationId}', 'stationName', this.value)">
+                        <label class="form-label">Station Name:</label>
+                        <input type="text" class="form-control mb-2 station-name-input" id="stationName_${stationId}" placeholder="Auto-filled or manual entry" required oninput="window.updateStationData('${stationId}', 'stationName', this.value)">
 
-                    <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude_${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="window.updateStationData('${stationId}', 'latitude', this.value)">
+                        <label class="form-label">Stationary Unit Tower Latitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude_${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="window.updateStationData('${stationId}', 'latitude', this.value)">
 
-                    <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="window.updateStationData('${stationId}', 'longitude', this.value)">
+                        <label class="form-label">Stationary Unit Tower Longitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="window.updateStationData('${stationId}', 'longitude', this.value)">
 
-                    <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
+                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
 
-                    <label class="form-label">Onboard Slots:</label>
-                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)">
-                    
-                    <div class="mb-2">
-                        <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
-                        <input type="range"
-                            class="form-range"
-                            id="radiusSlider_${stationId}"
-                            min="7"
-                            max="25"
-                            step="1"
-                            value="${newStation.safe_radius_km}"
-                            oninput="document.getElementById('radius-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'safe_radius_km', parseFloat(this.value))">
-                    </div>
+                        <label class="form-label">Onboard Slots:</label>
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)">
+                        
+                        <div class="mb-2">
+                            <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
+                            <input type="range"
+                                class="form-range"
+                                id="radiusSlider_${stationId}"
+                                min="7"
+                                max="25"
+                                step="1"
+                                value="${newStation.safe_radius_km}"
+                                oninput="document.getElementById('radius-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'safe_radius_km', parseFloat(this.value))">
+                        </div>
 
-                    <div class="mb-2">
-                        <label class="form-label">Frequency: <span id="frequency-value-${stationId}">${newStation.allocated_frequency}</span></label>
-                        <input type="range"
-                            class="form-range"
-                            id="frequencySlider_${stationId}"
-                            min="1"
-                            max="7"
-                            step="1"
-                            value="${newStation.allocated_frequency}"
-                            oninput="document.getElementById('frequency-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'allocated_frequency', parseInt(this.value))">
+                        <div class="mb-2">
+                            <label class="form-label">Frequency: <span id="frequency-value-${stationId}">${newStation.allocated_frequency}</span></label>
+                            <input type="range"
+                                class="form-range"
+                                id="frequencySlider_${stationId}"
+                                min="1"
+                                max="7"
+                                step="1"
+                                value="${newStation.allocated_frequency}"
+                                oninput="document.getElementById('frequency-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'allocated_frequency', parseInt(this.value))">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
-    container.appendChild(cardWrapper);
-    _setupKavachIdListener(cardWrapper, stationId); // Use internal function for listener setup
+    
+    // Append the HTML string and then get the newly added element as a jQuery object
+    $(container).append(cardWrapperHtml);
+    const $newCardWrapper = $(`#card_${stationId}`); // Get the newly added card as a jQuery object
 
-    updateStationNumbers(); // Re-index displayed station numbers
-    cardWrapper.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    _setupKavachIdListener($newCardWrapper, stationId); // Pass the jQuery object
+
+    updateStationNumbers();
+    $newCardWrapper[0].scrollIntoView({ behavior: 'smooth', block: 'center' }); // Use native DOM element for scrollIntoView
     $(`#KavachID_${stationId}`).focus();
 
     if (currentPlanningStations.length > 0) {
@@ -222,22 +238,20 @@ function _createStationCard() {
 }
 
 // Function to remove a station card and update the global state
-export function removeStation(stationIdToRemove) { // Exported and made globally accessible
-    // Remove the station from the DOM
-    const cardElement = document.getElementById(`card_${stationIdToRemove}`);
-    if (cardElement) {
+export function removeStation(stationIdToRemove) {
+    const cardElement = $(`#card_${stationIdToRemove}`); // Get as jQuery object
+    if (cardElement.length) {
         cardElement.remove();
     }
 
-    // Remove the station from the global currentPlanningStations array
     const initialLength = currentPlanningStations.length;
     currentPlanningStations = currentPlanningStations.filter(station => station.id !== stationIdToRemove);
 
     if (currentPlanningStations.length < initialLength) {
         stationCounter = currentPlanningStations.length;
-        updateStationNumbers(); // Re-index displayed station numbers
-        savePlanningStationsToLocalStorage(); // Save to local storage after modification
-        refreshMap(); // Update map after station removal
+        updateStationNumbers();
+        savePlanningStationsToLocalStorage();
+        refreshMap();
 
         if (currentPlanningStations.length === 0) {
             $('#submitContainer').hide();
@@ -249,7 +263,7 @@ export function removeStation(stationIdToRemove) { // Exported and made globally
 }
 
 // Function to update data for a specific station in the global array
-export function updateStationData(stationId, field, value) { // Exported and made globally accessible
+export function updateStationData(stationId, field, value) {
     console.log(`[updateStationData] Called for ID: ${stationId}, Field: ${field}, Value: ${value}`);
     const stationIndex = currentPlanningStations.findIndex(s => s.id === stationId);
     if (stationIndex !== -1) {
@@ -268,15 +282,15 @@ export function updateStationData(stationId, field, value) { // Exported and mad
         }
 
         console.log(`[updateStationData] Updated station data for ${stationId}:`, currentPlanningStations[stationIndex]);
-        refreshMap(); // Trigger map refresh
+        savePlanningStationsToLocalStorage();
+        refreshMap();
     } else {
         console.warn(`[updateStationData] Station with ID ${stationId} not found in currentPlanningStations array.`);
     }
-    savePlanningStationsToLocalStorage();
 }
 
 // Function to update the displayed station numbers on the cards
-export function updateStationNumbers() { // Exported if needed by other modules
+export function updateStationNumbers() {
     $('#stationContainer .station-card').each(function(index) {
         const cardId = $(this).attr('id');
         const stationId = cardId.replace('card_', '');
@@ -285,7 +299,6 @@ export function updateStationNumbers() { // Exported if needed by other modules
         if (station) {
             station.station_number = index + 1;
             $(this).find('.station-title-text').text(`Station ${index + 1}`);
-            // Note: The onclick for remove button now references `window.removeStation`
             $(this).find('.btn-close').attr('onclick', `event.stopPropagation(); window.removeStation('${stationId}')`);
         }
     });
@@ -293,7 +306,7 @@ export function updateStationNumbers() { // Exported if needed by other modules
 }
 
 // Function to validate all station cards
-export function validateAllStationCards() { // Exported for use by runAllocation or submitData
+export function validateAllStationCards() {
     let allValid = true;
     let firstInvalidElement = null;
     const cardsWithErrors = new Set();
@@ -424,390 +437,210 @@ export function validateAllStationCards() { // Exported for use by runAllocation
     return allValid;
 }
 
-// Function to handle "Finish Manual Input" (now renamed to be clear for the toggle behavior)
-export function toggleCardCollapse() { // Renamed from finishManualInput
+function validateStationCard(station) {
+    const cardElement = $(`#card_${station.id}`); // Get as jQuery object
+    const formInputs = cardElement.length ? cardElement.find('.form-control') : [];
+    let cardIsValid = true;
+    formInputs.each(function() { // Use .each for jQuery collection
+        if (!validateInput(this, false)) { // Pass native DOM element
+            cardIsValid = false;
+        }
+    });
+    station.isValid = cardIsValid;
+
+    const cardHeader = $(`#headerFor_${station.id}`); // Get as jQuery object
+    if (cardHeader.length) {
+        if (cardIsValid) {
+            cardHeader.removeClass('bg-danger').addClass('bg-primary');
+            cardHeader.find('.badge').removeClass('bg-warning text-dark').addClass('bg-success').text('Valid');
+        } else {
+            cardHeader.removeClass('bg-primary').addClass('bg-danger');
+            cardHeader.find('.badge').removeClass('bg-success').addClass('bg-warning text-dark').text('Invalid');
+        }
+    }
+}
+
+export function clearPlanningStations() {
+    if (confirm("Are you sure you want to clear all planning stations? This action cannot be undone.")) {
+        currentPlanningStations = [];
+        stationCounter = 0;
+        localStorage.removeItem('planningStations');
+        renderStationCards();
+        refreshMap();
+        
+        const allocationResults = document.getElementById('allocationResults');
+        const resultsList = document.getElementById('results-list');
+        const submitContainer = document.getElementById('submitContainer');
+
+        if (allocationResults) allocationResults.style.display = 'none';
+        if (resultsList) resultsList.innerHTML = '';
+        if (submitContainer) submitContainer.style.display = 'none';
+        
+        showManual();
+        console.log("All planning stations cleared.");
+    }
+}
+
+async function submitDataWrapper() {
     if (!validateAllStationCards()) {
+        alert("Please correct errors in station data before submitting.");
+        return;
+    }
+    await submitDataMapLogic();
+}
+
+export function toggleCardCollapse() {
+    const stationContainer = document.getElementById('stationContainer');
+    const manualInputActions = document.getElementById('manualInputActions');
+    const submitContainer = document.getElementById('submitContainer');
+    const finishButton = document.getElementById('finishManualInputBtn');
+
+    if (!stationContainer || !manualInputActions || !submitContainer || !finishButton) {
+        console.error("toggleCardCollapse: One or more critical elements not found.");
         return;
     }
 
-    const cards = $('#stationContainer .station-card');
-    if (cards.length === 0) {
-        alert("Please add at least one station.");
-        return;
-    }
+    const isCollapsed = stationContainer.classList.contains('collapsed-view');
 
-    const firstCardCollapse = cards.first().find('.collapse');
-    if (firstCardCollapse.length && firstCardCollapse.hasClass('show')) {
-        // If first card is open, collapse all
-        cards.find('.collapse').each(function() {
-            bootstrap.Collapse.getOrCreateInstance(this).hide();
-            $(`#${$(this).attr('aria-labelledby')}`).attr('aria-expanded', 'false');
+    if (!isCollapsed) {
+        if (currentPlanningStations.length === 0) {
+            alert("Please add at least one station before finishing input.");
+            return;
+        }
+
+        if (!validateAllStationCards()) {
+            alert("Please correct errors in station data before finishing input.");
+            return;
+        }
+
+        stationContainer.style.display = 'none';
+        manualInputActions.style.display = 'none';
+        submitContainer.style.display = 'flex';
+        const mapid = document.getElementById('mapid');
+        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        if (mapid) mapid.style.display = 'block';
+        if (mapPlaceholder) mapPlaceholder.style.display = 'none';
+
+
+        finishButton.textContent = 'Edit Stations & Inputs';
+        stationContainer.classList.add('collapsed-view');
+
+        currentPlanningStations.forEach(station => {
+            station.isCollapsed = true;
+            const collapseElement = document.getElementById(`collapse_${station.id}`);
+            if (collapseElement) {
+                const bsCollapse = new bootstrap.Collapse(collapseElement, { toggle: false });
+                bsCollapse.hide();
+            }
+            const headerElement = document.getElementById(`headerFor_${station.id}`);
+            if (headerElement) {
+                const icon = headerElement.querySelector('.fas'); // Find any FontAwesome icon
+                if (icon) {
+                    icon.classList.remove('fa-chevron-up');
+                    icon.classList.add('fa-chevron-down');
+                }
+            }
         });
-        $('#finishManualInputBtn').text('Expand All Cards');
+        savePlanningStationsToLocalStorage();
+        refreshMap();
+        console.log("Input cards collapsed, submit section shown.");
+
     } else {
-        // If first card is closed, expand all
-        cards.find('.collapse').each(function() {
-            bootstrap.Collapse.getOrCreateInstance(this).show();
-            $(`#${$(this).attr('aria-labelledby')}`).attr('aria-expanded', 'true');
+        stationContainer.style.display = 'flex';
+        manualInputActions.style.display = 'flex';
+        submitContainer.style.display = 'none';
+        const mapid = document.getElementById('mapid');
+        const mapPlaceholder = document.getElementById('mapPlaceholder');
+        if (mapid) mapid.style.display = 'block';
+        if (mapPlaceholder) mapPlaceholder.style.display = 'none';
+
+        finishButton.textContent = 'Finish & Preview Stations';
+        stationContainer.classList.remove('collapsed-view');
+
+        currentPlanningStations.forEach(station => {
+            station.isCollapsed = false;
+            const collapseElement = document.getElementById(`collapse_${station.id}`);
+            if (collapseElement) {
+                const bsCollapse = new bootstrap.Collapse(collapseElement, { toggle: false });
+                bsCollapse.show();
+            }
+            const headerElement = document.getElementById(`headerFor_${station.id}`);
+            if (headerElement) {
+                const icon = headerElement.querySelector('.fas'); // Find any FontAwesome icon
+                if (icon) {
+                    icon.classList.remove('fa-chevron-down');
+                    icon.classList.add('fa-chevron-up');
+                }
+            }
         });
-        $('#finishManualInputBtn').text('Collapse All Cards');
-    }
-    $('#submitContainer').show(); // Show submit button after this action
-}
-
-
-// Internal function to set up listeners for Kavach ID input and autofill logic
-function _setupKavachIdListener(cardElement, stationId) {
-    const kavachIdInput = cardElement.querySelector(`#KavachID_${stationId}`);
-    const stationCodeEl = cardElement.querySelector(`#StationCode_${stationId}`);
-    const nameEl = cardElement.querySelector(`#stationName_${stationId}`);
-    const latEl = cardElement.querySelector(`#Latitude_${stationId}`);
-    const lonEl = cardElement.querySelector(`#Longtitude_${stationId}`);
-    const optimumStaticEl = cardElement.querySelector(`#OptimumStatic_${stationId}`);
-    const onboardSlotsEl = cardElement.querySelector(`#onboardSlots_${stationId}`);
-
-    const feedbackEl = $(kavachIdInput).closest('.card-body').find('.kavach-id-feedback');
-    const suggestionsEl = cardElement.querySelector(`#suggestions_kavach_${stationId}`);
-
-    if (!kavachIdInput || !suggestionsEl) {
-        console.error(`Kavach ID Input or suggestions element not found for ID: ${stationId}`);
-        return;
-    }
-
-    const autoFilledFields = [nameEl, latEl, lonEl, stationCodeEl, optimumStaticEl, onboardSlotsEl];
-
-    const hideSuggestions = () => {
-        suggestionsEl.innerHTML = '';
-        $(suggestionsEl).hide();
-    };
-
-    const handleKavachIdValidation = (isSelectionEvent = false) => {
-        const currentKavachIdValue = kavachIdInput.value.trim();
-        const lookupData = skavIdLookup[currentKavachIdValue];
-
-        autoFilledFields.forEach(el => { if(el) el.dataset.autoFilled = "false"; });
-        kavachIdInput.classList.remove('is-invalid', 'is-valid');
-        if (feedbackEl && feedbackEl.length) {
-            feedbackEl.text('').hide().removeClass('text-success text-warning text-danger');
-        }
-
-        let isDuplicate = false;
-        if (currentKavachIdValue) {
-            const count = currentPlanningStations.filter(s => s.id !== stationId && s.KavachID === currentKavachIdValue).length;
-            if (count > 0) {
-                isDuplicate = true;
-            }
-        }
-
-        if (isDuplicate) {
-            kavachIdInput.classList.add('is-invalid');
-            if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('This Kavach ID is already used. Please use a unique ID.').addClass('text-danger').show();
-            }
-        } else if (lookupData) {
-            kavachIdInput.classList.add('is-valid');
-
-            updateStationData(stationId, 'KavachID', currentKavachIdValue);
-
-            if (stationCodeEl) {
-                stationCodeEl.value = lookupData.code || '';
-                stationCodeEl.dataset.originalValue = stationCodeEl.value;
-                stationCodeEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'StationCode', stationCodeEl.value);
-            }
-            if (nameEl) {
-                nameEl.value = lookupData.name || '';
-                nameEl.dataset.originalValue = nameEl.value;
-                nameEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'stationName', nameEl.value);
-            }
-            if (latEl) {
-                latEl.value = lookupData.latitude || '';
-                latEl.dataset.originalValue = latEl.value;
-                latEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'latitude', latEl.value);
-            }
-            if (lonEl) {
-                lonEl.value = lookupData.longitude || '';
-                lonEl.dataset.originalValue = lonEl.value;
-                lonEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'longitude', lonEl.value);
-            }
-            if (optimumStaticEl && lookupData.optimum_static_profile_transfer !== undefined) {
-                optimumStaticEl.value = lookupData.optimum_static_profile_transfer;
-                optimumStaticEl.dataset.originalValue = optimumStaticEl.value;
-                optimumStaticEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'optimum_static_profile_transfer', optimumStaticEl.value);
-            }
-            if (onboardSlotsEl && lookupData.onboard_slots !== undefined) {
-                onboardSlotsEl.value = lookupData.onboard_slots;
-                onboardSlotsEl.dataset.originalValue = onboardSlotsEl.value;
-                onboardSlotsEl.dataset.autoFilled = "true";
-                updateStationData(stationId, 'onboard_slots', onboardSlotsEl.value);
-            }
-
-            if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('Kavach ID found. Fields auto-filled.').removeClass('text-danger text-warning').addClass('text-success').show();
-                setTimeout(() => { if (feedbackEl.hasClass('text-success')) feedbackEl.fadeOut();}, 3000);
-            }
-        } else if (currentKavachIdValue && isSelectionEvent) {
-            kavachIdInput.classList.add('is-invalid');
-            if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('Kavach ID not found. Please verify or enter details manually.').addClass('text-danger').show();
-            }
-            if (stationCodeEl) { stationCodeEl.value = ''; updateStationData(stationId, 'StationCode', ''); }
-            if (nameEl) { nameEl.value = ''; updateStationData(stationId, 'stationName', ''); }
-            if (latEl) { latEl.value = ''; updateStationData(stationId, 'latitude', ''); }
-            if (lonEl) { lonEl.value = ''; updateStationData(stationId, 'longitude', ''); }
-            if (optimumStaticEl) { optimumStaticEl.value = ''; updateStationData(stationId, 'optimum_static_profile_transfer', ''); }
-            if (onboardSlotsEl) { onboardSlotsEl.value = ''; updateStationData(stationId, 'onboard_slots', ''); }
-
-        } else if (!currentKavachIdValue) {
-            if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('').hide();
-            }
-            if (stationCodeEl) { stationCodeEl.value = ''; updateStationData(stationId, 'StationCode', ''); }
-            if (nameEl) { nameEl.value = ''; updateStationData(stationId, 'stationName', ''); }
-            if (latEl) { latEl.value = ''; updateStationData(stationId, 'latitude', ''); }
-            if (lonEl) { lonEl.value = ''; updateStationData(stationId, 'longitude', ''); }
-            if (optimumStaticEl) { optimumStaticEl.value = ''; updateStationData(stationId, 'optimum_static_profile_transfer', ''); }
-            if (onboardSlotsEl) { onboardSlotsEl.value = ''; updateStationData(stationId, 'onboard_slots', ''); }
-        }
-    };
-
-    autoFilledFields.forEach(el => {
-        if (!el) return;
-        el.addEventListener('blur', function(event) {
-            const targetEl = event.target;
-            if (targetEl.dataset.autoFilled === "true" && targetEl.value !== targetEl.dataset.originalValue) {
-                const labelText = $(targetEl).prev('label').text() || 'This field';
-                if (!confirm(`${labelText} was auto-filled. Are you sure you want to change it to "${targetEl.value}"?`)) {
-                    targetEl.value = targetEl.dataset.originalValue;
-                } else {
-                    targetEl.dataset.originalValue = targetEl.value;
-                }
-            }
-            const fieldNameFromId = targetEl.id.split('_')[0];
-            const dataFieldName = {
-                'KavachID': 'KavachID',
-                'StationCode': 'StationCode',
-                'stationName': 'stationName',
-                'Latitude': 'latitude',
-                'Longtitude': 'longitude',
-                'radiusSlider': 'safe_radius_km',
-                'frequencySlider': 'allocated_frequency',
-                'OptimumStatic': 'optimum_static_profile_transfer',
-                'onboardSlots': 'onboard_slots',
-            }[fieldNameFromId] || fieldNameFromId.toLowerCase();
-
-            let parsedValue = targetEl.value;
-            if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(dataFieldName)) {
-                 parsedValue = parseFloat(targetEl.value) || 0;
-                 if (dataFieldName === 'allocated_frequency' || dataFieldName === 'optimum_static_profile_transfer' || dataFieldName === 'onboard_slots') {
-                     parsedValue = parseInt(targetEl.value) || 0;
-                 }
-            }
-            updateStationData(stationId, dataFieldName, parsedValue);
-        });
-    });
-
-    kavachIdInput.addEventListener('input', () => {
-        const idValue = kavachIdInput.value.trim();
-        hideSuggestions();
-        kavachIdInput.classList.remove('is-valid');
-
-        if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
-            feedbackEl.text('').hide();
-        }
-
-        const currentlyUsedIdsInOtherCards = new Set(
-            currentPlanningStations
-                .filter(s => s.id !== stationId && s.KavachID)
-                .map(s => s.KavachID)
-        );
-
-        if (idValue.length > 0) {
-            const potentialMatches = Object.keys(skavIdLookup).filter(key => key.startsWith(idValue));
-            const availableMatches = potentialMatches.filter(match => !currentlyUsedIdsInOtherCards.has(match));
-
-            if (availableMatches.length > 0) {
-                availableMatches.slice(0, 10).forEach(match => {
-                    const suggestionItem = document.createElement('a');
-                    suggestionItem.href = '#';
-                    suggestionItem.classList.add('list-group-item', 'list-group-item-action', 'py-1', 'px-2');
-                    suggestionItem.textContent = `${match} (${skavIdLookup[match].name || 'N/A'})`;
-                    suggestionItem.addEventListener('click', (e) => {
-                        e.preventDefault();
-                        kavachIdInput.value = match;
-                        hideSuggestions();
-                        handleKavachIdValidation(true);
-                    });
-                    suggestionsEl.appendChild(suggestionItem);
-                });
-                $(suggestionsEl).show();
-            } else {
-                hideSuggestions();
-            }
-        } else {
-            hideSuggestions();
-            handleKavachIdValidation(false);
-        }
-
-        if (idValue.length > 0) {
-            if (skavIdLookup[idValue]) {
-                if (feedbackEl && feedbackEl.length) {
-                    if (!feedbackEl.hasClass('text-success')) {
-                        feedbackEl.text('Kavach ID found.').addClass('text-success').removeClass('text-warning text-danger').show();
-                        setTimeout(() => { if(feedbackEl.hasClass('text-success')) feedbackEl.fadeOut(); }, 2000);
-                    }
-                }
-            } else if (idValue.length === parseInt(kavachIdInput.maxLength, 10)) {
-                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
-                    feedbackEl.text('Kavach ID may not exist in master list.').addClass('text-warning').removeClass('text-success text-danger').show();
-                }
-            } else if (currentlyUsedIdsInOtherCards.has(idValue)) {
-                 if (feedbackEl && feedbackEl.length) {
-                    feedbackEl.text('This Kavach ID is already used.').addClass('text-danger').removeClass('text-warning text-success').show();
-                 }
-            } else {
-                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
-                    feedbackEl.text('').hide();
-                }
-            }
-        } else {
-            if (feedbackEl && feedbackEl.length) {
-                feedbackEl.text('').hide();
-            }
-        }
-    });
-
-    kavachIdInput.addEventListener('blur', () => {
-        setTimeout(() => {
-            hideSuggestions();
-            if (kavachIdInput.value.trim() !== "") {
-                handleKavachIdValidation(true);
-            } else {
-                if (feedbackEl && feedbackEl.length && !feedbackEl.hasClass('text-danger')) {
-                    feedbackEl.text('').hide();
-                }
-            }
-        }, 150);
-    });
-
-    kavachIdInput.addEventListener('keydown', (e) => {
-        const items = suggestionsEl.querySelectorAll('.list-group-item-action');
-        if (!$(suggestionsEl).is(":visible") || items.length === 0) return;
-
-        let currentFocus = -1;
-        items.forEach((item, index) => {
-            if (item.classList.contains('active')) currentFocus = index;
-        });
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            items[currentFocus]?.classList.remove('active');
-            currentFocus = (currentFocus + 1) % items.length;
-            items[currentFocus]?.classList.add('active');
-            items[currentFocus]?.scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'ArrowUp') {
-            e.preventDefault();
-            items[currentFocus]?.classList.remove('active');
-            currentFocus = (currentFocus - 1 + items.length) % items.length;
-            items[currentFocus]?.classList.add('active');
-            items[currentFocus]?.scrollIntoView({ block: 'nearest' });
-        } else if (e.key === 'Enter' && currentFocus > -1) {
-            e.preventDefault();
-            items[currentFocus]?.click();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            hideSuggestions();
-        }
-    });
-
-    document.addEventListener('click', (e) => {
-        if (!kavachIdInput.contains(e.target) && !suggestionsEl.contains(e.target)) {
-            hideSuggestions();
-        }
-    });
-
-    // These listeners are technically redundant because of inline oninput,
-    // but kept here for completeness in case inline handlers are removed.
-    const fieldsToUpdateOnInput = [
-        { selector: `#StationCode_${stationId}`, fieldName: 'StationCode', type: 'string' },
-        { selector: `#stationName_${stationId}`, fieldName: 'stationName', type: 'string' },
-        { selector: `#Latitude_${stationId}`, fieldName: 'latitude', type: 'float' },
-        { selector: `#Longtitude_${stationId}`, fieldName: 'longitude', type: 'float' },
-        { selector: `#OptimumStatic_${stationId}`, fieldName: 'optimum_static_profile_transfer', type: 'int' },
-        { selector: `#onboardSlots_${stationId}`, fieldName: 'onboard_slots', type: 'int' },
-        { selector: `#radiusSlider_${stationId}`, fieldName: 'safe_radius_km', type: 'float' },
-        { selector: `#frequencySlider_${stationId}`, fieldName: 'allocated_frequency', type: 'int' }
-    ];
-
-    fieldsToUpdateOnInput.forEach(field => {
-        const element = cardElement.querySelector(field.selector);
-        if (element) {
-            element.addEventListener('input', () => {
-                let valueToUpdate = element.value;
-                if (field.type === 'float') {
-                    valueToUpdate = parseFloat(element.value) || 0;
-                } else if (field.type === 'int') {
-                    valueToUpdate = parseInt(element.value) || 0;
-                }
-                updateStationData(stationId, field.fieldName, valueToUpdate);
-            });
-        }
-    });
-}
-
-// This function clears all planning stations from the UI and global state
-export function clearPlanningStations() { // Exported for HTML button click
-    if (confirm('Are you sure you want to clear all planning stations?')) {
-        currentPlanningStations = []; // Clear the global array
-        savePlanningStationsToLocalStorage(); // Clear from localStorage
-        document.getElementById('stationContainer').innerHTML = ''; // Clear cards from DOM
-        stationCounter = 0; // Reset counter
-        updateStationNumbers(); // Re-index (will effectively clear numbers)
-        document.getElementById('allocationResults').style.display = 'none'; // Hide results
-        refreshMap(); // Update map to remove all planning stations
+        savePlanningStationsToLocalStorage();
+        refreshMap();
+        console.log("Input cards expanded, submit section hidden.");
     }
 }
 
-// This function prepares the UI for manual input, usually on initial load or reset
-export function showManual() { // Exported for initial setup from main.js
-    $('#uploadSection').hide();
-    $('#stationContainer').empty().show();
+export function showManual() {
+    const stationContainer = document.getElementById('stationContainer');
+    const manualInputActions = document.getElementById('manualInputActions');
+    const submitContainer = document.getElementById('submitContainer');
+    const allocationResults = document.getElementById('allocationResults');
+    const resultsList = document.getElementById('results-list');
+    const finishManualInputBtn = document.getElementById('finishManualInputBtn');
 
-    $('#manualInputActions').show();
-    $('#addStationBtn').show();
-    $('#finishManualInputBtn').text('Finish & Preview Stations').hide();
+    if (stationContainer) stationContainer.style.display = 'flex';
+    if (manualInputActions) manualInputActions.style.display = 'flex';
+    if (submitContainer) submitContainer.style.display = 'none';
     
-    $('#submitContainer').hide();
-    $('#submitArrowGuide').hide();
+    if (allocationResults) allocationResults.style.display = 'none';
+    if (resultsList) resultsList.innerHTML = '';
     
-    currentPlanningStations = []; 
-    stationCounter = 0; 
-    savePlanningStationsToLocalStorage(); // Ensure localStorage is cleared too
-    document.getElementById('allocationResults').style.display = 'none';
+    if (finishManualInputBtn) finishManualInputBtn.textContent = 'Finish & Preview Stations';
+    if (stationContainer) stationContainer.classList.remove('collapsed-view');
+
+    currentPlanningStations.forEach(station => {
+        station.isCollapsed = false;
+        const collapseElement = document.getElementById(`collapse_${station.id}`);
+        if (collapseElement) {
+            const bsCollapse = new bootstrap.Collapse(collapseElement, { toggle: false });
+            bsCollapse.show();
+        }
+        const headerElement = document.getElementById(`headerFor_${station.id}`);
+        if (headerElement) {
+            const icon = headerElement.querySelector('.fas'); // Find any FontAwesome icon
+            if (icon) {
+                icon.classList.remove('fa-chevron-down');
+                icon.classList.add('fa-chevron-up');
+            }
+        }
+    });
+    refreshMap();
 }
 
 // --- Local Storage Management ---
-export function savePlanningStationsToLocalStorage() { // Exported for use by other modules
+export function savePlanningStationsToLocalStorage() {
     localStorage.setItem('planningStations', JSON.stringify(currentPlanningStations));
     console.log("Planning stations saved to localStorage.");
 }
 
-export function loadPlanningStationsFromLocalStorage() { // Exported for initial setup from main.js
+export function loadPlanningStationsFromLocalStorage() {
     const storedStations = localStorage.getItem('planningStations');
     if (storedStations) {
         const loaded = JSON.parse(storedStations);
-        currentPlanningStations = []; // Clear array before loading to prevent duplicates on re-load
+        currentPlanningStations = [];
+        if (loaded.length > 0) {
+            stationCounter = Math.max(...loaded.map(s => s.station_number || 0)) + 1;
+        } else {
+            stationCounter = 0;
+        }
+
         loaded.forEach(stationData => {
-            _createStationCardFromLoadedData(stationData); // Use internal helper
+            _createStationCardFromLoadedData(stationData);
         });
-        updateStationNumbers(); // Ensure correct numbering and data.station_number
+        updateStationNumbers();
         console.log("Planning stations loaded from localStorage.");
     } else {
         currentPlanningStations = [];
+        stationCounter = 0;
         console.log("No planning stations found in localStorage.");
     }
 }
@@ -816,79 +649,255 @@ export function loadPlanningStationsFromLocalStorage() { // Exported for initial
 function _createStationCardFromLoadedData(stationData) {
     const stationId = stationData.id || generateUniqueStationId();
 
-    currentPlanningStations.push({ ...stationData, id: stationId });
+    if (!currentPlanningStations.some(s => s.id === stationId)) {
+        currentPlanningStations.push({ ...stationData, id: stationId });
+    } else {
+        const existingIndex = currentPlanningStations.findIndex(s => s.id === stationId);
+        if (existingIndex !== -1) {
+            currentPlanningStations[existingIndex] = { ...stationData, id: stationId };
+        }
+    }
 
     const container = document.getElementById("stationContainer");
-    const cardWrapper = document.createElement("div");
-    cardWrapper.className = "col-12 col-sm-6 col-md-4 mb-3 station-card";
-    cardWrapper.id = `card_${stationId}`;
+    if (!container) {
+        console.error("Station container not found. Cannot create card for loaded data.");
+        return;
+    }
 
-    cardWrapper.innerHTML = `
-        <div class="card shadow p-0 h-100">
-            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
-                id="headerFor_${stationId}"
-                data-bs-toggle="collapse"
-                data-bs-target="#collapse_${stationId}"
-                aria-expanded="false" <!-- Start collapsed for loaded cards -->
-                aria-controls="collapse_${stationId}"
-                style="cursor: pointer;">
-                <span class="station-title-text">Station ${currentPlanningStations.length}</span>
-                <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); window.removeStation('${stationId}')"></button>
-            </div>
-            <div class="collapse" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}"> <!-- Start collapsed for loaded cards -->
-                <div class="card-body">
-                    <label class="form-label">Stationary Kavach ID:</label>
-                    <div class="input-wrapper">
-                        <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off" required value="${stationData.KavachID || ''}">
-                        <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
-                    </div>
-                    <div class="form-text kavach-id-feedback mb-2"></div>
+    const cardWrapperHtml = `
+        <div class="col-12 col-sm-6 col-md-4 mb-3 station-card" id="card_${stationId}">
+            <div class="card shadow p-0 h-100">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
+                    id="headerFor_${stationId}"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#collapse_${stationId}"
+                    aria-expanded="${stationData.isCollapsed ? 'false' : 'true'}"
+                    aria-controls="collapse_${stationId}"
+                    style="cursor: pointer;">
+                    <span class="station-title-text">Station ${stationData.station_number || currentPlanningStations.length}</span>
+                    <button type="button" class="btn-close btn-close-white" aria-label="Close" onclick="event.stopPropagation(); window.removeStation('${stationId}')"></button>
+                </div>
+                <div class="collapse ${stationData.isCollapsed ? '' : 'show'}" id="collapse_${stationId}" aria-labelledby="headerFor_${stationId}">
+                    <div class="card-body">
+                        <label class="form-label">Stationary Kavach ID:</label>
+                        <div class="input-wrapper">
+                            <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off" required value="${stationData.KavachID || ''}">
+                            <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
+                        </div>
+                        <div class="form-text kavach-id-feedback mb-2"></div>
 
-                    <label class="form-label">Station Code:</label>
-                    <input type="text" class="form-control mb-2 station-code-input" id="StationCode_${stationId}" placeholder="Enter Station Code" required oninput="window.updateStationData('${stationId}', 'StationCode', this.value)" value="${stationData.StationCode || ''}">
+                        <label class="form-label">Station Code:</label>
+                        <input type="text" class="form-control mb-2 station-code-input" id="StationCode_${stationId}" placeholder="Enter Station Code" required oninput="window.updateStationData('${stationId}', 'StationCode', this.value)" value="${stationData.StationCode || ''}">
 
-                    <label class="form-label">Station Name:</label>
-                    <input type="text" class="form-control mb-2 station-name-input" id="stationName_${stationId}" placeholder="Auto-filled or manual entry" required oninput="window.updateStationData('${stationId}', 'stationName', this.value)" value="${stationData.stationName || ''}">
+                        <label class="form-label">Station Name:</label>
+                        <input type="text" class="form-control mb-2 station-name-input" id="stationName_${stationId}" placeholder="Auto-filled or manual entry" required oninput="window.updateStationData('${stationId}', 'stationName', this.value)" value="${stationData.stationName || ''}">
 
-                    <label class="form-label">Stationary Unit Tower Latitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude_${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="window.updateStationData('${stationId}', 'latitude', this.value)" value="${stationData.latitude || ''}">
+                        <label class="form-label">Stationary Unit Tower Latitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 latitude-input" id="Latitude_${stationId}" placeholder="Auto-filled or manual entry" required max="37.100" min="8.06666667" oninput="window.updateStationData('${stationId}', 'latitude', this.value)" value="${stationData.latitude || ''}">
 
-                    <label class="form-label">Stationary Unit Tower Longitude:</label>
-                    <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="window.updateStationData('${stationId}', 'longitude', this.value)" value="${stationData.longitude || ''}">
+                        <label class="form-label">Stationary Unit Tower Longitude:</label>
+                        <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="window.updateStationData('${stationId}', 'longitude', this.value)" value="${stationData.longitude || ''}">
 
-                    <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                    <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)" value="${stationData.optimum_static_profile_transfer || 0}">
+                        <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)" value="${stationData.optimum_static_profile_transfer || 0}">
 
-                    <label class="form-label">Onboard Slots:</label>
-                    <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)" value="${stationData.onboard_slots || 0}">
-                    
-                    <div class="mb-2">
-                        <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${stationData.safe_radius_km}</span></label>
-                        <input type="range"
-                            class="form-range"
-                            id="radiusSlider_${stationId}"
-                            min="7"
-                            max="25"
-                            step="1"
-                            value="${stationData.safe_radius_km}"
-                            oninput="document.getElementById('radius-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'safe_radius_km', parseFloat(this.value))">
-                    </div>
+                        <label class="form-label">Onboard Slots:</label>
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)" value="${stationData.onboard_slots || 0}">
+                        
+                        <div class="mb-2">
+                            <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${stationData.safe_radius_km}</span></label>
+                            <input type="range"
+                                class="form-range"
+                                id="radiusSlider_${stationId}"
+                                min="7"
+                                max="25"
+                                step="1"
+                                value="${stationData.safe_radius_km}"
+                                oninput="document.getElementById('radius-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'safe_radius_km', parseFloat(this.value))">
+                        </div>
 
-                    <div class="mb-2">
-                        <label class="form-label">Frequency: <span id="frequency-value-${stationId}">${stationData.allocated_frequency}</span></label>
-                        <input type="range"
-                            class="form-range"
-                            id="frequencySlider_${stationId}"
-                            min="1"
-                            max="7"
-                            step="1"
-                            value="${stationData.allocated_frequency}"
-                            oninput="document.getElementById('frequency-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'allocated_frequency', parseInt(this.value))">
+                        <div class="mb-2">
+                            <label class="form-label">Frequency: <span id="frequency-value-${stationId}">${stationData.allocated_frequency}</span></label>
+                            <input type="range"
+                                class="form-range"
+                                id="frequencySlider_${stationId}"
+                                min="1"
+                                max="7"
+                                step="1"
+                                value="${stationData.allocated_frequency}"
+                                oninput="document.getElementById('frequency-value-${stationId}').textContent = this.value; window.updateStationData('${stationId}', 'allocated_frequency', parseInt(this.value))">
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     `;
-    container.appendChild(cardWrapper);
-    _setupKavachIdListener(cardWrapper, stationId);
+    
+    $(container).append(cardWrapperHtml);
+    const $newCardWrapper = $(`#card_${stationId}`); // Get the newly added card as a jQuery object
+
+    _setupKavachIdListener($newCardWrapper, stationId);
 }
+
+// New function to render all station cards based on currentPlanningStations array
+function renderStationCards() {
+    const container = document.getElementById("stationContainer");
+    if (container) {
+        $(container).empty(); // Clear existing cards using jQuery
+    }
+    currentPlanningStations.forEach(stationData => {
+        _createStationCardFromLoadedData(stationData);
+    });
+    updateStationNumbers();
+}
+
+
+function _setupKavachIdListener(cardWrapper, stationId) {
+    // cardWrapper is now expected to be a jQuery object
+    const kavachIdInput = cardWrapper.find(`#KavachID_${stationId}`);
+    const suggestionsBox = cardWrapper.find(`#suggestions_kavach_${stationId}`);
+    const kavachIdFeedback = cardWrapper.find('.kavach-id-feedback');
+
+    if (kavachIdInput.length === 0 || suggestionsBox.length === 0 || kavachIdFeedback.length === 0) {
+        console.warn(`Missing elements for Kavach ID listener setup for station ${stationId}.`);
+        return;
+    }
+
+    kavachIdInput.on('input', function() {
+        const query = this.value;
+        suggestionsBox.empty();
+        kavachIdInput.removeClass('is-invalid is-valid');
+        kavachIdFeedback.hide().removeClass('text-success text-warning text-danger').text('');
+
+        if (query.length === 0) {
+            kavachIdInput.val('');
+            updateStationData(stationId, 'KavachID', '');
+            updateStationData(stationId, 'stationName', '');
+            updateStationData(stationId, 'StationCode', '');
+            updateStationData(stationId, 'latitude', '');
+            updateStationData(stationId, 'longitude', '');
+            return;
+        }
+
+        const filtered = Object.keys(skavIdLookup).filter(id => id.startsWith(query));
+
+        if (filtered.length > 0) {
+            suggestionsBox.show();
+            filtered.forEach(id => {
+                const item = $(`<button type="button" class="list-group-item list-group-item-action">${id} - ${skavIdLookup[id].name}</button>`);
+                item.on('click', () => {
+                    kavachIdInput.val(id);
+                    suggestionsBox.hide();
+                    _fillStationDetails(stationId, id);
+                });
+                suggestionsBox.append(item);
+            });
+        } else {
+            suggestionsBox.hide();
+            _clearStationDetails(stationId);
+            if (query.length > 0) {
+                kavachIdInput.addClass('is-invalid');
+                kavachIdFeedback.text('Kavach ID not found in master list.').addClass('text-danger').show();
+            }
+        }
+        window.updateStationData(stationId, 'KavachID', query);
+    });
+
+    kavachIdInput.on('blur', function() {
+        setTimeout(() => suggestionsBox.hide(), 100);
+        
+        const finalKavachId = this.value;
+        if (finalKavachId && skavIdLookup[finalKavachId]) {
+            _fillStationDetails(stationId, finalKavachId);
+            kavachIdInput.addClass('is-valid');
+        } else if (finalKavachId) {
+            _clearStationDetails(stationId);
+            kavachIdInput.addClass('is-invalid');
+            kavachIdFeedback.text('Kavach ID not found in master list.').addClass('text-danger').show();
+        } else {
+            _clearStationDetails(stationId);
+            kavachIdInput.removeClass('is-invalid is-valid');
+            kavachIdFeedback.hide();
+        }
+    });
+}
+
+function _fillStationDetails(stationId, kavachId) {
+    const details = skavIdLookup[kavachId];
+    if (details) {
+        $(`#stationName_${stationId}`).val(details.name);
+        $(`#StationCode_${stationId}`).val(details.code);
+        $(`#Latitude_${stationId}`).val(details.latitude);
+        $(`#Longtitude_${stationId}`).val(details.longitude);
+
+        const station = currentPlanningStations.find(s => s.id === stationId);
+        if (station) {
+            station.KavachID = kavachId;
+            station.stationName = details.name;
+            station.StationCode = details.code;
+            station.latitude = details.latitude;
+            station.longitude = details.longitude;
+        }
+    }
+}
+
+function _clearStationDetails(stationId) {
+    const station = currentPlanningStations.find(s => s.id === stationId);
+    if (station) {
+        station.stationName = '';
+        station.StationCode = '';
+        station.latitude = '';
+        station.longitude = '';
+    }
+    $(`#stationName_${stationId}`).val('');
+    $(`#StationCode_${stationId}`).val('');
+    $(`#Latitude_${stationId}`).val('');
+    $(`#Longtitude_${stationId}`).val('');
+}
+
+// Internal function to validate a single input field
+function validateInput(inputElement, showAlert = true) {
+    const input = $(inputElement);
+    const value = input.val().trim();
+    const type = input.attr('type');
+    const required = input.prop('required');
+    const min = parseFloat(input.attr('min'));
+    const max = parseFloat(input.attr('max'));
+    const fieldName = input.prev('label').text() || input.attr('placeholder') || 'Field';
+
+    input.removeClass('is-invalid is-valid');
+
+    if (required && !value) {
+        input.addClass('is-invalid');
+        if (showAlert) alert(`${fieldName} is required.`);
+        return false;
+    }
+
+    if (type === 'number') {
+        const numValue = parseFloat(value);
+        if (isNaN(numValue)) {
+            if (required || value) {
+                input.addClass('is-invalid');
+                if (showAlert) alert(`${fieldName} must be a valid number.`);
+                return false;
+            }
+        } else {
+            if (min !== undefined && !isNaN(min) && numValue < min) {
+                input.addClass('is-invalid');
+                if (showAlert) alert(`${fieldName} must be at least ${min}.`);
+                return false;
+            }
+            if (max !== undefined && !isNaN(max) && numValue > max) {
+                input.addClass('is-invalid');
+                if (showAlert) alert(`${fieldName} must be at most ${max}.`);
+                return false;
+            }
+        }
+    }
+
+    if (value) {
+        input.addClass('is-valid');
+    }
+    return true;
+}
+

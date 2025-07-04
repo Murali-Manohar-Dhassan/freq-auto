@@ -1,48 +1,22 @@
 // main.js
-// This is the entry point for your frontend JavaScript.
-// It orchestrates the loading and initialization of other modules.
+// This file is the entry point for the frontend application.
+// It handles initial setup, loading data, and orchestrating other modules.
 
-import { 
-    loadSkavIdLookup, 
-    loadPlanningStationsFromLocalStorage, 
-    showManual,
-    addNewStation,
-    removeStation, // Import removeStation
-    updateStationData, // Import updateStationData
-    clearPlanningStations, // Import clearPlanningStations
-    toggleCardCollapse // Import new toggle function
-} from './ui_logic.js';
-
-import { 
-    refreshMap, 
-    runAllocation, // Import runAllocation
-    submitData // Import submitData
-} from './map_logic.js';
-
-// Expose functions globally for HTML onclick attributes.
-// This is necessary because onclick in HTML is a global scope, not a module scope.
-window.addNewStation = addNewStation;
-window.removeStation = removeStation;
-window.updateStationData = updateStationData;
-window.runAllocation = runAllocation;
-window.submitData = submitData;
-window.clearPlanningStations = clearPlanningStations;
-window.toggleCardCollapse = toggleCardCollapse; // Expose the new function
-
+// Import functions from ui_logic.js
+import { loadSkavIdLookup, loadPlanningStationsFromLocalStorage, showManual } from './ui_logic.js';
+// Import refreshMap from map_logic.js
+import { refreshMap } from './map_logic.js';
 
 // --- DOM Ready / Initialization ---
 document.addEventListener('DOMContentLoaded', function () {
+    // Show the floating brand after DOM is loaded
     document.getElementById('floatingBrand').classList.add('show');
+
+    // Load S-Kavach ID lookup data first, then proceed with UI initialization
     loadSkavIdLookup(() => {
         console.log("S-Kavach ID lookup loaded. Initializing UI.");
-        loadPlanningStationsFromLocalStorage(); // Load any saved stations first
-        showManual(); // Set initial view and prepare UI
-        refreshMap(); // Initial map refresh. This will now display loaded stations or an empty map.
+        loadPlanningStationsFromLocalStorage(); // Load any saved planning stations
+        showManual(); // Set initial view and prepare UI (e.g., show add station button)
+        refreshMap(); // Initial map refresh to display loaded stations or placeholder
     });
-
-    // Attach toggle event to the finishManualInputBtn
-    const finishBtn = document.getElementById('finishManualInputBtn');
-    if (finishBtn) {
-        finishBtn.addEventListener('click', window.toggleCardCollapse);
-    }
 });

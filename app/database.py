@@ -2,142 +2,153 @@ import sqlite3
 import os
 import sys
 import shutil
+from flask import g # Import g for application context, useful for managing connections
+
+# Define the database file name
+DATABASE_FILE_NAME = "approved_stations.db"
 
 def get_db_path():
-    # Destination path to store/write DB during runtime
-    user_data_path = os.path.join(os.getcwd(), "approved_stations.db")
+    """
+    Determines the path for the SQLite database file.
+    It places the DB in the current working directory for regular runs.
+    For PyInstaller bundles, it copies a bundled DB if it doesn't exist in user data.
+    """
+    # Path in the current working directory (where main.py is run)
+    user_data_path = os.path.join(os.getcwd(), DATABASE_FILE_NAME)
 
+    # Check if running in a PyInstaller bundle
     if getattr(sys, 'frozen', False):
-        # Running in PyInstaller
-        bundle_db_path = os.path.join(sys._MEIPASS, "app", "approved_stations.db")
+        # Path to the bundled DB inside the PyInstaller executable
+        bundle_db_path = os.path.join(sys._MEIPASS, "app", DATABASE_FILE_NAME)
 
-        # Copy DB only if it doesn't exist already
+        # Copy the bundled DB to the user data path ONLY if it doesn't exist
         if not os.path.exists(user_data_path):
+            print(f"Copying bundled DB from {bundle_db_path} to {user_data_path}")
             shutil.copyfile(bundle_db_path, user_data_path)
+        else:
+            print(f"Using existing DB at {user_data_path}")
+    else:
+        print(f"Using DB at: {user_data_path}")
 
     return user_data_path
 
+# Global variable for the database file path
 DATABASE_FILE = get_db_path()
 
+def get_db_connection():
+    """
+    Helper to get a database connection that returns dict-like rows.
+    Uses Flask's 'g' object to store and reuse the connection within a request context.
+    """
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE_FILE)
+        g.db.row_factory = sqlite3.Row # This allows accessing columns by name (e.g., row['name'])
+        print("DEBUG: New DB connection opened.") # Debug print
+    return g.db
+
+def close_db(e=None):
+    """
+    Closes the database connection at the end of the request.
+    Registered with app.teardown_appcontext in routes.py or main.py.
+    """
+    db = g.pop('db', None) # Get the db connection from g, remove it
+    if db is not None:
+        db.close()
+        print("DEBUG: DB connection closed.") # Debug print
+
 def db_init():
-    """Initializes the database and creates/updates the table schema."""
-    conn = sqlite3.connect(DATABASE_FILE, check_same_thread=False)
-    c = conn.cursor()
+    """
+    Initializes the database and creates both 'approved_stations' and 'planning_stations' tables
+    if they don't already exist.
+    """
+    conn = get_db_connection() # Get connection from g, ensures it's within app context
+    cursor = conn.cursor()
 
-    # --- Schema Migration Logic ---
-    c.execute("PRAGMA table_info(stations)")
-    existing_columns = {row[1]: row[2] for row in c.fetchall()} # Store as name:type dict
-
-    # Define the target schema
-    target_schema = {
-        'id': 'INTEGER', 'name': 'TEXT', 'latitude': 'REAL', 'longitude': 'REAL',
-        'safe_radius_km': 'REAL', 'status': 'TEXT', 'allocated_frequency': 'INTEGER',
-        'static_slots_req': 'INTEGER', 'onboard_slots_req': 'INTEGER',
-        'allocated_p1': 'TEXT', 'allocated_p2': 'TEXT', 'allocated_p3': 'TEXT',
-        'allocated_p4': 'TEXT', 'allocated_p5': 'TEXT', 'allocated_p6': 'TEXT',
-        'timeslot': 'TEXT', # << CHANGED to TEXT
-        'Area_type': 'TEXT', 'SKac_ID': 'TEXT', 'Station_Code': 'TEXT'
-    }
-
-    # Check if migration is needed (table exists but schema is outdated)
-    if 'stations' in [row[0] for row in c.execute("SELECT name FROM sqlite_master WHERE type='table'").fetchall()]:
-        if existing_columns.get('timeslot') != 'TEXT':
-            print("Timeslot column type is not TEXT. Rebuilding table...")
-            # 1. Rename old table
-            c.execute("ALTER TABLE stations RENAME TO stations_old")
-
-            # 2. Create the new table with the correct schema
-            create_new_table(c)
-
-            # 3. Copy data from old to new. We only copy columns that exist in both tables.
-            c.execute("PRAGMA table_info(stations_old)")
-            old_cols = [row[1] for row in c.fetchall()]
-            
-            common_cols = [col for col in target_schema if col in old_cols]
-
-            # Special handling for timeslot: convert integer to a default string range
-            select_cols_str = ', '.join([f"CAST({col} AS TEXT) || '-45'" if col == 'timeslot' else col for col in common_cols])
-
-            try:
-                c.execute(f"""
-                    INSERT INTO stations ({', '.join(common_cols)}) 
-                    SELECT {select_cols_str}
-                    FROM stations_old
-                """)
-                print("Data migrated to new schema. Old integer timeslots converted to a default range.")
-            except sqlite3.Error as e:
-                 print(f"Could not migrate all data: {e}")
-
-            # 4. Drop the old table
-            c.execute("DROP TABLE stations_old")
-    else:
-        # Table doesn't exist, create it fresh
-        create_new_table(c)
-
-
-    # Add dummy data if the table is empty
-    c.execute("SELECT count(*) FROM stations")
-    if c.fetchone()[0] == 0:
-        print("Database is empty. Populating with initial test data...")
-        try:
-            # Note: timeslot is now a TEXT field representing a range
-            stations_to_add = [
-                ('SECUNDERABAD_TWR', 17.44, 78.50, 50.0, 'approved', 1, '2-14', 'Urban', 'SK001', 'SC-TWR'),
-                ('HYDERABAD_TWR', 17.23, 78.43, 60.0, 'approved', 2, '15-28', 'Suburban', 'SK002', 'HYD-TWR')
-            ]
-            c.executemany("""
-                INSERT INTO stations 
-                (name, latitude, longitude, safe_radius_km, status, allocated_frequency, timeslot, Area_type, SKac_ID, Station_Code) 
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """, stations_to_add)
-            
-            print(f"✅ Successfully added {len(stations_to_add)} initial stations.")
-        except sqlite3.IntegrityError:
-            print("Could not add initial stations, they might already exist.")
-            pass
-            
-    conn.commit()
-    conn.close()
-    print("✅ Database initialized successfully.")
-    print("Using database at:", DATABASE_FILE)
-
-
-def create_new_table(cursor):
-    """Creates the stations table with the latest schema."""
+    # Create approved_stations table
     cursor.execute('''
-        CREATE TABLE stations (
+        CREATE TABLE IF NOT EXISTS approved_stations (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             name TEXT UNIQUE NOT NULL,
+            Station_Code TEXT,
+            SKac_ID TEXT UNIQUE,
             latitude REAL NOT NULL,
             longitude REAL NOT NULL,
-            safe_radius_km REAL NOT NULL,
-            status TEXT NOT NULL,
+            safe_radius_km REAL,
+            status TEXT,
             allocated_frequency INTEGER,
             static_slots_req INTEGER,
             onboard_slots_req INTEGER,
             allocated_p1 TEXT, allocated_p2 TEXT, allocated_p3 TEXT,
             allocated_p4 TEXT, allocated_p5 TEXT, allocated_p6 TEXT,
             timeslot TEXT,
-            Area_type TEXT,
-            SKac_ID TEXT,
-            Station_Code TEXT
+            Area_type TEXT
         )
     ''')
-    print("Table 'stations' created with the new TEXT timeslot schema.")
+    print("DEBUG: 'approved_stations' table checked/created.")
 
+    # Create planning_stations table (same structure as approved_stations)
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS planning_stations (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            Station_Code TEXT,
+            SKac_ID TEXT UNIQUE,
+            latitude REAL NOT NULL,
+            longitude REAL NOT NULL,
+            safe_radius_km REAL,
+            status TEXT,
+            allocated_frequency INTEGER,
+            static_slots_req INTEGER,
+            onboard_slots_req INTEGER,
+            allocated_p1 TEXT, allocated_p2 TEXT, allocated_p3 TEXT,
+            allocated_p4 TEXT, allocated_p5 TEXT, allocated_p6 TEXT,
+            timeslot TEXT,
+            Area_type TEXT
+        )
+    ''')
+    print("DEBUG: 'planning_stations' table checked/created.")
 
-def get_db_connection():
-    """Helper to get a database connection that returns dict-like rows."""
-    conn = sqlite3.connect(DATABASE_FILE, check_same_thread=False)
-    conn.row_factory = sqlite3.Row
-    return conn
+    conn.commit()
+    print("DEBUG: Database schema initialization complete.")
 
 def get_approved_stations_from_db():
+    """Fetches all stations from the 'approved_stations' table."""
     conn = get_db_connection()
-    approved_stations = conn.execute("SELECT id, name, latitude, longitude, safe_radius_km, allocated_frequency FROM stations WHERE status = 'approved'").fetchall()
-    conn.close()
-    return approved_stations
+    # No need to filter by status='approved' here, as the table itself implies approved.
+    # If 'status' column is used for other states within this table, filter as needed.
+    stations = conn.execute("SELECT * FROM approved_stations").fetchall()
+    # The connection is managed by g and will be closed by close_db at end of request
+    return stations
 
-# You can run this file directly to initialize/update the database
+def get_planning_stations_from_db():
+    """Fetches all stations from the 'planning_stations' table."""
+    conn = get_db_connection()
+    stations = conn.execute("SELECT * FROM planning_stations").fetchall()
+    # The connection is managed by g and will be closed by close_db at end of request
+    return stations
+
+# This block is for direct execution of the script for initial DB setup
 if __name__ == '__main__':
-    db_init()
+    # When running directly, Flask's app context isn't available,
+    # so we create a temporary one to allow db_init to use get_db_connection.
+    # This is for standalone database setup, not for when Flask app is running.
+    # In main.py, db_init is called within app.app_context().
+    print("Running db_init directly...")
+    # Simulate app context for direct run
+    try:
+        # Create a dummy Flask app to get an app context
+        temp_app = Flask(__name__)
+        temp_app.config['TESTING'] = True # Mark as testing to avoid some overhead
+        with temp_app.app_context():
+            db_init()
+            # If you want to add dummy data when running directly:
+            # conn = get_db_connection()
+            # cursor = conn.cursor()
+            # cursor.execute(...) # Add dummy data here if needed for direct run
+            # conn.commit()
+        print("Direct db_init run complete.")
+    except Exception as e:
+        print(f"Error during direct db_init run: {e}")
+        import traceback
+        traceback.print_exc()
+

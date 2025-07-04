@@ -224,7 +224,6 @@
         <div class="input-section">
             <div class="row justify-content-center mb-4">
                 <div class="col-md-8 col-lg-6 d-flex justify-content-center gap-2">
-                    <!-- Moved the "Finish/Collapse" button here for better UX control -->
                     <button class="btn btn-info flex-grow-1 shadow-sm" id="finishManualInputBtn"
                         onclick="window.toggleCardCollapse()">Finish & Preview Stations</button>
                 </div>
@@ -236,26 +235,11 @@
                 <div class="col-md-8 col-lg-6 text-center d-flex flex-wrap gap-2">
                     <button class="btn btn-primary flex-grow-1 mb-2 mb-md-0 shadow-sm" id="addStationBtn"
                         onclick="window.addNewStation()">Add Station</button>
-                    <button class="btn btn-success flex-grow-1 shadow-sm" onclick="window.runAllocation()">Run Allocation</button>
+                    <!-- Removed Run Allocation button -->
                     <button class="btn btn-warning flex-grow-1 shadow-sm" onclick="window.clearPlanningStations()">Clear All Planning</button>
                 </div>
             </div>
 
-            <!-- Allocation Results Section -->
-            <div class="row mt-4" id="allocationResults" style="display: none;">
-                <div class="col-md-12">
-                    <div class="card shadow-sm">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0">Allocation Results</h5>
-                        </div>
-                        <div class="card-body">
-                            <ul id="results-list" class="list-group list-group-flush">
-                                <!-- Allocation results will be populated here -->
-                            </ul>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div class="row mt-4" id="submitContainer" style="display: none;">
                 <div class="col-md-10 mx-auto text-center position-relative">
@@ -344,6 +328,8 @@
         </div>
     </div>
 
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <!-- Leaflet JavaScript -->
     <script src="{{ url_for('static', filename='lib/leaflet.js') }}"></script>
     
