@@ -31,7 +31,6 @@ def calculate_distance(lat1, lon1, lat2, lon2):
     
     return km
 
-# Helper function to parse timeslot string into a list of occupied indices (0-indexed)
 def parse_timeslot_range(timeslot_str: str) -> set[int]:
     """
     Parses a timeslot string like '2-14' into a set of 0-indexed slot integers.
@@ -146,7 +145,6 @@ def allocate_slots(
     # --- Fetch Approved Stations (only once) ---
     conn = get_db_connection()
     approved_stations = conn.execute("SELECT * FROM stations WHERE status = 'approved'").fetchall()
-    conn.close()
 
     approved_stations_list = []
     print(f"DEBUG: Found {len(approved_stations)} approved stations in DB.")
@@ -465,8 +463,7 @@ def allocate_slots(
     print("DEBUG: allocate_slots function finished.")
     return allocations_output
 
-def generate_excel(input_stations_data):
-    alloc_results = allocate_slots(input_stations_data)
+def generate_excel(alloc_results):
     print("DEBUG processing.py: \n Generating Excel file with new styling logic...")
 
     try:

@@ -1,6 +1,5 @@
 from flask import Flask, render_template, request, jsonify, send_file, session, url_for, send_from_directory
 import os
-import io
 import re
 import threading
 import pandas as pd
@@ -10,7 +9,7 @@ import json
 from app.processing import calculate_distance, calculate_all_overlaps, generate_excel, allocate_slots
 import sqlite3
 # Import db_init from app.database, and also get_db_connection, get_approved_stations_from_db, get_planning_stations_from_db
-from app.database import get_db_connection, get_approved_stations_from_db, db_init, get_planning_stations_from_db
+from app.database import get_db_connection, get_approved_stations_from_db, db_init, get_planning_stations_from_db, close_db
 import traceback
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
@@ -24,9 +23,11 @@ app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 # --- FIX: Call db_init() within the application context here ---
 with app.app_context():
     db_init()
-# --- END FIX ---
 
-# --- UPDATED: Color palette now matches your new HTML legend ---
+# --- REGISTER close_db WITH THE APPLICATION CONTEXT TEARDOWN ---
+# This ensures that the database connection is automatically closed at the end of each request.
+app.teardown_appcontext(close_db)
+
 FREQ_COLORS = {
     1: {'outline': "#F3EF18E2", 'fill': '#FFFACD'},
     2: {'outline': "#10E610B2", 'fill': '#90EE90'},
@@ -156,7 +157,10 @@ def update_map():
                 </div>
             """
         })
-    print(f"All stations for map drawing (after processing): {all_stations_for_map_drawing}")
+    #approved_count = sum(1 for s in all_stations_for_map_drawing if s.get('type') == 'approved')
+    #db_planning_count = sum(1 for s in all_stations_for_map_drawing if s.get('type') == 'db_planning')
+    #planning_count = sum(1 for s in all_stations_for_map_drawing if s.get('type') == 'planning')
+    print(f"Total Count of Station Map Data: {len(all_stations_for_map_drawing)}")
 
     all_coords = [(s['lat'], s['lon']) for s in all_stations_for_map_drawing if s['lat'] is not None and s['lon'] is not None]
     if all_coords:
@@ -306,47 +310,42 @@ def submit_data_for_excel_generation():
             return jsonify({"error": "Invalid station data received for allocation"}), 400
 
         # --- STEP 1: Run Allocation Logic ---
-        # The allocate_slots function now returns the allocated planning stations with their final details
-        # This list will contain the *results* of the allocation for the *current batch* of planning stations.
         allocated_planning_results = allocate_slots(planning_stations_data_from_frontend)
         print(f"DEBUG routes.py: Allocation results from processing.py: {allocated_planning_results}")
 
         # --- STEP 2: Persist Allocated Planning Stations to 'planning_stations' Database Table ---
-        conn = get_db_connection()
+        conn = get_db_connection() # Get the connection managed by Flask's 'g'
         cursor = conn.cursor()
         
         for station_result in allocated_planning_results:
             if station_result.get('Status') == 'Allocated':
                 try:
-                    # Use SKac_ID (Kavach ID) as the unique identifier for update/insert
                     skac_id = station_result.get("Stationary Kavach ID")
                     
-                    # Check if a station with this SKac_ID already exists in planning_stations
                     existing_station_query = cursor.execute("SELECT id FROM planning_stations WHERE SKac_ID = ?", (skac_id,)).fetchone()
                     
                     if existing_station_query:
-                        # Update existing planning station
                         station_id_to_update = existing_station_query[0]
                         cursor.execute(
                             """UPDATE planning_stations SET
                                 name=?, Station_Code=?, SKac_ID=?, latitude=?, longitude=?, safe_radius_km=?, status=?, allocated_frequency=?, timeslot=?, Area_type=?
                                 WHERE id = ?""",
                             (
-                                station_result.get("Station"), # 'Station' is the name from allocation output
+                                station_result.get("Station"),
                                 station_result.get("Station Code"),
                                 skac_id,
                                 station_result.get("Latitude"),
                                 station_result.get("Longitude"),
                                 station_result.get("SafeRadius"),
-                                station_result.get("Status"), # Should be 'Allocated'
+                                station_result.get("Status"),
                                 station_result.get("Frequency"),
-                                station_result.get("Allocated Timeslot Range"), # Persist the allocated timeslot
-                                "Allocated Planning" # Area_type for successfully allocated planning stations
+                                station_result.get("Allocated Timeslot Range"),
+                                "Allocated Planning",
+                                station_id_to_update
                             )
                         )
                         print(f"DEBUG routes.py: Updated existing planning station {station_result.get('Station')} (ID: {station_id_to_update}) in 'planning_stations' DB.")
                     else:
-                        # Insert new planning station
                         cursor.execute(
                             """INSERT INTO planning_stations (name, Station_Code, SKac_ID, latitude, longitude, safe_radius_km, status, allocated_frequency, timeslot, Area_type)
                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
@@ -360,7 +359,7 @@ def submit_data_for_excel_generation():
                                 station_result.get("Status"),
                                 station_result.get("Frequency"),
                                 station_result.get("Allocated Timeslot Range"),
-                                "Allocated Planning" # Area_type for new allocated planning stations
+                                "Allocated Planning"
                             )
                         )
                         print(f"DEBUG routes.py: Inserted new planning station {station_result.get('Station')} into 'planning_stations' DB.")
@@ -368,14 +367,16 @@ def submit_data_for_excel_generation():
                     print(f"WARNING routes.py: Could not save/update station {station_result.get('Station')} to 'planning_stations' due to integrity error (e.g., duplicate SKac_ID): {e}")
                 except Exception as e:
                     print(f"ERROR routes.py: Failed to save allocated station {station_result.get('Station')} to 'planning_stations' DB: {e}")
+                    import traceback
                     traceback.print_exc()
 
-        conn.commit()
-        conn.close()
+        conn.commit() # Commit changes to the database
+        # REMOVE THIS LINE: conn.close() # <--- THIS IS THE PROBLEM!
         print("DEBUG routes.py: All allocated planning stations processed for DB persistence in 'planning_stations'.")
 
         # --- STEP 3: Generate the Excel file using the allocated data ---
         # Pass the `allocated_planning_results` to generate_excel
+         # Ensure this import is correct
         output_filepath = generate_excel(allocated_planning_results)
         
         if output_filepath:
@@ -389,6 +390,7 @@ def submit_data_for_excel_generation():
 
     except Exception as e:
         print(f"Error in submit_data_for_excel_generation: {e}")
+        import traceback
         traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 

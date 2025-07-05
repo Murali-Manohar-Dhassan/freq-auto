@@ -2,7 +2,7 @@
 // This file handles all Leaflet map initialization, rendering, and interaction logic.
 
 // Import currentPlanningStations from ui_logic.js
-import { currentPlanningStations } from './ui_logic.js';
+import { currentPlanningStations, validateAllStationCards  } from './ui_logic.js';
 // Import India boundary GeoJSON data
 import { indiaBoundayLines } from './india_boundaries.js';
 
@@ -14,7 +14,6 @@ let activeCoverageCircle = null;
 let coverageGroupLayer;
 let overlapHighlightGroupLayer;
 let indiaBoundariesLayer;
-
 
 const HIGHLIGHT_STYLE = {
     color: 'white',
@@ -30,13 +29,13 @@ const FREQ_COLORS = {
     3: { outline: '#ff9900', fill: '#FFDAB9' },  // Orange, PeachPuff
     4: { outline: '#0066ff', fill: '#ADD8E6' },  // Blue, LightBlue
     5: { outline: '#868688', fill: '#bdbdc1' }, // Cement, Plum
-    6: { outline: '#cc0000', 'fill': '#ff5050' }, // Red, LightCoral
-    7: { outline: '#cc0099', 'fill': '#FFB6C1' }  // Pink, LightPink
+    6: { outline: '#cc0000', fill: '#ff5050' }, // Red, LightCoral
+    7: { outline: '#cc0099', fill: '#FFB6C1' }  // Pink, LightPink
 };
 const DEFAULT_MAP_COLOR = { outline: 'grey', fill: 'lightgrey' };
 
 
-// --- Loading Spinner Functions (Moved here from ui_logic.js for map-related loading) ---
+// --- Utility Functions for Loading Spinner ---
 export function showLoadingSpinner(message = "Processing... Please wait.") {
     const spinner = document.getElementById('loadingSpinnerOverlay');
     const msgElement = document.getElementById('loadingMessage');
@@ -50,6 +49,7 @@ export function hideLoadingSpinner() {
 }
 
 
+// The new and improved function to update the map with ALL planning stations
 export async function refreshMap() {
     showLoadingSpinner("Updating map visualization...");
 
@@ -57,6 +57,7 @@ export async function refreshMap() {
     const mapPlaceholder = document.getElementById('mapPlaceholder');
     const conflictWarning = document.getElementById('conflictWarning');
 
+    // This payload contains ONLY the current planning stations being managed by the UI
     const planningStationsPayload = currentPlanningStations
         .map(s => {
             const lat = parseFloat(s.latitude);
@@ -66,7 +67,8 @@ export async function refreshMap() {
             const onboardSlots = parseInt(s.onboard_slots) || 0;
 
             if (isNaN(lat) || isNaN(lon)) {
-                console.warn(`Skipping station ${s.stationName || s.id} due to invalid coordinates: Lat=${s.latitude}, Lon=${s.longitude}`);
+                // Keep this warning, it's useful for debugging invalid inputs
+                console.warn(`[refreshMap] Skipping station ${s.stationName || s.id} due to invalid coordinates in currentPlanningStations: Lat='${s.latitude}', Lon='${s.longitude}'`);
                 return null;
             }
 
@@ -85,19 +87,8 @@ export async function refreshMap() {
 
     console.log("[refreshMap] Sending payload to /api/update_map:", planningStationsPayload);
 
-    if (planningStationsPayload.length === 0 && (!mymap || mymap.getBounds().isValid() === false)) {
-        if (mymap) {
-            mymap.remove();
-            mymap = null;
-        }
-        mapidDiv.innerHTML = '';
-        mapidDiv.style.display = 'none';
-        mapPlaceholder.style.display = 'flex';
-        conflictWarning.style.display = 'none';
-        hideLoadingSpinner();
-        console.log("No valid planning stations to display on the map.");
-        return;
-    }
+    // Removed the early exit condition. The map should always try to display.
+    // The fallback logic for fitBounds will handle empty/invalid planningStationsPayload.
 
     try {
         const response = await fetch('/api/update_map', {
@@ -113,22 +104,22 @@ export async function refreshMap() {
 
         const mapData = await response.json();
         console.log("[refreshMap] Received map data from backend:", mapData);
+        // --- DEBUG POINT 1: Check allStationData from backend ---
+        console.log("[DEBUG 1] mapData.allStationData received from backend:", mapData.allStationData);
+
 
         if (mymap) {
             mymap.remove();
             mymap = null;
+            console.log("[refreshMap] Existing map removed.");
         }
 
         mapidDiv.innerHTML = '';
         mapidDiv.style.display = 'block';
         mapPlaceholder.style.display = 'none';
 
-        const initialCenter = Array.isArray(mapData.center_location) && mapData.center_location.length === 2 &&
-                                !isNaN(mapData.center_location[0]) && !isNaN(mapData.center_location[1])
-                                ? mapData.center_location : [20.5937, 78.9629];
-        const initialZoom = !isNaN(mapData.zoom_level) ? mapData.zoom_level : 6;
-
-        mymap = L.map('mapid').setView(initialCenter, initialZoom);
+        mymap = L.map('mapid');
+        console.log("[refreshMap] New map instance created.");
         
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
@@ -146,11 +137,37 @@ export async function refreshMap() {
         overlapHighlightGroupLayer = L.featureGroup().addTo(mymap);
 
 
+        // Draw ALL stations (including approved/persisted ones from mapData.allStationData)
         drawAllMapElements(mapData.allStationData, approvedGroup, planningGroup, dbPlanningGroup);
         drawInterTypeConflicts(mapData.interTypeConflicts, conflictGroup);
         drawOverlapHighlights(mapData.overlappingPairData, overlapHighlightGroup);
         drawCircles(mapData.allStationData);
+        console.log("[refreshMap] All map elements drawn.");
 
+        // Calculate bounds ONLY from the current planning stations payload for zooming
+        if (planningStationsPayload.length > 0) { // Use planningStationsPayload directly
+            const latLngsForZoom = planningStationsPayload.map(s => [parseFloat(s.lat), parseFloat(s.lon)]);
+            // Filter out invalid coordinates before creating bounds
+            const validLatLngsForZoom = latLngsForZoom.filter(ll => !isNaN(ll[0]) && !isNaN(ll[1]));
+
+            // --- DEBUG POINT 2: Check validLatLngs for fitBounds (now based on planningStationsPayload) ---
+            console.log("[DEBUG 2] validLatLngs for fitBounds (Planning Stations only):", validLatLngsForZoom);
+
+            if (validLatLngsForZoom.length > 0) {
+                const bounds = L.latLngBounds(validLatLngsForZoom);
+                // --- DEBUG POINT 3: Check calculated bounds (Planning Stations only) ---
+                console.log("[DEBUG 3] Calculated bounds (Planning Stations only):", bounds.isValid() ? bounds.toBBoxString() : 'Invalid Bounds');
+                
+                mymap.fitBounds(bounds.pad(0.2)); // Add 20% padding
+                console.log("[refreshMap] Map fitted to planning stations bounds.");
+            } else {
+                mymap.setView([20.5937, 78.9629], 6); // Fallback if planning stations have no valid coords
+                console.log("[refreshMap] No valid planning station coordinates, set to default India view.");
+            }
+        } else {
+            mymap.setView([20.5937, 78.9629], 6); // Fallback if planningStationsPayload is empty
+            console.log("[refreshMap] No planning stations, set to default India view.");
+        }
 
         L.control.layers({
             'OpenStreetMap': L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
@@ -195,6 +212,7 @@ export async function refreshMap() {
         conflictWarning.style.display = 'none';
     } finally {
         hideLoadingSpinner();
+        console.log("[refreshMap] Function finished.");
     }
 }
 
@@ -336,12 +354,14 @@ export function drawOverlapHighlights(overlapDataArray, overlapHighlightGroup) {
 
 function _boundaryStyle(feature) {
     let wt = mymap.getZoom() / 4;
-    switch (feature.properties.boundary) {
-        case 'claimed':
-            return { color: "#666666", weight: wt, opacity: 0.8 };
-        default:
-            return { color: "lightgray", weight: wt / 2, opacity: 0.8 };
-    }
+    return {
+        color: "#3A3535",   // A blue color for highlighting (you can change this)
+        weight: wt,         // Use the calculated weight
+        opacity: 0.9,        // Adjust opacity (0.0 to 1.0)
+        fill: false,            // Set to false to disable filling the polygon
+        fillColor: null,        // Explicitly set to null (or any color, but 'fill: false' takes precedence)
+        fillOpacity: 0.0    
+    };
 }
 
 function _addIndiaBoundaries() {
@@ -375,19 +395,37 @@ function _handleZoomEnd() {
 
 export async function submitData() {
     console.log("[submitData] Starting submission process.");
-    // No direct validation here, assuming ui_logic's submitDataWrapper handles it.
-    // If this function is called directly, ensure validation is done before calling it.
+    if (!validateAllStationCards()) {
+        const messageBox = document.createElement('div');
+        messageBox.style.cssText = `
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            background-color: white; border: 2px solid orange; padding: 20px; border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2); z-index: 1000; text-align: center;
+        `;
+        messageBox.innerHTML = `
+            <p style="color: orange; font-weight: bold;">Warning</p>
+            <p>Please correct errors in station data before submitting.</p>
+            <button onclick="this.parentNode.remove()" style="background-color: #ffc107; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer;">Close</button>
+        `;
+        document.body.appendChild(messageBox);
+        console.log("[submitData] Validation failed. Aborting submission.");
+        return;
+    }
 
     const payloadStations = currentPlanningStations.map(s => ({
+        // Match keys to allocate_slots's expected input
         KavachID: s.KavachID,
         StationCode: s.StationCode,
-        name: s.stationName,
-        Latitude: parseFloat(s.latitude) || 0.0,
-        Longitude: parseFloat(s.longitude) || 0.0,
-        onboardSlots: parseInt(s.onboard_slots, 10) || 0,
-        Static: parseInt(s.optimum_static_profile_transfer, 10) || 0,
-        safe_radius_km: parseFloat(s.safe_radius_km) || 12.0,
-        allocated_frequency: parseInt(s.allocated_frequency, 10) || 4
+        name: s.stationName, // Changed from stationName to name
+        Latitude: parseFloat(s.latitude) || 0.0, // Changed from latitude to Latitude
+        Longitude: parseFloat(s.longitude) || 0.0, // Changed from longitude to Longitude
+        onboardSlots: parseInt(s.onboard_slots, 10) || 0, // Changed from onboard_slots to onboardSlots
+        Static: parseInt(s.optimum_static_profile_transfer, 10) || 0, // Changed from optimum_static_profile_transfer to Static
+        SafeRadius: parseFloat(s.safe_radius_km) || 12.0, // Changed from safe_radius_km to SafeRadius
+        // If 'allocated_frequency' is not used by allocate_slots for its core logic,
+        // you might consider removing it from the payload if not strictly necessary.
+        // If it is needed later, keep it as is.
+        allocated_frequency: parseInt(s.allocated_frequency, 10) || 1 
     }));
 
     if (payloadStations.length === 0) {
@@ -473,11 +511,9 @@ async function checkFileReady(fileUrl) {
                     setTimeout(() => {
                         window.location.href = fileUrl;
                         hideLoadingSpinner();
-                        // Import ui_logic functions dynamically to avoid circular dependency
-                        // when ui_logic also imports from map_logic.
                         import('./ui_logic.js').then(uiLogic => {
-                            uiLogic.clearPlanningStations();
-                            uiLogic.showManual();
+                            uiLogic.clearPlanningStations(); // Clear stations after successful download
+                            uiLogic.showManual(); // Show manual input section
                         });
                     }, 1000);
                 } else if (response.status === 404 || attempts >= maxAttempts) {
@@ -519,4 +555,3 @@ async function checkFileReady(fileUrl) {
     }
     poll();
 }
-

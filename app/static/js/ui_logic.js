@@ -169,7 +169,7 @@ function _createStationCard() {
                     <div class="card-body">
                         <label class="form-label">Stationary Kavach ID:</label>
                         <div class="input-wrapper">
-                            <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="10" autocomplete="off" required>
+                            <input type="text" class="form-control mb-2 kavach-id-input" id="KavachID_${stationId}" placeholder="Enter Kavach ID" oninput="this.value = this.value.replace(/[^0-9]/g, ''); window.updateStationData('${stationId}', 'KavachID', this.value)" maxlength="7" autocomplete="off" required>
                             <div class="suggestions-box list-group" id="suggestions_kavach_${stationId}"></div>
                         </div>
                         <div class="form-text kavach-id-feedback mb-2"></div>
@@ -187,10 +187,10 @@ function _createStationCard() {
                         <input type="number" step="any" class="form-control mb-2 longitude-input" id="Longtitude_${stationId}" placeholder="Auto-filled or manual entry" required max="92.100" min="68.06666667" oninput="window.updateStationData('${stationId}', 'longitude', this.value)">
 
                         <label class="form-label">Optimum no. of Simultaneous Exclusive Static Profile Transfer:</label>
-                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
+                        <input type="number" class="form-control mb-2 optimum-static-input" id="OptimumStatic_${stationId}" min="1" required oninput="window.updateStationData('${stationId}', 'optimum_static_profile_transfer', this.value)">
 
                         <label class="form-label">Onboard Slots:</label>
-                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="0" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)">
+                        <input type="number" class="form-control mb-2 onboard-slots-input" id="onboardSlots_${stationId}" min="1" required oninput="window.updateStationData('${stationId}', 'onboard_slots', this.value)">
                         
                         <div class="mb-2">
                             <label class="form-label">Radius (km): <span id="radius-value-${stationId}">${newStation.safe_radius_km}</span></label>
@@ -264,29 +264,69 @@ export function removeStation(stationIdToRemove) {
 
 // Function to update data for a specific station in the global array
 export function updateStationData(stationId, field, value) {
-    console.log(`[updateStationData] Called for ID: ${stationId}, Field: ${field}, Value: ${value}`);
-    const stationIndex = currentPlanningStations.findIndex(s => s.id === stationId);
-    if (stationIndex !== -1) {
-        if (['KavachID', 'StationCode', 'stationName'].includes(field)) {
-            currentPlanningStations[stationIndex][field] = value;
-        }
-        else if (['latitude', 'longitude', 'safe_radius_km', 'optimum_static_profile_transfer', 'onboard_slots', 'allocated_frequency'].includes(field)) {
-            if (field === 'allocated_frequency' || field === 'optimum_static_profile_transfer' || field === 'onboard_slots') {
-                currentPlanningStations[stationIndex][field] = parseInt(value) || 0;
-            } else {
-                currentPlanningStations[stationIndex][field] = parseFloat(value) || 0;
-            }
-        }
-        else {
-            currentPlanningStations[stationIndex][field] = value;
-        }
-
-        console.log(`[updateStationData] Updated station data for ${stationId}:`, currentPlanningStations[stationIndex]);
-        savePlanningStationsToLocalStorage();
-        refreshMap();
-    } else {
-        console.warn(`[updateStationData] Station with ID ${stationId} not found in currentPlanningStations array.`);
+     console.log(`[DEBUG ui_logic] updateStationData called for station ${stationId}, field ${field}, value ${value}`);
+    const station = currentPlanningStations.find(s => s.id === stationId);
+    if (!station) {
+        console.warn(`Station with ID ${stationId} not found.`);
+        return;
     }
+
+    let actualInputElement = document.getElementById(`${field}_${stationId}`);
+    // Fallback for fields whose IDs don't match the field name directly (e.g., Latitude_ instead of latitude_)
+    if (!actualInputElement) { 
+        if (field === 'latitude') actualInputElement = document.getElementById(`Latitude_${stationId}`);
+        else if (field === 'longitude') actualInputElement = document.getElementById(`Longtitude_${stationId}`);
+        else if (field === 'optimum_static_profile_transfer') actualInputElement = document.getElementById(`OptimumStatic_${stationId}`);
+        else if (field === 'onboard_slots') actualInputElement = document.getElementById(`onboardSlots_${stationId}`);
+        else if (field === 'KavachID') actualInputElement = document.getElementById(`KavachID_${stationId}`);
+        else if (field === 'StationCode') actualInputElement = document.getElementById(`StationCode_${stationId}`);
+        else if (field === 'stationName') actualInputElement = document.getElementById(`stationName_${stationId}`);
+        else if (field === 'safe_radius_km') actualInputElement = document.getElementById(`radiusSlider_${stationId}`);
+        else if (field === 'allocated_frequency') actualInputElement = document.getElementById(`frequencySlider_${stationId}`);
+    }
+
+    if (actualInputElement && actualInputElement.type === 'number') {
+        let numValue = parseFloat(value);
+        const min = parseFloat(actualInputElement.min);
+        const max = parseFloat(actualInputElement.max);
+
+        // Clamping values within min/max if they go out of range
+        if (!isNaN(min) && numValue < min) {
+            numValue = min;
+            actualInputElement.value = min; // Update input field with clamped value
+        }
+        if (!isNaN(max) && numValue > max) {
+            numValue = max;
+            actualInputElement.value = max; // Update input field with clamped value
+        }
+        station[field] = numValue; // Store the parsed number
+    } else {
+        station[field] = value; // Store the raw string value
+    }
+
+    // Call validateInput for the specific field for immediate visual feedback on that field
+    if (actualInputElement) {
+        validateInput(actualInputElement, false); // Pass false for showAlert to avoid pop-up flood
+    }
+
+    // Call validateStationCard after updating data for the specific station
+    validateStationCard(station);
+
+    // --- NEW DEBUG LOGS HERE ---
+    if (field === 'latitude' || field === 'longitude' || field === 'safe_radius_km' || field === 'allocated_frequency') {
+        console.log(`[DEBUG ui_logic] ${field} updated for Station ${stationId}. Value: '${station[field]}', Type: ${typeof station[field]}`);
+        console.log(`[DEBUG ui_logic] Current Station Data for ${stationId} before refreshMap: Lat='${station.latitude}', Lon='${station.longitude}', Radius='${station.safe_radius_km}', Freq='${station.allocated_frequency}'`);
+        // Log the entire currentPlanningStations array's coordinate data
+        const allCoords = currentPlanningStations.map(s => `(${s.latitude},${s.longitude})`).join(', ');
+        console.log(`[DEBUG ui_logic] All currentPlanningStations coords before refreshMap: [${allCoords}]`);
+    }
+    // --- END NEW DEBUG LOGS ---
+
+    // This block triggers refreshMap
+    if (field === 'safe_radius_km' || field === 'latitude' || field === 'longitude' || field === 'allocated_frequency') {
+        refreshMap();
+    }
+    savePlanningStationsToLocalStorage();
 }
 
 // Function to update the displayed station numbers on the cards
@@ -737,8 +777,16 @@ function _createStationCardFromLoadedData(stationData) {
     const $newCardWrapper = $(`#card_${stationId}`); // Get the newly added card as a jQuery object
 
     _setupKavachIdListener($newCardWrapper, stationId);
+    
+    // *** NEW: Validate the newly created card after it's rendered and data populated ***
+    const newlyAddedStationObject = currentPlanningStations.find(s => s.id === stationId);
+    if (newlyAddedStationObject) {
+        // You might want to delay this slightly if the browser needs to fully render inputs
+        // or just rely on updateStationData's call if the values are being set one by one.
+        // For simplicity, calling it directly here.
+        validateStationCard(newlyAddedStationObject);
+    }
 }
-
 // New function to render all station cards based on currentPlanningStations array
 function renderStationCards() {
     const container = document.getElementById("stationContainer");
@@ -751,9 +799,7 @@ function renderStationCards() {
     updateStationNumbers();
 }
 
-
 function _setupKavachIdListener(cardWrapper, stationId) {
-    // cardWrapper is now expected to be a jQuery object
     const kavachIdInput = cardWrapper.find(`#KavachID_${stationId}`);
     const suggestionsBox = cardWrapper.find(`#suggestions_kavach_${stationId}`);
     const kavachIdFeedback = cardWrapper.find('.kavach-id-feedback');
@@ -779,7 +825,16 @@ function _setupKavachIdListener(cardWrapper, stationId) {
             return;
         }
 
-        const filtered = Object.keys(skavIdLookup).filter(id => id.startsWith(query));
+        // Get Kavach IDs already used in other planning stations
+        const usedKavachIds = new Set(currentPlanningStations
+            .filter(s => s.id !== stationId) // Exclude the current station
+            .map(s => s.KavachID)
+            .filter(id => id) // Filter out empty or null IDs
+        );
+
+        const filtered = Object.keys(skavIdLookup).filter(id => {
+            return id.startsWith(query) && !usedKavachIds.has(id); // Filter out already used IDs
+        });
 
         if (filtered.length > 0) {
             suggestionsBox.show();
@@ -789,28 +844,40 @@ function _setupKavachIdListener(cardWrapper, stationId) {
                     kavachIdInput.val(id);
                     suggestionsBox.hide();
                     _fillStationDetails(stationId, id);
+                    window.updateStationData(stationId, 'KavachID', id); // Ensure data is updated on selection
+                    kavachIdInput.addClass('is-valid'); // Mark as valid after selection
+                    kavachIdFeedback.hide(); // Hide any previous feedback
                 });
                 suggestionsBox.append(item);
             });
         } else {
             suggestionsBox.hide();
             _clearStationDetails(stationId);
+            // Only show 'not found' if query is not empty and no suggestions were found
             if (query.length > 0) {
                 kavachIdInput.addClass('is-invalid');
-                kavachIdFeedback.text('Kavach ID not found in master list.').addClass('text-danger').show();
+                kavachIdFeedback.text('Kavach ID not found in master list or already used.').addClass('text-danger').show();
             }
         }
-        window.updateStationData(stationId, 'KavachID', query);
+        window.updateStationData(stationId, 'KavachID', query); // Keep this to update the station data as user types
     });
 
     kavachIdInput.on('blur', function() {
-        // Add a slight delay before hiding suggestions to allow click event on suggestion to fire
         setTimeout(() => {
             suggestionsBox.hide();
             const finalKavachId = this.value;
+            // Re-validate on blur, especially for manual entry without suggestion selection
             if (finalKavachId && skavIdLookup[finalKavachId]) {
-                _fillStationDetails(stationId, finalKavachId);
-                kavachIdInput.addClass('is-valid');
+                const isDuplicateInOthers = currentPlanningStations.some(s => s.id !== stationId && s.KavachID === finalKavachId);
+                if (isDuplicateInOthers) {
+                    kavachIdInput.addClass('is-invalid');
+                    kavachIdFeedback.text('Kavach ID is already used by another station.').addClass('text-danger').show();
+                    _clearStationDetails(stationId); // Clear details if it's a duplicate and not intended to be linked
+                } else {
+                    _fillStationDetails(stationId, finalKavachId);
+                    kavachIdInput.addClass('is-valid');
+                    kavachIdFeedback.hide();
+                }
             } else if (finalKavachId) {
                 _clearStationDetails(stationId);
                 kavachIdInput.addClass('is-invalid');
@@ -820,7 +887,7 @@ function _setupKavachIdListener(cardWrapper, stationId) {
                 kavachIdInput.removeClass('is-invalid is-valid');
                 kavachIdFeedback.hide();
             }
-        }, 150); // 150ms delay
+        }, 150);
     });
 }
 
